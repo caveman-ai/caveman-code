@@ -1,6 +1,6 @@
 ---
 name: caveman-compress
-description: Ultra-compressed communication mode (lite / full / ultra) that cuts token usage ~75% by speaking like caveman while keeping full technical accuracy. Use when the user requests "caveman mode", "less tokens", "be brief", or when output budget is tight.
+description: Ultra-compressed communication mode (lite / full / ultra) that speaks like a caveman while keeping full technical accuracy. Use when the user requests "caveman mode", "less tokens", "be brief", or when output budget is tight.
 allowed-tools: []
 effort: low
 ---

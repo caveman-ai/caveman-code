@@ -23,7 +23,7 @@ export default defineConfig({
             {
                 property: "og:description",
                 content:
-                    "2x fewer tokens than Codex CLI on identical gpt-5.5 tasks. 20+ provider OAuth. Plan mode, subagents, MCP, sandbox, hooks. MIT.",
+                    "Frozen terminal coding agent. 20+ providers. Plan mode, subagents, MCP, sandbox, hooks. MIT.",
             },
         ],
         ["meta", { property: "og:url", content: "https://getcaveman.dev/docs/" }],
@@ -37,7 +37,7 @@ export default defineConfig({
             { text: "Docs", link: "/getting-started/quickstart" },
             { text: "Reference", link: "/reference/slash-commands" },
             { text: "Migration", link: "/migration/from-claude-code" },
-            { text: "Comparison", link: "/comparison" },
+            { text: "Features", link: "/comparison" },
             { text: "Cookbook", link: "/cookbook" },
             {
                 text: "Links",
@@ -87,7 +87,7 @@ export default defineConfig({
                 text: "Recipes & Cookbook",
                 items: [
                     { text: "Cookbook", link: "/cookbook" },
-                    { text: "Comparison", link: "/comparison" },
+                    { text: "Features", link: "/comparison" },
                     { text: "Troubleshooting", link: "/troubleshooting" },
                 ],
             },

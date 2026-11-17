@@ -81,7 +81,7 @@ export function locateClaudeMemory(cwd: string, home = homedir()): ClaudeMemoryL
 
 function candidateSlugs(cwd: string): string[] {
 	const abs = resolve(cwd);
-	// Claude Code (observed): "-Users-julb-Desktop-GitHub-caveman-cli"
+	// Claude Code (observed): "-Users-dev-caveman-cli"
 	const dashed = abs.replace(/[/:]+/g, "-");
 	// Some builds prefix a duplicate dash before the volume.
 	return Array.from(new Set([dashed, dashed.replace(/^-/, "--"), dashed.replace(/^-/, "")]));

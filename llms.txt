@@ -1,9 +1,9 @@
 # Caveman Code — terminal coding agent
 
-> Caveman Code is a terminal coding agent that uses 2× fewer tokens than
-> Codex CLI on identical tasks, supports 20+ providers with 6 OAuth flows,
-> and ships under the MIT license. Four-layer Caveman Mode compression
-> gives ~85% reduction on tool output. Plan mode, autonomous goal loop,
+> Caveman Code is a terminal coding agent, frozen in August 2026. It
+> supports 20+ providers and ships under the MIT license. Four-layer
+> Caveman Mode compression shrinks tool output (measured offline on the
+> bundled fixtures). Plan mode, autonomous goal loop,
 > worktree-isolated subagents, native MCP, cavemem-backed memory.
 
 This file is the LLM-friendly entry point to Caveman Code's documentation.
@@ -58,8 +58,8 @@ are both registered on PATH.
 
 ## Differentiators (one-line each)
 
-1. Caveman Mode compression: 4 layers, ~85% reduction on tool output
-2. 20+ providers + 6 OAuth flows (Claude Pro, ChatGPT Plus, Copilot, Gemini, Antigravity)
+1. Caveman Mode compression: 4 layers, ~85% smaller tool output on the bundled fixtures (offline)
+2. 20+ providers, OAuth for ChatGPT Plus, Copilot, Gemini, Antigravity
 3. Session branching (`/tree`, `/fork`)
 4. Plan mode + autonomous goal loop
 5. Worktree-isolated subagents via Task tool

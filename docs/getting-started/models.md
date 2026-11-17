@@ -47,7 +47,7 @@ Cycle in TUI with `Shift+Tab`.
 
 ## Architect / editor split
 
-Use a strong model to plan, a cheaper model to execute. Drops cost ~3-5× on long sessions.
+Use a strong model to plan, a cheaper model to execute.
 
 ```bash
 /architect set architectModel=claude-opus-4-7 editorModel=claude-haiku-4

@@ -1,10 +1,8 @@
 # Cave CLI — terminal coding agent
 
-> Cave is the only terminal coding agent that beats Claude Code on cost,
-> Aider on context selection, Codex on provider flexibility, and opencode
-> on session UX — in a single MIT-licensed binary. Three-layer Cave Mode
-> compression gives ~85% reduction on tool output and $1.70-$6.92 of
-> Anthropic spend saved per typical session.
+> Cave is a terminal coding agent in a single MIT-licensed binary, frozen
+> in August 2026. Three-layer Cave Mode compression shrinks tool output
+> (measured offline on the bundled fixtures).
 
 This file is the LLM-friendly entry point to Cave's documentation. Each
 linked page is plain markdown with a "Copy for LLMs" button at the top
@@ -53,7 +51,7 @@ curl -fsSL https://cave.sh/install | bash
 ## Differentiators (one-line each)
 
 1. Cave Mode compression: 3 layers, ~85% reduction on tool output
-2. 20+ providers + 6 OAuth flows (Claude Pro, ChatGPT Plus, Copilot, Gemini, Antigravity)
+2. 20+ providers, OAuth for ChatGPT Plus, Copilot, Gemini, Antigravity
 3. Session branching (`/tree`, `/fork`) — no major competitor has this
 4. Plan mode + 7 parallel worktree-isolated subagents
 5. Native MCP client + Cave can serve as MCP server

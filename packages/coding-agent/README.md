@@ -243,23 +243,6 @@ Run `npm run bench:offline` to reproduce. Results on 10 real-world tool output f
                                                                       99.3% savings
 ```
 
-#### System Prompt Overhead vs Savings
-
-| Intensity | Prompt Cost | Break-even | Net per 15-turn session |
-|-----------|------------|------------|------------------------|
-| lite | +120 tokens | 1 tool call | **+567K tokens saved** |
-| full | +175 tokens | 1 tool call | **+567K tokens saved** |
-| ultra | +195 tokens | 1 tool call | **+566K tokens saved** |
-
-Caveman Code mode pays for itself on the **first tool call** of every session.
-
-#### Cost Impact (Sonnet pricing, $3/M input)
-
-```
-  15-turn session:  ~$1.70 saved per session
-  30-turn session:  ~$6.92 saved per session  (91% tool compression)
-```
-
 #### Session Replay (real sessions)
 
 4 sessions analyzed from `~/.cave/agent/sessions/`:

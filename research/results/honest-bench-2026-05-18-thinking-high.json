@@ -48,7 +48,7 @@
       "cost_usd": 0.0446255,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-01-add-docstrings.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-01-add-docstrings.log"
     },
     {
       "tool": "codex",
@@ -67,7 +67,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-01-add-docstrings.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-01-add-docstrings.log"
     },
     {
       "tool": "caveman",
@@ -86,7 +86,7 @@
       "cost_usd": 0.05938800000000001,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-02-fix-assertion.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-02-fix-assertion.log"
     },
     {
       "tool": "codex",
@@ -105,7 +105,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-02-fix-assertion.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-02-fix-assertion.log"
     },
     {
       "tool": "caveman",
@@ -124,7 +124,7 @@
       "cost_usd": 0.05248649999999999,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-03-fix-import.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-03-fix-import.log"
     },
     {
       "tool": "codex",
@@ -143,7 +143,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-03-fix-import.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-03-fix-import.log"
     },
     {
       "tool": "caveman",
@@ -162,7 +162,7 @@
       "cost_usd": 0.045241500000000004,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-04-type-hints.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-py-04-type-hints.log"
     },
     {
       "tool": "codex",
@@ -181,7 +181,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-04-type-hints.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-py-04-type-hints.log"
     },
     {
       "tool": "caveman",
@@ -200,7 +200,7 @@
       "cost_usd": 0.0758145,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-01-add-jsdoc.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-01-add-jsdoc.log"
     },
     {
       "tool": "codex",
@@ -219,7 +219,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-01-add-jsdoc.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-01-add-jsdoc.log"
     },
     {
       "tool": "caveman",
@@ -238,7 +238,7 @@
       "cost_usd": 0.042309,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-02-fix-type-error.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-02-fix-type-error.log"
     },
     {
       "tool": "codex",
@@ -257,7 +257,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-02-fix-type-error.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-02-fix-type-error.log"
     },
     {
       "tool": "caveman",
@@ -276,7 +276,7 @@
       "cost_usd": 0.050944,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-03-add-error-handling.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-03-add-error-handling.log"
     },
     {
       "tool": "codex",
@@ -295,7 +295,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-03-add-error-handling.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-03-add-error-handling.log"
     },
     {
       "tool": "caveman",
@@ -314,7 +314,7 @@
       "cost_usd": 0.041988,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-04-rename-variable.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/easy-ts-04-rename-variable.log"
     },
     {
       "tool": "codex",
@@ -333,7 +333,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-04-rename-variable.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/easy-ts-04-rename-variable.log"
     },
     {
       "tool": "caveman",
@@ -352,7 +352,7 @@
       "cost_usd": 0.06636750000000001,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-01-async-refactor.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-01-async-refactor.log"
     },
     {
       "tool": "codex",
@@ -371,7 +371,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-01-async-refactor.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-01-async-refactor.log"
     },
     {
       "tool": "caveman",
@@ -390,7 +390,7 @@
       "cost_usd": 0.05944200000000001,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-02-optimize-algorithm.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-02-optimize-algorithm.log"
     },
     {
       "tool": "codex",
@@ -409,7 +409,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-02-optimize-algorithm.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-02-optimize-algorithm.log"
     },
     {
       "tool": "caveman",
@@ -428,7 +428,7 @@
       "cost_usd": 0.0332375,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": "Error: spawnSync node ENOBUFS",
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-03-decorator-pattern.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-03-decorator-pattern.log"
     },
     {
       "tool": "codex",
@@ -447,7 +447,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-03-decorator-pattern.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-03-decorator-pattern.log"
     },
     {
       "tool": "caveman",
@@ -466,7 +466,7 @@
       "cost_usd": 0.117616,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-04-concurrent-fix.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-py-04-concurrent-fix.log"
     },
     {
       "tool": "codex",
@@ -485,7 +485,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-04-concurrent-fix.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-py-04-concurrent-fix.log"
     },
     {
       "tool": "caveman",
@@ -504,7 +504,7 @@
       "cost_usd": 0.058009,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-ts-01-generic-refactor.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-ts-01-generic-refactor.log"
     },
     {
       "tool": "codex",
@@ -523,7 +523,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-ts-01-generic-refactor.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-ts-01-generic-refactor.log"
     },
     {
       "tool": "caveman",
@@ -542,7 +542,7 @@
       "cost_usd": 0.0605315,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-ts-02-state-machine.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-ts-02-state-machine.log"
     },
     {
       "tool": "codex",
@@ -561,7 +561,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-ts-02-state-machine.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-ts-02-state-machine.log"
     },
     {
       "tool": "caveman",
@@ -580,7 +580,7 @@
       "cost_usd": 0.1326815,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-ts-03-multi-file-refactor.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/hard-ts-03-multi-file-refactor.log"
     },
     {
       "tool": "codex",
@@ -599,7 +599,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-ts-03-multi-file-refactor.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/hard-ts-03-multi-file-refactor.log"
     },
     {
       "tool": "caveman",
@@ -618,7 +618,7 @@
       "cost_usd": 0.056056,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-01-refactor-class.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-01-refactor-class.log"
     },
     {
       "tool": "codex",
@@ -637,7 +637,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-01-refactor-class.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-01-refactor-class.log"
     },
     {
       "tool": "caveman",
@@ -656,7 +656,7 @@
       "cost_usd": 0.07073000000000002,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-02-fix-bug-with-test.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-02-fix-bug-with-test.log"
     },
     {
       "tool": "codex",
@@ -675,7 +675,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-02-fix-bug-with-test.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-02-fix-bug-with-test.log"
     },
     {
       "tool": "caveman",
@@ -694,7 +694,7 @@
       "cost_usd": 0.0839595,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-03-add-cli-arg.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-03-add-cli-arg.log"
     },
     {
       "tool": "codex",
@@ -713,7 +713,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-03-add-cli-arg.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-03-add-cli-arg.log"
     },
     {
       "tool": "caveman",
@@ -732,7 +732,7 @@
       "cost_usd": 0.075249,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-04-fix-json-parser.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-py-04-fix-json-parser.log"
     },
     {
       "tool": "codex",
@@ -751,7 +751,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-04-fix-json-parser.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-py-04-fix-json-parser.log"
     },
     {
       "tool": "caveman",
@@ -770,7 +770,7 @@
       "cost_usd": 0.084527,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-01-extract-function.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-01-extract-function.log"
     },
     {
       "tool": "codex",
@@ -789,7 +789,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-01-extract-function.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-01-extract-function.log"
     },
     {
       "tool": "caveman",
@@ -808,7 +808,7 @@
       "cost_usd": 0.14046200000000003,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-02-replace-api.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-02-replace-api.log"
     },
     {
       "tool": "codex",
@@ -827,7 +827,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-02-replace-api.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-02-replace-api.log"
     },
     {
       "tool": "caveman",
@@ -846,7 +846,7 @@
       "cost_usd": 0.059343,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-03-fix-failing-test.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-03-fix-failing-test.log"
     },
     {
       "tool": "codex",
@@ -865,7 +865,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-03-fix-failing-test.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-03-fix-failing-test.log"
     },
     {
       "tool": "caveman",
@@ -884,7 +884,7 @@
       "cost_usd": 0.0485375,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-04-create-module.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-04-create-module.log"
     },
     {
       "tool": "codex",
@@ -903,7 +903,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-04-create-module.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-04-create-module.log"
     },
     {
       "tool": "caveman",
@@ -922,7 +922,7 @@
       "cost_usd": 0.09070900000000001,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-05-implement-interface.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-05-implement-interface.log"
     },
     {
       "tool": "codex",
@@ -941,7 +941,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-05-implement-interface.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-05-implement-interface.log"
     },
     {
       "tool": "caveman",
@@ -960,7 +960,7 @@
       "cost_usd": 0.0700625,
       "config_fingerprint": "rtk=on,cave-mode=ultra,tool-compression=on,ml=on,model=gpt-5.5,thinking=high",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-06-wire-event-handler.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/caveman/medium-ts-06-wire-event-handler.log"
     },
     {
       "tool": "codex",
@@ -979,7 +979,7 @@
       "cost_usd": null,
       "config_fingerprint": "sandbox=workspace-write,model=gpt-5.5",
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-06-wire-event-handler.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-18/codex/medium-ts-06-wire-event-handler.log"
     }
   ]
 }

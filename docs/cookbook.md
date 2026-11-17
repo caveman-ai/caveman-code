@@ -158,7 +158,7 @@ caveman plugin publish my-pack    # publishes to the configured marketplace
 > migrate this Express app to Fastify
 ```
 
-Opus plans (one expensive model call). Haiku executes each step (cheap). Drops cost ~3-5×.
+Opus plans (one expensive model call). Haiku executes each step (cheap).
 
 ## Watch mode for IDE-style edits
 

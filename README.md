@@ -4,14 +4,17 @@
 > `caveman wrap` makes the agent you already use cheaper instead of replacing
 > it. Note: this package installs a `caveman` binary that shadows the caveman
 > CLI from that repo — uninstall one before installing the other.
+>
+> This is the 2026 terminal agent, frozen. It is not the Caveman Code app at
+> caveman.so, which is proprietary. This repository stays MIT-licensed.
 
 <div align="center">
 
 # 🪨 Caveman Code
 
-**The terminal coding agent that talks like a caveman — and burns half the tokens doing it.**
+**The terminal coding agent that talks like a caveman.**
 
-Same model. Same task. **~2× fewer tokens than Codex.** 20+ providers · plan mode · autopilot loop · MIT.
+20+ providers · plan mode · autopilot loop · MIT.
 
 <p>
   <a href="https://github.com/JuliusBrussee/caveman-code/stargazers"><img src="https://img.shields.io/github/stars/JuliusBrussee/caveman-code?color=d97757&style=flat-square" alt="Stars" /></a>
@@ -27,10 +30,6 @@ Same model. Same task. **~2× fewer tokens than Codex.** 20+ providers · plan m
 <a href="#features">Features</a> ·
 <a href="#sdk">SDK</a>
 
-<!-- TODO before publish: render the demo gif → `vhs vhs/install.tape`, then uncomment the line below.
-<img src="vhs/install.gif" width="760" alt="caveman install + first prompt — 30 seconds" />
--->
-
 </div>
 
 ---
@@ -45,31 +44,9 @@ Big agent waffle. Waffle cost token. Caveman no waffle.
 |---|---|
 | Great question! A React component can re-render on every keystroke for several reasons. The most common cause is passing a fresh object or function reference as a prop on each render, which defeats React's referential-equality bail-out and forces the child to reconcile again … *(three more paragraphs)* | New object ref each render. Inline prop = new ref = re-render. Wrap in `useMemo`. |
 
-Same answer. Same model. Caveman version costs **~9× less to read back** — and the agent reads its own context back on *every single turn*. The saving compounds across the whole session.
+The agent reads its own context back on every turn, so shorter replies stay cheaper for the rest of the session.
 
 That is the entire product. Everything below is the coding agent it ships inside.
-
----
-
-## The proof
-
-*25-task MicroBench · `gpt-5.5` · xhigh reasoning · 2026-05-18*
-
-| Tool | Fresh tokens | Pass rate |
-|---|---|---|
-| **🪨 caveman** | `████████████▌` **524k** | 14 / 25 |
-| codex | `████████████████████████` 1,010k | 15 / 25 |
-
-> **1.93× fewer tokens than Codex CLI on identical tasks.**
-> Same `gpt-5.5` model. Same `xhigh` reasoning. Pass rate within one task.
->
-> No marketing-deck baselines. Each tool spawned as a real child process. Each task verified by a task-specific `verify.sh`. Raw CSV + per-task logs published.
-
-```bash
-npx tsx research/evals/run-honest-bench.ts --tools caveman,codex   # reproduce in one command
-```
-
-[Raw CSV](research/results/honest-bench-2026-05-18.csv) · [Aggregate JSON](research/results/honest-bench-2026-05-18.json) · [Methodology](research/README.md) · [25 task prompts](research/evals/microbench/tasks/)
 
 ---
 
@@ -90,7 +67,7 @@ caveman goal start "ship feature X"      # autonomous Ralph loop
 ```
 
 <details>
-<summary><strong>Other install paths</strong> — pnpm · yarn · bun · Docker · OAuth login</summary>
+<summary><strong>Other install paths</strong> — pnpm · yarn · bun · Docker</summary>
 
 ```bash
 pnpm add -g @juliusbrussee/caveman-code
@@ -99,9 +76,6 @@ bun  add -g @juliusbrussee/caveman-code
 
 # Docker
 docker run --rm -it -v "$PWD:/work" ghcr.io/juliusbrussee/caveman-code:latest
-
-# No API key? Use a subscription you already pay for:
-caveman && /login   # Claude Pro · ChatGPT Plus · Copilot · Gemini · Antigravity
 ```
 
 CI / headless install: [docs/getting-started/installation.md](docs/getting-started/installation.md).
@@ -138,8 +112,6 @@ Four compression layers, always on — and they hit **two** separate token sinks
 | | Read Dedup | Files fingerprinted per session — re-reads return a stub, not the bytes. | **−99%** on repeats |
 | | **[RTK](https://github.com/rtk-ai/rtk)** | Optional external Rust binary ("Rust Token Killer") — pipes bash output through `rtk` before it enters context. | **−60% to −90%** (RTK's own bench) |
 
-Pays for itself after one tool call.
-
 <details>
 <summary><strong>Benchmark</strong> — 10 real tool-output fixtures · −86% aggregate</summary>
 
@@ -162,8 +134,6 @@ Pays for itself after one tool call.
 |---|---|
 | Tokens saved (10 fixtures) | ~72,400 of 337K chars |
 | System-prompt overhead | 120–195 tokens (lite–ultra) |
-| Net savings — 15-turn session | **+567K tokens (~$1.70, Sonnet)** |
-| Net savings — 30-turn session | **+1.13M tokens (~$6.92, Sonnet)** |
 
 ```bash
 npm run bench:offline   # compression analysis — free, <1s
@@ -181,19 +151,15 @@ Use `/caveman [lite|full|ultra|off]` in the TUI to adjust compression aggressive
 
 ## Why Caveman Code
 
-| Capability | Caveman | Claude Code | Codex | Aider | opencode |
-|---|:---:|:---:|:---:|:---:|:---:|
-| 4-layer token compression | ✅ | ❌ | ❌ | repo map only | ❌ |
-| 20+ provider OAuth | ✅ | Anthropic | ChatGPT | API keys | ✅ |
-| Autonomous goal loop | ✅ | ❌ | ❌ | ❌ | ❌ |
-| Autopilot — no permission prompts | ✅ | ❌ | ❌ | ✅ | ❌ |
-| Repo map (PageRank, Aider-style) | ✅ | ❌ | ❌ | ✅ | ❌ |
-| Architect / editor model split | ✅ | ❌ | ❌ | ✅ | ❌ |
-| Session branching + shadow-git checkpoints | ✅ | ❌ | fork only | git only | ❌ |
-| Persistent semantic memory (cavemem) | ✅ | MEMORY.md | ❌ | ❌ | ❌ |
-| MIT open source | ✅ | closed | Apache-2.0 | Apache-2.0 | ✅ |
-
-Full table including Crush: [docs/comparison.md](docs/comparison.md).
+- 4-layer token compression
+- 20+ providers, API keys or OAuth
+- Autonomous goal loop
+- Autopilot, no permission prompts
+- Repo map (PageRank, Aider-style)
+- Architect / editor model split
+- Session branching and shadow-git checkpoints
+- Persistent semantic memory (cavemem)
+- MIT licensed
 
 ---
 
@@ -204,7 +170,7 @@ Full table including Crush: [docs/comparison.md](docs/comparison.md).
 | 🤖 | **Autonomous goal loop** — Ralph-style autopilot. Rolling state, per-iteration $/token ledger, shadow-git checkpoints, ranked termination (sentinel · iteration cap · $-cap · no-progress · SIGINT). Resume any time. | `caveman goal start` |
 | 🧠 | **Plan mode** — read-only chat. Model sees only `read`/`grep`/`find`/`ls`, produces a written plan, never edits. Subagents inherit the gate. `/act` to execute. | `/plan` |
 | 👥 | **Subagents** — up to 7 parallel, worktree-isolated. Frontmatter agents at `.cave/agents/*.md` (Claude Code superset). Five ship by default. | `Task` tool |
-| 🪞 | **Architect / editor split** — slow model plans, fast model executes. ~3–5× cheaper than a single-model run. | `--architect` · `--editor` |
+| 🪞 | **Architect / editor split** — slow model plans, fast model executes. | `--architect` · `--editor` |
 
 Latest release: plan mode · goal loop · native memory tools · subagent registry. Full history → [CHANGELOG.md](CHANGELOG.md).
 
@@ -221,8 +187,8 @@ caveman --fork <path|id>      # fork into a new file
 ```
 `/tree` navigate + branch in-place (search · fold · page · filter) · `/compact` manual compaction · `/checkpoint` + `/rollback N` rewind code **and** conversation together.
 
-### 🌐 20+ providers, 6 OAuth flows
-**OAuth** — Claude Pro/Max · ChatGPT Plus/Pro · GitHub Copilot · Google Gemini · Antigravity · Vertex
+### 🌐 20+ providers
+**OAuth** — ChatGPT Plus/Pro · GitHub Copilot · Google Gemini · Antigravity · Vertex
 **API keys** — Anthropic · OpenAI · Azure · Vertex · Bedrock · Mistral · Groq · Cerebras · xAI · OpenRouter · Vercel AI Gateway · Hugging Face · Kimi · MiniMax · Z.AI · DeepSeek
 **Custom** — any OpenAI-/Anthropic-/Google-compatible endpoint via `~/.cave/agent/models.json`.
 

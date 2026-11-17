@@ -55,7 +55,7 @@
       "tokens_cache_write": 0,
       "cost_usd": 0.04847900000000001,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/caveman/easy-py-01-add-docstrings.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/caveman/easy-py-01-add-docstrings.log"
     },
     {
       "tool": "claude",
@@ -72,7 +72,7 @@
       "tokens_cache_write": 17201,
       "cost_usd": 0.20305825,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/claude/easy-py-01-add-docstrings.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/claude/easy-py-01-add-docstrings.log"
     },
     {
       "tool": "codex",
@@ -89,7 +89,7 @@
       "tokens_cache_write": null,
       "cost_usd": null,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/codex/easy-py-01-add-docstrings.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/codex/easy-py-01-add-docstrings.log"
     },
     {
       "tool": "caveman",
@@ -106,7 +106,7 @@
       "tokens_cache_write": 0,
       "cost_usd": 0.0539515,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/caveman/easy-py-02-fix-assertion.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/caveman/easy-py-02-fix-assertion.log"
     },
     {
       "tool": "claude",
@@ -123,7 +123,7 @@
       "tokens_cache_write": 18036,
       "cost_usd": 0.28393950000000007,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/claude/easy-py-02-fix-assertion.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/claude/easy-py-02-fix-assertion.log"
     },
     {
       "tool": "codex",
@@ -140,7 +140,7 @@
       "tokens_cache_write": null,
       "cost_usd": null,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/codex/easy-py-02-fix-assertion.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/codex/easy-py-02-fix-assertion.log"
     },
     {
       "tool": "caveman",
@@ -157,7 +157,7 @@
       "tokens_cache_write": 0,
       "cost_usd": 0.05306399999999999,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/caveman/easy-py-03-fix-import.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/caveman/easy-py-03-fix-import.log"
     },
     {
       "tool": "claude",
@@ -174,7 +174,7 @@
       "tokens_cache_write": 16456,
       "cost_usd": 0.182121,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/claude/easy-py-03-fix-import.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/claude/easy-py-03-fix-import.log"
     },
     {
       "tool": "codex",
@@ -191,7 +191,7 @@
       "tokens_cache_write": null,
       "cost_usd": null,
       "error": null,
-      "raw_log_path": "/Users/julb/Desktop/GitHub/caveman-cli/research/results/honest-bench-2026-05-17/codex/easy-py-03-fix-import.log"
+      "raw_log_path": "/Users/dev/caveman-cli/research/results/honest-bench-2026-05-17/codex/easy-py-03-fix-import.log"
     }
   ]
 }

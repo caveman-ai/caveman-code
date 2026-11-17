@@ -107,7 +107,7 @@ describe("FooterComponent width handling", () => {
 			},
 		});
 		(session.sessionManager as unknown as { getCwd(): string }).getCwd = () =>
-			"/Users/julb/Desktop/GitHub/caveman-cli";
+			"/Users/dev/Desktop/projects/caveman-cli";
 		const footer = new FooterComponent(session, createFooterData(1));
 
 		const lines = footer.render(width);

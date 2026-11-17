@@ -24,7 +24,7 @@
       "dollars_spent": 0.0440055,
       "duration_ms": 21642,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-py-01-add-docstrings.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-py-01-add-docstrings.json"
       ],
       "difficulty": "easy",
       "language": "python",
@@ -42,7 +42,7 @@
       "dollars_spent": 0.041679,
       "duration_ms": 19135,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-py-02-fix-assertion.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-py-02-fix-assertion.json"
       ],
       "difficulty": "easy",
       "language": "python",
@@ -60,7 +60,7 @@
       "dollars_spent": 0.0352685,
       "duration_ms": 18207,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-py-03-fix-import.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-py-03-fix-import.json"
       ],
       "difficulty": "easy",
       "language": "python",
@@ -78,7 +78,7 @@
       "dollars_spent": 0.026692,
       "duration_ms": 14529,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-py-04-type-hints.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-py-04-type-hints.json"
       ],
       "difficulty": "easy",
       "language": "python",
@@ -96,7 +96,7 @@
       "dollars_spent": 0.029588,
       "duration_ms": 18835,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-ts-01-add-jsdoc.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-ts-01-add-jsdoc.json"
       ],
       "difficulty": "easy",
       "language": "typescript",
@@ -114,7 +114,7 @@
       "dollars_spent": 0.0217575,
       "duration_ms": 12078,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-ts-02-fix-type-error.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-ts-02-fix-type-error.json"
       ],
       "difficulty": "easy",
       "language": "typescript",
@@ -132,7 +132,7 @@
       "dollars_spent": 0.026974000000000005,
       "duration_ms": 15676,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-ts-03-add-error-handling.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-ts-03-add-error-handling.json"
       ],
       "difficulty": "easy",
       "language": "typescript",
@@ -150,7 +150,7 @@
       "dollars_spent": 0.0365945,
       "duration_ms": 16015,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/easy-ts-04-rename-variable.json"
+        "/Users/dev/caveman-cli/research/results/traces/easy-ts-04-rename-variable.json"
       ],
       "difficulty": "easy",
       "language": "typescript",
@@ -168,7 +168,7 @@
       "dollars_spent": 0.082942,
       "duration_ms": 55232,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-py-01-async-refactor.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-py-01-async-refactor.json"
       ],
       "difficulty": "hard",
       "language": "python",
@@ -186,7 +186,7 @@
       "dollars_spent": 0.04348500000000001,
       "duration_ms": 31986,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-py-02-optimize-algorithm.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-py-02-optimize-algorithm.json"
       ],
       "difficulty": "hard",
       "language": "python",
@@ -204,7 +204,7 @@
       "dollars_spent": 0.0605235,
       "duration_ms": 31754,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-py-03-decorator-pattern.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-py-03-decorator-pattern.json"
       ],
       "difficulty": "hard",
       "language": "python",
@@ -222,7 +222,7 @@
       "dollars_spent": 0.04616800000000001,
       "duration_ms": 32454,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-py-04-concurrent-fix.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-py-04-concurrent-fix.json"
       ],
       "difficulty": "hard",
       "language": "python",
@@ -240,7 +240,7 @@
       "dollars_spent": 0.059846500000000004,
       "duration_ms": 48261,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-ts-01-generic-refactor.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-ts-01-generic-refactor.json"
       ],
       "difficulty": "hard",
       "language": "typescript",
@@ -258,7 +258,7 @@
       "dollars_spent": 0.07557449999999999,
       "duration_ms": 75749,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-ts-02-state-machine.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-ts-02-state-machine.json"
       ],
       "difficulty": "hard",
       "language": "typescript",
@@ -276,7 +276,7 @@
       "dollars_spent": 0.12063650000000001,
       "duration_ms": 109040,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/hard-ts-03-multi-file-refactor.json"
+        "/Users/dev/caveman-cli/research/results/traces/hard-ts-03-multi-file-refactor.json"
       ],
       "difficulty": "hard",
       "language": "typescript",
@@ -294,7 +294,7 @@
       "dollars_spent": 0.039471,
       "duration_ms": 34248,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-py-01-refactor-class.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-py-01-refactor-class.json"
       ],
       "difficulty": "medium",
       "language": "python",
@@ -312,7 +312,7 @@
       "dollars_spent": 0.049110499999999994,
       "duration_ms": 21873,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-py-02-fix-bug-with-test.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-py-02-fix-bug-with-test.json"
       ],
       "difficulty": "medium",
       "language": "python",
@@ -330,7 +330,7 @@
       "dollars_spent": 0.02778,
       "duration_ms": 18301,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-py-03-add-cli-arg.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-py-03-add-cli-arg.json"
       ],
       "difficulty": "medium",
       "language": "python",
@@ -348,7 +348,7 @@
       "dollars_spent": 0.04627800000000001,
       "duration_ms": 29004,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-py-04-fix-json-parser.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-py-04-fix-json-parser.json"
       ],
       "difficulty": "medium",
       "language": "python",
@@ -366,7 +366,7 @@
       "dollars_spent": 0.048876499999999996,
       "duration_ms": 41361,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-ts-01-extract-function.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-ts-01-extract-function.json"
       ],
       "difficulty": "medium",
       "language": "typescript",
@@ -384,7 +384,7 @@
       "dollars_spent": 0.062462000000000004,
       "duration_ms": 51323,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-ts-02-replace-api.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-ts-02-replace-api.json"
       ],
       "difficulty": "medium",
       "language": "typescript",
@@ -402,7 +402,7 @@
       "dollars_spent": 0.0355515,
       "duration_ms": 23137,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-ts-03-fix-failing-test.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-ts-03-fix-failing-test.json"
       ],
       "difficulty": "medium",
       "language": "typescript",
@@ -420,7 +420,7 @@
       "dollars_spent": 0.041249,
       "duration_ms": 22064,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-ts-04-create-module.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-ts-04-create-module.json"
       ],
       "difficulty": "medium",
       "language": "typescript",
@@ -438,7 +438,7 @@
       "dollars_spent": 0.043279,
       "duration_ms": 43355,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-ts-05-implement-interface.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-ts-05-implement-interface.json"
       ],
       "difficulty": "medium",
       "language": "typescript",
@@ -456,7 +456,7 @@
       "dollars_spent": 0.046228,
       "duration_ms": 37900,
       "traces": [
-        "/Users/julb/Desktop/GitHub/caveman-cli/research/results/traces/medium-ts-06-wire-event-handler.json"
+        "/Users/dev/caveman-cli/research/results/traces/medium-ts-06-wire-event-handler.json"
       ],
       "difficulty": "medium",
       "language": "typescript",

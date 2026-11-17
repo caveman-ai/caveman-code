@@ -77,7 +77,7 @@ Same UX as Aider:
 /architect set architectModel=claude-opus-4-7 editorModel=claude-haiku-4
 ```
 
-Architect plans, editor executes. Drops cost ~3-5× on long sessions. See [Plan Mode](/reference/plan-mode#architect-mode-split-planning--edit).
+Architect plans, editor executes. See [Plan Mode](/reference/plan-mode#architect-mode-split-planning--edit).
 
 ## Differences
 

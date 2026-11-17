@@ -95,30 +95,10 @@ Compare caveman-code's token efficiency against Codex and Claude Code using publ
 
 ```bash
 npm run bench:compare -- --cave-results research/results/microbench-2026-04-16.json
-npm run bench:compare -- --cave-results research/results/swebench-2026-04-16.json
 npm run bench:compare -- --format json --output report.json
 ```
 
-**Honest apples-to-apples — 25-task MicroBench, gpt-5.5, xhigh reasoning (2026-05-18):**
-
-| Tool | Resolved | Fresh tokens (in+out) | Cost |
-|------|----------|----------------------|------|
-| Codex CLI | 15/25 (60%) | 1,010,185 | $0 (codex sub) |
-| **Caveman Code** | **14/25 (56%)** | **524,703** | **$1.78** |
-
-**1.93× fewer fresh tokens than Codex CLI on identical tasks, same model, same reasoning effort.** Pass rate within 1 task.
-
-Raw artifacts: `research/results/honest-bench-2026-05-18.csv` + `.json` + per-task stdout/stderr logs under `research/results/honest-bench-2026-05-18/`.
-
-Reproduce in one command:
-
-```bash
-npx tsx research/evals/run-honest-bench.ts --tools caveman,codex
-```
-
-Methodology: each tool is spawned as a real child process (no SDK shortcuts), each task is verified with the task-specific `verify.sh`. Token counts come from each tool's own JSONL / stdout summary.
-
-Older numbers from the SDK-coupled `microbench-2026-04-16.json` and published-baseline comparisons are retained in `research/results/` for historical reference but are **not** the launch headline.
+Older numbers from the SDK-coupled `microbench-2026-04-16.json` and published-baseline comparisons are retained in `research/results/` for historical reference only.
 
 ## Regenerating published numbers
 

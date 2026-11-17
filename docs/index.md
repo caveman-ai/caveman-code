@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: "Caveman Code"
-  text: "Same model. Same task. 2× fewer tokens."
+  text: "The terminal coding agent that talks like a caveman."
   tagline: "Terminal coding agent that compresses at every layer. 20+ provider OAuth. Plan mode, subagents, MCP, sandbox, hooks. MIT."
   image:
     src: /logo.svg
@@ -22,12 +22,12 @@ hero:
 features:
   - icon: 📦
     title: Caveman Mode compression
-    details: 3-layer compression of prompts, tool output, and file reads. ~85% reduction on tool output. $1.70–$6.92 saved per session vs Claude Code.
+    details: 3-layer compression of prompts, tool output, and file reads. Compresses tool output on the bundled fixtures (offline, modelled).
     link: /reference/tools
     linkText: How it works
   - icon: 🔑
-    title: 20+ providers, 6 OAuth flows
-    details: Claude Pro, ChatGPT Plus, GitHub Copilot, Gemini, Antigravity, plus every major API. One CLI, every backend.
+    title: 20+ providers
+    details: ChatGPT Plus, GitHub Copilot, Gemini, Antigravity, plus every major API. One CLI, every backend.
     link: /getting-started/auth
     linkText: Authenticate
   - icon: 🌳

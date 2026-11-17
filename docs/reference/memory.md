@@ -12,7 +12,7 @@ Caveman Code delegates persistent memory to **cavemem** — the user's existing 
 ## What cavemem provides
 
 - SQLite (FTS5) storage with hybrid search: BM25 + local vectors (`Xenova/all-MiniLM-L6-v2`, alpha=0.5).
-- ~75% prose-token reduction via caveman-grammar compression. Code, paths, and URLs preserved byte-for-byte.
+- Prose compressed with caveman grammar. Code, paths, and URLs preserved byte-for-byte.
 - Stdio MCP server with four tools: `search`, `timeline`, `get_observations`, `list_sessions`.
 - Hook CLI: `cavemem hook run <event>` reads stdin and writes observations.
 - Privacy: `<private>...</private>` blocks are redacted before storage.
