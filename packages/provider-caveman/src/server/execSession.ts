@@ -54,7 +54,7 @@ export const EXEC_CLIENT_SERVER = "client";
 const CUSTOM_TOOL_TIMEOUT_MS = 24 * 60 * 60 * 1_000;
 /** How long each of the agent's own MCP servers has to connect before the session starts without it. */
 const MCP_CONNECT_MS = 30_000;
-const MCP_CLIENT_NAME = "caveman-code-app";
+const MCP_CLIENT_NAME = "caveman-code";
 /** A refused call, as the model and the caller read it (the words the classic engine used, which callers match). */
 const DENIED = "cave_tool_denied:";
 

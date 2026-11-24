@@ -1,4 +1,4 @@
-// `caveman-runtime agent exec` (platform CONTRACT §8.1; docs/design/agent-sdk.md): one agent, headless,
+// `caveman-runtime agent exec` (platform CONTRACT §8.1): one agent, headless,
 // in place, to its end. A third way into code that exists, beside an app chat and a Cloud computer's mail: the agent
 // file goes through the one agent loader (@caveman-app/automations parseAgentFile), the engine is the Caveman engine in
 // the shape its file asks for (provider-caveman exec, on the Caveman harness: the coding loadout its model was measured

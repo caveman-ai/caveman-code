@@ -55,6 +55,8 @@ Desktop and `caveman-code` drive the exact same local daemon (`packages/runtime`
 - [MCP Servers & Plugins](./docs/mcp-plugins.mdx)
 - [Architecture](./docs/architecture.mdx)
 
-## Attribution & License
+## Contributing, Security & License
 
-Built on [`@caveman-ai/harness`](https://github.com/caveman-ai/agent-sdk) with modules ported from T3 Code (MIT). See [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) for complete notices.
+- Contributor guide & agent map: [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md) (`CLAUDE.md` symlinks to `AGENTS.md`).
+- Security reporting: [`SECURITY.md`](./SECURITY.md).
+- Built on [`@caveman-ai/harness`](https://github.com/caveman-ai/agent-sdk) with modules ported from T3 Code (MIT). See [`LICENSE`](./LICENSE), [`NOTICE`](./NOTICE), and [`THIRD_PARTY_NOTICES.md`](./THIRD_PARTY_NOTICES.md) for complete notices.

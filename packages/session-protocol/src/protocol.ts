@@ -407,7 +407,7 @@ export const Workspace = Schema.Struct({
    */
   kind: optionalKey(Schema.Literals(["chief", "setup"])),
   /**
-   * The larger piece of work it belongs to ("Capy Pricing"): chats that share a topic sit in one group when the sidebar
+   * The larger piece of work it belongs to ("Pricing Revamp"): chats that share a topic sit in one group when the sidebar
    * shows chats by topic. The runtime's title writer names it with the title, reusing a topic the person already has
    * when the chat fits one, once: a later title never changes it. Only the person moves it after (workspace.topic).
    * Absent: in no group.
@@ -442,7 +442,7 @@ export const Workspace = Schema.Struct({
   /** Done, snoozed, pinned and read: kept by the runtime, never bumping `updated_at`. */
   inbox: optionalKey(WorkspaceInbox),
   /**
-   * An outside agent started this chat through `caveman-code mcp` (docs/design/outside-agents.md):
+   * An outside agent started this chat through `caveman-code mcp`:
    * its name, as Settings > Caveman MCP lists it. Absent for the person's own chats.
    */
   started_by: optionalKey(Schema.Struct({ agent: Schema.String })),
@@ -930,7 +930,7 @@ export const EngineProvider = Schema.Struct({
 export type EngineProvider = typeof EngineProvider.Type;
 
 /**
- * A provider the Caveman engine's web tools take a person's own key for (docs/design/web-tools.md): the web_search
+ * A provider the Caveman engine's web tools take a person's own key for: the web_search
  * providers, and Firecrawl, which reads the pages web_fetch can't on its own.
  */
 export const WebSearchProvider = Schema.Literals(["brave", "perplexity", "exa", "firecrawl"]).annotate({ identifier: "WebSearchProvider" });
@@ -1960,7 +1960,7 @@ export const ChiefBoard = Schema.Struct({
 export type ChiefBoard = typeof ChiefBoard.Type;
 
 /**
- * Smart View (docs/design/smart-view.md): something a Chief puts in the person's right sidebar, beside its chat. pr: a
+ * Smart View: something a Chief puts in the person's right sidebar, beside its chat. pr: a
  * pull request, on its guide unless `view` says otherwise; chat: a chat, live, read-only, one click from opening it;
  * image, video: a picture or a clip, by `url`, or by `path` in a chat's checkout (`workspace_id`); web: a page, loaded
  * by the person's own app. A new kind is a new member here plus its surface in the app (smart-view/targets.ts).
@@ -3613,7 +3613,7 @@ export type SessionEvent = typeof SessionEvent.Type;
 export type SessionEventType = SessionEvent["type"];
 
 // ------------------------------------------------------------- outside agents
-// Agents Caveman Code did not launch, operating it through `caveman-code mcp` (docs/design/outside-agents.md).
+// Agents Caveman Code did not launch, operating it through `caveman-code mcp`.
 
 /**
  * How much an outside agent may do. read: look only. supervised: start, message and stop its own chats, which run
@@ -3800,7 +3800,7 @@ const m = <P extends Schema.Struct.Fields, R extends Schema.Top>(params: P, resu
 });
 const mailSend = m({ ...req, ...ses, to_workspace_id: Id, body: Schema.String, reply_to: optionalKey(Id) }, MailMessage);
 
-// ------------------------------------------------------------- problem reports (docs/design/bug-reports.md)
+// ------------------------------------------------------------- problem reports
 // One button wherever an error shows: the runtime gathers its logs, redacts them on this computer, a model
 // describes the problem, and nothing leaves until the person has read the preview and pressed Send.
 
@@ -4118,7 +4118,7 @@ export type CodeAutoTopup = typeof CodeAutoTopup.Type;
  * organization may still hold. `purchasable` is false where this Cloud takes
  * no payments.
  *
- * What a plan holds stays private (docs/design/cloud-computers-2026-11-09/PLAN.md section 9): the only dollars
+ * What a plan holds stays private: the only dollars
  * here are a plan's price and its `up_to_usd` headline ("up to $60 of usage").
  * Its included dollars, the size of its limits, what a model or a computer
  * minute draws: none of that is in the protocol, and a client never works it
@@ -4216,7 +4216,7 @@ export type CodeUsageWindow = typeof CodeUsageWindow.Type;
  * Settings -> Account: the person's Caveman account through the sign-in
  * cloud.signin keeps in the runtime's secret store. `credits` is null when
  * this Caveman Cloud sells no Code plans. Plan usage is a percent and a reset,
- * never dollars (docs/design/cloud-computers-2026-11-09/PLAN.md section 9); the money here is the person's own
+ * never dollars; the money here is the person's own
  * (credits they bought, pay as you go), in list-price micro-dollars.
  */
 export const AccountSummary = Schema.Struct({
@@ -4407,7 +4407,7 @@ export type CloudComputerRow = typeof CloudComputerRow.Type;
 
 // ------------------------------------------------- Cloud environments (E2)
 // A repo's Cloud setup: one per repository per organization, built and proven
-// by Caveman Cloud (docs/design/environments-2026-10-18/CONTRACT.md §3-4).
+// by Caveman Cloud.
 
 /** One step of a Cloud build: clone, services, setup, check, snapshot, restore_check. */
 export const EnvironmentBuildStep = Schema.Struct({
@@ -4642,8 +4642,7 @@ export const RuntimeHello = S({
 export type RuntimeHello = typeof RuntimeHello.Type;
 
 /**
- * One finished turn as anonymous telemetry counts it (telemetry.turns; docs/design/turn-telemetry-2026-11-07/SPEC.md
- * "The fact"). Content-free by construction: every string is from a closed list or token-shaped, ids are salted hashes
+ * One finished turn as anonymous telemetry counts it (telemetry.turns). Content-free by construction: every string is from a closed list or token-shaped, ids are salted hashes
  * that never match a real session or turn id, and the prompt is only a length rounded down to a power of two.
  */
 export const TurnFact = Schema.Struct({
@@ -4846,7 +4845,7 @@ export const Methods = {
   ),
 
   /**
-   * Outside agents (docs/design/outside-agents.md). `become`: the first call of `caveman-code mcp` on
+   * Outside agents. `become`: the first call of `caveman-code mcp` on
    * an owner connection, which from then on is that agent's, for good (principal `agent:<agent_id>`), with the level
    * the person gave its name, lowered to `at_most`. Owner connections only, once each; refused for a blocked name.
    */
@@ -5573,7 +5572,7 @@ export const Methods = {
   /** The providers an engine takes keys for (Caveman engine), for Settings > Models & keys. */
   "engine.providers": m({ engine: EngineId }, S({ providers: Schema.Array(EngineProvider) })),
   /**
-   * Settings > Models & keys > Web search: the Caveman engine's web tool keys (docs/design/web-tools.md), never their
+   * Settings > Models & keys > Web search: the Caveman engine's web tool keys, never their
    * values. `credits`: Caveman credits are on, so searches run on them, at cost, when no own key answers. web.keys.* is
    * owner only, as secret.* (forbidden otherwise).
    */
@@ -6843,7 +6842,7 @@ export const Methods = {
 
   /**
    * Finished turns as anonymous telemetry, for the desktop app to send when the person has it on
-   * (docs/design/turn-telemetry-2026-11-07/SPEC.md). Only this computer's own screen may ask: forbidden otherwise.
+   *. Only this computer's own screen may ask: forbidden otherwise.
    * `since`: when the disclosure naming turn stats showed; turns that started before it are never counted, and a new
    * `since` drops what waited from an older one. `ack`: the highest `seq` delivered; those leave the outbox (asking
    * again with the same `ack` changes nothing). The facts come in `seq` order, the unacknowledged ones again until
