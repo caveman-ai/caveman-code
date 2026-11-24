@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/clientPolicy.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/clientPolicy.test.ts @ ab3a3cd1.
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { assert, describe, it } from "@effect/vitest";

@@ -935,7 +935,7 @@ describe("CavemanAdapterV2", () => {
     }).pipe(Effect.scoped, Effect.provide(layer)),
   );
 
-  // Founder ruling 2026-10-17: Auto routes over exactly what is connected, across providers, and never anything else.
+  // Auto routes over exactly what is connected, across providers, and never anything else.
   const cloudAnswering = (model: string) => {
     const calls: Array<{ models: Array<string>; pool: Array<{ id: string; model: string }>; ask: { text: string }; request: { effort: string } }> = [];
     const routeFetch = (async (_url, init) => {

@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/protocol.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/protocol.ts @ ab3a3cd1.
 import type * as AcpCompat from "./compat.ts";
 import * as Cause from "effect/Cause";
 import * as Clock from "effect/Clock";

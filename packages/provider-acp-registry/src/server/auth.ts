@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/server/auth.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/server/auth.ts @ ab3a3cd1.
 import {
   ProviderSetupError,
   type ProviderAuthMethod,

@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/server/AcpRegistrySupport.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/server/AcpRegistrySupport.ts @ ab3a3cd1.
 import {
   ACP_REGISTRY_MAX_AGENTS,
   AcpRegistryOperationError,

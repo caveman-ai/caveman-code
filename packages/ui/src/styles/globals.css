@@ -555,7 +555,7 @@
   /* Keys (STYLE.md 5): the send key's physical treatment, shared by the
      composer's keys, <Button> default and secondary, <Keycap> and the switch.
      Lit from above: a lit top edge, a shaded bottom edge and a hairline,
-     all inside its own shape; no drop shadow under it (founder 2026-11-13).
+     all inside its own shape; no drop shadow under it.
      Pressed, the key sinks a pixel, shrinks to --key-press and shades from
      the top inside in 60 ms. Tones: rest (a key with nothing to do), lit (the white
      key), card (one step above what it sits on), ghost (no surface until

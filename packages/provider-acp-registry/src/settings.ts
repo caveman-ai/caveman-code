@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/settings.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/settings.ts @ ab3a3cd1.
 /**
  * ACP Registry instance settings. Shared by the server driver and the client
  * settings form, so it holds only browser-safe schema code.

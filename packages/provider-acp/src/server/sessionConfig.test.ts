@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/sessionConfig.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/sessionConfig.test.ts @ ab3a3cd1.
 import { describe, expect, it } from "@effect/vitest";
 
 import { ACP_SESSION_MODE_OPTION_ID, acpProviderOptionDescriptors } from "./sessionConfig.ts";

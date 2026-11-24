@@ -262,7 +262,7 @@ test("a model starts where the person pinned it, else at an effort saved with it
   expect(withModelStart(starts, "claude-agent", opus, { effort: "medium", speed: "standard" })).toEqual({ "claude-agent/claude-opus-5-5": { effort: "medium", speed: "standard" } });
 });
 
-test("a pick the chat now runs is dropped, so the box follows changes made on other devices (T3 Code #20886)", () => {
+test("a pick the chat now runs is dropped, so the box follows changes made on other devices", () => {
   const picked = { model: "opus", effort: "high", access: "ask" as const };
   // The chat now runs it: the box follows the chat again, keeping its other picks.
   expect(settledPick(picked, "opus", "high")).toEqual({ access: "ask" });

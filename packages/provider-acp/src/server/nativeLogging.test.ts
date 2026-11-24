@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/nativeLogging.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/nativeLogging.test.ts @ ab3a3cd1.
 import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import * as Layer from "effect/Layer";

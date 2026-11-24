@@ -45,7 +45,7 @@ test("another chat's agent's message shows its first line, folded, and names who
   expect(html).not.toContain("drops the index");
 });
 
-test("a scheduled task's prompt folds the same way, titled by its task (T3 Code #22638)", () => {
+test("a scheduled task's prompt folds the same way, titled by its task", () => {
   cursor = 0;
   const prompt = "Triage the inbox\n\nLabel every new issue and close duplicates.";
   const html = render([ev("message.done", { role: "user", text: prompt, scheduled_task: { task_id: "task-1", title: "Nightly triage" } }, { item_id: "u1" })]);

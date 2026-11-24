@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/server/devinAcp.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/server/devinAcp.ts @ ab3a3cd1.
 import type * as AcpSchema from "@caveman-app/effect-acp/compat";
 import type { AcpToolCallState } from "@caveman-app/provider-acp/server/runtimeModel";
 import type { AcpAdapterV2SubagentUpdate } from "@caveman-app/provider-acp/server/adapter";

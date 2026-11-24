@@ -45,7 +45,7 @@ export const RefOrCheckpoint = Schema.String.check(
 
 export const EngineId = Schema.Union([
   Schema.Literals(["caveman", "claude-agent", "codex"]),
-  // T3 Code harnesses (packages/provider-<id>): one engine per driver, its accounts the driver's instances.
+  // upstream harnesses (packages/provider-<id>): one engine per driver, its accounts the driver's instances.
   Schema.Literals(["cursor", "opencode", "muse", "grok", "pi", "antigravity"]),
   Schema.TemplateLiteral(["acp:", Schema.String]),
 ]).annotate({ identifier: "EngineId" });
@@ -250,7 +250,7 @@ export const WorkspacePreview = Schema.Struct({
 export type WorkspacePreview = typeof WorkspacePreview.Type;
 
 /**
- * Where a chat stands in the person's inbox, kept on its engine thread by T3 Code's settlement, snooze, pin and
+ * Where a chat stands in the person's inbox, kept on its engine thread by upstream settlement, snooze, pin and
  * visit state, so every client of the runtime agrees. Empty keys are left out; a chat never touched has none.
  */
 export const WorkspaceInbox = Schema.Struct({
@@ -467,7 +467,7 @@ export const Workspace = Schema.Struct({
 export type Workspace = typeof Workspace.Type;
 
 /**
- * Permissions: what the engine may do without asking, T3 Code's runtime
+ * Permissions: what the engine may do without asking, upstream runtime
  * modes. ask (Supervised): approvals for commands and file changes. auto
  * (Auto-accept edits): edits go through, other actions can still ask. review
  * (Auto): the engine's own automatic review approves routine actions and asks
@@ -1445,7 +1445,7 @@ const SubagentSettings = Schema.Struct({
 
 /**
  * Settings > Models & keys > Claude Agent: when an idle Claude Agent chat over 200,000 tokens of context is compacted
- * (T3 Code's compactIdleThreads, which the runtime's idle compaction and Claude's resume prompt read). on_return:
+ * (upstream compactIdleThreads, which the runtime's idle compaction and Claude's resume prompt read). on_return:
  * Claude offers to compact when you come back to the chat, the default. before_cache_expires (beta): the runtime sends
  * /compact as a visible turn shortly before the chat's prompt cache expires, so coming back reads the short summary
  * from cache instead of the whole chat uncached. off: never, and Claude's resume prompt is skipped. settings.get
@@ -1468,7 +1468,7 @@ export const SnoozeOption = Schema.Union([
 export type SnoozeOption = typeof SnoozeOption.Type;
 
 /**
- * Settings > General > Inbox: when the runtime marks a chat done by itself (T3 Code's auto-settle, which keeps
+ * Settings > General > Inbox: when the runtime marks a chat done by itself (upstream auto-settle, which keeps
  * them in its settings; a pinned chat, one that asks something, works or waits never is), and when it archives
  * one that stayed done. settings.get reports the values in force.
  */
@@ -1480,7 +1480,7 @@ const InboxSettings = Schema.Struct({
   /** The quiet days never mark a chat with a pull request done (its merge or close still does). Default off. */
   inbox_keep_pull_requests: optionalKey(Schema.Boolean),
   /**
-   * The Snooze menu's choices, up to 8 (T3 Code's snoozePresets): `after` wakes that many minutes from the pick
+   * The Snooze menu's choices, up to 8 (upstream snoozePresets): `after` wakes that many minutes from the pick
    * (1 to 30 days), `at` wakes at a local `HH:MM` on `today`, `tomorrow` or the next given weekday. Default: 1 hour,
    * 3 hours, today 18:00, tomorrow 09:00, Monday 09:00.
    */

@@ -2030,8 +2030,7 @@ function ProjectFolder({
             <div className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2"><FoldTile open={open} label={`${open ? "Hide" : "Show"} ${project.name}'s chats`} onToggle={onToggle} /></div>
             <div className="relative flex shrink-0 items-center pr-1">
               {/* At rest, over the name's end, only while folded: its chats' state, else the amber dot while the project
-                  waits on you, so what needs the person stays in sight. Unfolded, its chats show their own (the founder,
-                  2026-11-15: "if the chat is expanded, do not show the status"). Hovered (or focused, or its menu open),
+                  waits on you, so what needs the person stays in sight. Unfolded, its chats show their own. Hovered (or focused, or its menu open),
                   New chat comes over it instead, the existing raised key. */}
               {shut || (waits && !open) ? (
                 <div className={cn("pointer-events-none absolute right-full top-0 flex h-full items-center pr-0.5", ON_ROW_HIDE)}>

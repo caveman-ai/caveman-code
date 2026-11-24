@@ -1,7 +1,6 @@
 // A NEW chat started in Cloud on a project whose computer is not up yet (CONTRACT §6.8), timed from Send: when Cloud
 // has placed it, when the computer's runtime is linked, when the chat's first event exists, and when the first token
-// of the answer arrives. The same step the founder's story measures on the real stack (founderStory.e2e.test.ts,
-// "9_new_chat_in_cloud"); here against the stand-in Cloud, a round trip away (FAR_MS), with a real Cloud computer's
+// of the answer arrives. The same step the founder's story measures on the real stack; here against the stand-in Cloud, a round trip away (FAR_MS), with a real Cloud computer's
 // runtime in this process and the stand-in Claude CLI (no model). The stand-in has no machine to boot: its "computer"
 // is the runtime starting, so what this measures is the runtime's own part (its start-up, its link, the start it
 // takes from Cloud's queue, the first turn), not a VM's. Printed, and written to CAVEMAN_NEW_CHAT_RESULTS when set.

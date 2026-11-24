@@ -28,7 +28,7 @@ it.effect("maps Bitbucket PR summaries into provider-neutral change requests", (
         decodePullRequest({
           id: 42,
           title: "Add Bitbucket provider",
-          links: { html: { href: "https://bitbucket.org/pingdotgg/t3code/pull-requests/42" } },
+          links: { html: { href: "https://bitbucket.org/acme/example-app/pull-requests/42" } },
           source: {
             branch: { name: "feature/source-control" },
             commit: { hash: "a".repeat(40) },
@@ -36,7 +36,7 @@ it.effect("maps Bitbucket PR summaries into provider-neutral change requests", (
           },
           destination: {
             branch: { name: "main" },
-            repository: { full_name: "pingdotgg/t3code" },
+            repository: { full_name: "acme/example-app" },
           },
           state: "OPEN",
         }).pipe(Effect.orDie, Effect.map(normalizeBitbucketPullRequestRecord)),
@@ -51,7 +51,7 @@ it.effect("maps Bitbucket PR summaries into provider-neutral change requests", (
       provider: SourceControlProviderKind.make("bitbucket"),
       number: 42,
       title: "Add Bitbucket provider",
-      url: "https://bitbucket.org/pingdotgg/t3code/pull-requests/42",
+      url: "https://bitbucket.org/acme/example-app/pull-requests/42",
       baseRefName: "main",
       headRefName: "feature/source-control",
       headSha: "a".repeat(40),

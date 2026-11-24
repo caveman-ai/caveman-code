@@ -3160,7 +3160,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
           commandId: CommandId.make(`branch-pr-link-${index}`),
           threadId,
           host: "GitHub.com",
-          repository: "Pingdotgg/T3code",
+          repository: "acme/example-app",
           number,
           url: `upstream`,
           source: "manual",
@@ -3215,7 +3215,7 @@ it.layer(layerTest)("OrchestrationV2LayerLive lifecycle", (it) => {
         branch: null,
         worktreePath: null,
       });
-      const key = { host: "GitHub.com", repository: "Pingdotgg/T3code" };
+      const key = { host: "GitHub.com", repository: "acme/example-app" };
       for (const number of [1, 2]) {
         yield* orchestrator.dispatch({
           type: "thread.pull-request.link",

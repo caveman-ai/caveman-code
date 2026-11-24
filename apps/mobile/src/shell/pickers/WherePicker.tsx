@@ -9,8 +9,7 @@
 // what you typed. Then the places, each by its kind's glyph and its name; one that can't take the project says why
 // and can't be picked, and a project one can't take moves to one that can. A row says
 // one thing under its name, the repository or else the folder, so nothing wraps. A pick (a project, one added from the
-// search, a computer) is the answer: the sheet closes and you're back in the box with the keyboard up (the founder,
-// 2026-11-07: "when you click on a repo or environment it should auto go back to the chat box"); the X or a swipe
+// search, a computer) is the answer: the sheet closes and you're back in the box with the keyboard up; the X or a swipe
 // closes it without one.
 //
 // Opened from the computer's chip (`focus` "computer"), the computers lead, the one in use checked, and the projects

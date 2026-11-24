@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/_internal/stdio.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/_internal/stdio.ts @ ab3a3cd1.
 import * as Queue from "effect/Queue";
 import * as Stream from "effect/Stream";
 import * as Cause from "effect/Cause";

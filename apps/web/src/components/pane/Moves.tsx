@@ -925,8 +925,7 @@ export function CloudLoginNotice({ client, workspace }: { client: Client; worksp
 /**
  * The person kept this Mac's versions of what one return held back, on this device: that hold, by its commit (F-6), so
  * a later return that holds the same paths under a new commit shows the card again. A runtime from before commits: by
- * its paths. Keep is this device's word only: the held ref stays for a later review or git (the founder's open call on
- * what Keep means; the safe default loses nothing).
+ * its paths. Keep is this device's word only: the held ref stays for a later review or git.
  */
 const KEPT_KEY = (sessionId: string, held: Pick<Held, "paths" | "commit">) => `caveman:moves:held-kept:${sessionId}:${held.commit ?? held.paths.join("\n")}`;
 /** Whether the person kept this Mac's versions of exactly this hold here (KEPT_KEY). */

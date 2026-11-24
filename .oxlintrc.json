@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  // T3 Code's lint (its vite.config.ts `lint` block, origin/main 67eebaca23), minus its product-specific rules.
+  // upstream lint (its vite.config.ts `lint` block, origin/main 67eebaca23), minus its product-specific rules.
   // `pnpm lint` fails on errors only. A rule set to "warn" still finds real problems but fires too often here to
   // fix in one change; check:changed prints its warnings for the files a branch touches. The count after each
   // "warn" or "off" is how often the rule fired on 2026-11-09: turn one back to "error" once its count is zero.
@@ -11,10 +11,10 @@
     "suspicious": "error",
     "perf": "error"
   },
-  // T3 Code also reports unused disable directives. Not yet here: 41 name a rule that is off here (most of them
+  // upstream also reports unused disable directives. Not yet here: 41 name a rule that is off here (most of them
   // react-hooks/exhaustive-deps, no-control-regex, or a t3code rule in ported code).
   "rules": {
-    // Off in T3 Code too.
+    // Off in upstream too.
     "eslint/no-control-regex": "off",
     "eslint/no-await-in-loop": "off",
     "eslint/no-shadow": "off",
@@ -34,7 +34,7 @@
     "react/no-object-type-as-default-prop": "off",
     "react/react-in-jsx-scope": "off",
 
-    // On in T3 Code.
+    // On in upstream.
     "eslint/no-empty-pattern": "error",
     "eslint/no-unneeded-ternary": "error",
     "eslint/no-unsafe-optional-chaining": "error",

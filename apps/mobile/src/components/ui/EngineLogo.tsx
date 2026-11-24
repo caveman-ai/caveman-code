@@ -52,7 +52,7 @@ export function engineBrand(engine: string): BrandName | undefined {
  * The harness logo at `size`: the vendor's mark, or the pixel bust or tile. Pixel art stays crisp only at 16 and 32,
  * so give a pixel logo one of those; a vendor mark draws at any size (14 in a chip, 16 in a row, 20 in a sheet).
  */
-export function EngineLogo({ engine, size = 16, label, color, colour = true }: { engine: string; size?: number; label?: string; color?: string; /** The vendor's own colours, as every logo now wears them (founder, 2026-11-07: "no more monochrome logos"); off draws the mark in one ink. */ colour?: boolean }) {
+export function EngineLogo({ engine, size = 16, label, color, colour = true }: { engine: string; size?: number; label?: string; color?: string; /** The vendor's own colours, as every logo now wears them; off draws the mark in one ink. */ colour?: boolean }) {
   const { c } = useTheme();
   const brand = engineBrand(engine);
   if (brand) return <BrandMark name={brand} size={size} label={label} color={color} mono={!colour} />;

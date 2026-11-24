@@ -46,11 +46,18 @@ const FORBIDDEN_CONTENT = [
   ['Caveman-Cloud', /\bCaveman-Cloud\b/],
   ['caveman-code-app', /\bcaveman-code-app\b/],
   ['agent-sdk-private', /\bagent-sdk-private\b/],
-  ['local-user-path', /\/Users\/julb\b/],
+  ['caveman-site', /\bcaveman-site\b/],
+  ['caveman-model-research', /\bcaveman-model-research\b/],
+  ['caveman-v5-staging', /\bcaveman-v5-staging\b/],
+  ['local-user-path', /\/Users\/(?:julb|julius)\b/],
   ['vendor-tgz', /vendor\/caveman-ai-/],
-  ['internal-design-doc', /\bdocs\/(design\/|decisions\/|WHY\.md)/],
+  ['internal-design-doc', /\bdocs\/(design\/|decisions\/|WHY\.md|implementation\/)/],
+  ['founder-note', /\((?:the\s+)?founder\b|\bfounder\s+(?:ruling|call)\b/i],
+  ['internal-handle', /["']masa["']/],
+  ['upstream-slug-leak', /\bpingdotgg\/t3code\b|\bt3code-ref\b/i],
   ['competitor-capy', /\bcapy\b/i],
   ['competitor-monocode', /\bmonocode\b/i],
+  ['competitor-eval-obs', /\b(Headroom|Braintrust|LangSmith|Helicone|Portkey|PromptLayer|Humanloop|Daytona|E2B|Martian|Promptfoo|DeepEval|Ragas|langevals|Runloop|Blaxel|boat\.dev)\b/i],
 ];
 
 function scan(dir) {
@@ -63,7 +70,7 @@ function scan(dir) {
       continue;
     }
     if (rel === 'scripts/verify-clean-room.mjs' || rel === 'THIRD_PARTY_NOTICES.md' || rel === 'NOTICE' || rel === 'apps/cli/THIRD_PARTY_NOTICES.md' || rel === 'apps/cli/NOTICE') continue;
-    if (/\.(png|jpg|jpeg|gif|ico|woff2?|ttf|wasm|pdf|zip|gz|tgz|icns|svg|lock)$/i.test(ent.name) || ent.name === 'pnpm-lock.yaml') continue;
+    if (/\.(png|jpg|jpeg|gif|webp|ico|woff2?|ttf|wasm|pdf|zip|gz|tgz|icns|svg|lock)$/i.test(ent.name) || ent.name === 'pnpm-lock.yaml') continue;
     let text;
     try {
       if (statSync(full).size > 1_000_000) continue;

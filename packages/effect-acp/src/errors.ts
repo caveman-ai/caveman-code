@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/errors.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/errors.ts @ ab3a3cd1.
 import * as Schema from "effect/Schema";
 import * as SchemaAST from "effect/SchemaAST";
 import type * as SchemaIssue from "effect/SchemaIssue";

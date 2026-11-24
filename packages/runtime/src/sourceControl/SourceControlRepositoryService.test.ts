@@ -263,7 +263,7 @@ it.effect("keeps arbitrary Bitbucket request failures out of the repository mess
       const error = yield* Effect.flip(
         service.lookupRepository({
           provider: SourceControlProviderKind.make("bitbucket"),
-          repository: "pingdotgg/t3code",
+          repository: "acme/example-app",
           cwd: "/workspace",
         }),
       );

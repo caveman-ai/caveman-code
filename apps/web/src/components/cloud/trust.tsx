@@ -1,5 +1,4 @@
-// What Caveman Cloud holds for you, and the switches that decide it (founder
-// 2026-10-17, TRUST + SECURITY). Settings sync by themselves and carry no
+// What Caveman Cloud holds for you, and the switches that decide it. Settings sync by themselves and carry no
 // values; secret values leave This Mac only for a repository or server you
 // turned on, and turning it off deletes Cloud's copy; connector sign-ins are
 // made with Cloud and kept there. Every surface here says that plainly.

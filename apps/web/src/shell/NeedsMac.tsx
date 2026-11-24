@@ -1,6 +1,5 @@
 // What a browser window shows for a page the person's Mac answers (the Chief, Plugins, Automations) while it has no
-// computer behind it: the page's own bar, then where the thing is and the one step that brings it here (founder
-// 2026-11-12: with those rows hidden and nothing said, the web "feels like stuff just doesn't work"). After Caveman
+// computer behind it: the page's own bar, then where the thing is and the one step that brings it here. After Caveman
 // Cloud's first-run empty states (its EmptyHero): what the page is for, where it sits in the chain that feeds it, and
 // the next action first. In our own look: the page-level empty state (STYLE.md section 4).
 import { Button } from "@caveman-app/ui/components/button";

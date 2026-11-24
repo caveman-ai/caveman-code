@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/rpc.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/rpc.ts @ ab3a3cd1.
 import * as AcpCompat from "./compat.ts";
 import * as Rpc from "effect/rpc/Rpc";
 import * as RpcGroup from "effect/rpc/RpcGroup";

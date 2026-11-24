@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/test/fixtures/acp-mock-peer.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/test/fixtures/acp-mock-peer.ts @ ab3a3cd1.
 import * as Effect from "effect/Effect";
 import * as Layer from "effect/Layer";
 

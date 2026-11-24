@@ -1092,7 +1092,7 @@ owners:
 
 # Session protocol v1
 
-The runtime speaks **one protocol** to every client. Messages are JSON lines, and each carries a \`seq\` so a client that reconnects can [resume where it left off](#resume). The shape follows [T3 Code](https://github.com/pingdotgg/t3code), then goes further where we need it.
+The runtime speaks **one protocol** to every client. Messages are JSON lines, and each carries a \`seq\` so a client that reconnects can [resume where it left off](#resume). The shape follows [upstream](https://github.com/acme/example-app), then goes further where we need it.
 
 > [!NOTE]
 > Tenant scope comes from verified auth, never from the payload.

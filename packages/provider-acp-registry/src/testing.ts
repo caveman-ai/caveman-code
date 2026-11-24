@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/testing.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/testing.ts @ ab3a3cd1.
 /**
  * ACP Registry internals the server's replay testkit and ACP adapter tests
  * drive directly.

@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/adapter.ts @ ab3a3cd1; perf from 0e40614ad5.
+// Ported from upstream (MIT), packages/provider-acp/src/server/adapter.ts @ ab3a3cd1; perf from 0e40614ad5.
 // @effect-diagnostics nodeBuiltinImport:off
 
 import {

@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/client.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/client.test.ts @ ab3a3cd1.
 import * as Path from "effect/Path";
 import * as Cause from "effect/Cause";
 import * as Deferred from "effect/Deferred";

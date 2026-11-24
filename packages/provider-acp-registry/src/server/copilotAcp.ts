@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/server/copilotAcp.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/server/copilotAcp.ts @ ab3a3cd1.
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import type * as AcpSchema from "@caveman-app/effect-acp/compat";

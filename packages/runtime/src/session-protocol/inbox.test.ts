@@ -240,7 +240,7 @@ test("Review's settings are T3's review guide settings, never saved in the runti
   await client.call("settings.set", { request_id: "review-settings-on", settings: { review_guides: true } });
 });
 
-test("the Snooze menu's choices are T3's snoozePresets, never saved in the runtime's own (T3 Code #26208)", async () => {
+test("the Snooze menu's choices are T3's snoozePresets, never saved in the runtime's own", async () => {
   expect(await client.call("settings.get", {})).toMatchObject({
     inbox_snooze_options: [
       { kind: "after", minutes: 60 },
@@ -267,7 +267,7 @@ test("the Snooze menu's choices are T3's snoozePresets, never saved in the runti
   expect(await client.call("settings.get", {})).toMatchObject({ inbox_snooze_options: [] });
 });
 
-test("how chats are named is T3's thread title instructions, never saved in the runtime's own (T3 Code #21882)", async () => {
+test("how chats are named is T3's thread title instructions, never saved in the runtime's own", async () => {
   expect(await client.call("settings.get", {})).toMatchObject({ thread_title_instructions: "" });
   const next = await client.call("settings.set", { request_id: "title-instructions", settings: { thread_title_instructions: "  Two to four words.  " } });
   expect(next).toMatchObject({ thread_title_instructions: "Two to four words." });

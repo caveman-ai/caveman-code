@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/stderr.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/stderr.ts @ ab3a3cd1.
 /** Last few KiB of ACP child stderr kept for startup / exit diagnostics. */
 export const ACP_STDERR_TAIL_MAX_CHARS = 4_096;
 

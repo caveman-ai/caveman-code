@@ -773,7 +773,7 @@ export const layer = Layer.effect(
           updated_at = excluded.updated_at,
           -- Keep a next_run_at (and the scheduled run count) that a finishing run
           -- moved during this save, unless another edit changed the schedule or
-          -- enabled state meanwhile. Ports T3 Code 4ac97be2b6 (#28104).
+          -- enabled state meanwhile. Ports upstream 4ac97be2b6 (#28104).
           next_run_at = CASE
             WHEN ${keptSchedule === null ? 0 : 1} = 1
               AND scheduled_tasks.schedule_json IN (

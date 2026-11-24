@@ -1,7 +1,6 @@
 /**
  * The runtime's tools the Caveman engine sees declared beside its surface instead of only from programs and exec
- * cells: the few that wait on another agent or a person, which a program's time limit would cut off (founder ruling
- * 2026-10-16: direct basics, a few host-declared waiting tools), and the two that answer with a screenshot, which a
+ * cells: the few that wait on another agent or a person, which a program's time limit would cut off, and the two that answer with a screenshot, which a
  * program can only print as text. The runtime owns their MCP servers and sets this.
  *
  * @module provider-caveman/server/runtimeTools

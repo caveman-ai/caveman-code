@@ -1,5 +1,4 @@
-// The left edge is Back's (the founder: "add proper left safe zones to the side of the phone so swiping can take you
-// back easily"). On a pushed screen a swipe that starts in the strip along the left edge always goes back: the stack's
+// The left edge is Back's. On a pushed screen a swipe that starts in the strip along the left edge always goes back: the stack's
 // own back swipe takes it there (nav/Navigator.tsx), and every horizontal swipe of ours inside the content (a row's
 // actions, a card's Allow and Deny, the thread's dock) lets a touch that starts in the strip go at once instead of
 // racing the stack for it. Out of the strip they keep their swipes, as Mail's rows do.

@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/nativeLogging.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/nativeLogging.ts @ ab3a3cd1.
 import type { ProviderDriverKind, ThreadId } from "@caveman-app/protocol";
 import { causeErrorTag, errorTag } from "@caveman-app/shared/observability";
 import * as Cause from "effect/Cause";

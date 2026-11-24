@@ -68,7 +68,7 @@ layer("050_ProjectionThreadPullRequests", (it) => {
             'project-1',
             'GitHub link',
             '{"instanceId":"codex","model":"gpt-5.4"}',
-            '{"projectId":"project-1","repository":"PingDotGG/T3Code","number":42,"url":"https://GitHub.com/pingdotgg/t3code/pull/42"}',
+            '{"projectId":"project-1","repository":"acme/example-app","number":42,"url":"https://GitHub.com/acme/example-app/pull/42"}',
             '2026-03-01T00:00:01.000Z',
             '2026-03-02T00:00:00.000Z'
           ),
@@ -133,9 +133,9 @@ layer("050_ProjectionThreadPullRequests", (it) => {
         {
           threadId: "thread-github",
           host: "github.com",
-          repository: "pingdotgg/t3code",
+          repository: "acme/example-app",
           number: 42,
-          url: "https://GitHub.com/pingdotgg/t3code/pull/42",
+          url: "https://GitHub.com/acme/example-app/pull/42",
           source: "manual",
           linkedAt: "2026-03-02T00:00:00.000Z",
           snapshotJson: null,

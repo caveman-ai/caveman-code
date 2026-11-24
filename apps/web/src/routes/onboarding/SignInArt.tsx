@@ -1,5 +1,5 @@
 // The sign-in page's picture: the app itself (a new chat), a window cut off by the panel's right and bottom edges, in front of the
-// Caveman site's dusk (caveman-site-launch public/hero/cave-dusk.png: the volcano, the clouds, the monolith). Embers
+// Caveman site's dusk (docs-site-assets public/hero/cave-dusk.png: the volcano, the clouds, the monolith). Embers
 // rise behind the window into the sky and the dusk leans a little away from the pointer. Reduced motion: the still
 // picture. docs/ "1. Sign in".
 

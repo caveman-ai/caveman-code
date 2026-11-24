@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/runtimeModel.test.ts @ ab3a3cd1; perf from 9d4038f731.
+// Ported from upstream (MIT), packages/provider-acp/src/server/runtimeModel.test.ts @ ab3a3cd1; perf from 9d4038f731.
 import { describe, expect, it } from "vitest";
 
 import type * as EffectAcpSchema from "@caveman-app/effect-acp/compat";

@@ -910,10 +910,10 @@ describe("projectsSection", () => {
       "- caveman-code (caveman-repo:aaa): path /Users/me/code/caveman-code; remote git@github.com:caveman-ai/caveman-code.git. The app. Languages: TypeScript 90%. Areas: packages/runtime (chief).\n" +
         "A note that names work in a repository that is no source of these projects: offer once, in one line, that the person add it as a source in a project's settings, so chats can work there. Adding it is theirs. Never offer it again for that repository, and start nothing there until it is a source.",
     );
-    const site = { id: "caveman-repo:ccc", name: "caveman-site", path: "/Users/me/Desktop/GitHub/caveman-site", description: "The marketing site" };
+    const site = { id: "caveman-repo:ccc", name: "docs-site", path: "/Users/me/Desktop/GitHub/docs-site", description: "The marketing site" };
     const both = projectsSection([app, site], [], true);
     expect(both.split("\n")[0]).toBe("Every project, new ones too:");
-    expect(both).toContain("- caveman-site (caveman-repo:ccc): path /Users/me/Desktop/GitHub/caveman-site; The marketing site.");
+    expect(both).toContain("- docs-site (caveman-repo:ccc): path /Users/me/Desktop/GitHub/docs-site; The marketing site.");
     expect(both).toContain("Two projects can share a name: pick by path or remote, and name the project by its id.");
     // A second clone of a repository says so, instead of its profile again.
     expect(projectsSection([app, { ...app, id: "caveman-repo:bbb", path: "/tmp/caveman-code" }])).toContain("- caveman-code (caveman-repo:bbb): path /tmp/caveman-code; remote git@github.com:caveman-ai/caveman-code.git. Another clone of caveman-code (caveman-repo:aaa).");
@@ -969,18 +969,18 @@ describe("projectEvidence", () => {
   const projects = [
     { id: "caveman-repo:aaa", name: "caveman-code", path: "/Users/me/code/caveman-code" },
     { id: "caveman-repo:bbb", name: "caveman-code", path: "/Users/me/Desktop/GitHub/caveman-code" },
-    { id: "caveman-repo:ccc", name: "caveman-site", path: "/Users/me/Desktop/GitHub/caveman-site" },
+    { id: "caveman-repo:ccc", name: "docs-site", path: "/Users/me/Desktop/GitHub/docs-site" },
     { id: "caveman-repo:ddd", name: "app", path: "/Users/me/Desktop/GitHub/app" },
   ];
   const files: Record<string, ReadonlyArray<string>> = {
     "/Users/me/code/caveman-code": ["README.md", "docs/chief.md", "packages/runtime/src/chief/prompt.ts"],
     "/Users/me/Desktop/GitHub/caveman-code": ["README.md", "docs/chief.md"],
-    "/Users/me/Desktop/GitHub/caveman-site": ["README.md", "src/pages/index.astro"],
+    "/Users/me/Desktop/GitHub/docs-site": ["README.md", "src/pages/index.astro"],
     "/Users/me/Desktop/GitHub/app": ["README.md"],
   };
   const exists = (root: string, relative: string) => (files[root] ?? []).includes(relative);
   test("a unique name, a path tail, or a file that exists in one project each point at it; a namesake never matches by name", () => {
-    expect(projectEvidence(projects, "fix the hero on caveman-site", exists)).toEqual([{ id: "caveman-repo:ccc", name: "caveman-site", reasons: ["named caveman-site"] }]);
+    expect(projectEvidence(projects, "fix the hero on docs-site", exists)).toEqual([{ id: "caveman-repo:ccc", name: "docs-site", reasons: ["named docs-site"] }]);
     // Two projects are called caveman-code: the name alone settles nothing.
     expect(projectEvidence(projects, "a chief fix in caveman-code", exists)).toEqual([]);
     expect(projectEvidence(projects, "the one in code/caveman-code", exists)).toEqual([{ id: "caveman-repo:aaa", name: "caveman-code", reasons: ["its path /Users/me/code/caveman-code"] }]);
@@ -1007,7 +1007,7 @@ describe("projectEvidence", () => {
   });
   test("the chat on their screen counts, reasons add up, and one project with evidence is clear", () => {
     const evidence = evidenceOf(projects, "make the index page bigger (src/pages/index.astro)", exists, "caveman-repo:ccc");
-    expect(evidence).toEqual([{ id: "caveman-repo:ccc", name: "caveman-site", reasons: ["has src/pages/index.astro", "the chat on their screen is there"], strong: true, score: 0, clones: [] }]);
+    expect(evidence).toEqual([{ id: "caveman-repo:ccc", name: "docs-site", reasons: ["has src/pages/index.astro", "the chat on their screen is there"], strong: true, score: 0, clones: [] }]);
     expect(clearProject(evidence)?.id).toBe("caveman-repo:ccc");
     expect(clearProject(evidenceOf(projects, "update docs/chief.md", exists))).toBeUndefined();
     expect(clearProject([])).toBeUndefined();

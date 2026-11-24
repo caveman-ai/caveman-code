@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/clientPolicy.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/clientPolicy.ts @ ab3a3cd1.
 // @effect-diagnostics nodeBuiltinImport:off
 import type { ProviderRequestKind, RuntimeMode } from "@caveman-app/protocol";
 import type * as EffectAcpSchema from "@caveman-app/effect-acp/compat";

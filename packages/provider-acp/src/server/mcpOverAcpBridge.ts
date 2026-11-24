@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/mcpOverAcpBridge.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/mcpOverAcpBridge.ts @ ab3a3cd1.
 // The bridge forwards opaque JSON-RPC values without interpreting their schemas.
 // @effect-diagnostics preferSchemaOverJson:off
 import * as Effect from "effect/Effect";

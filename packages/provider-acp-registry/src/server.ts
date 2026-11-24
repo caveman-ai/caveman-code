@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/server.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/server.ts @ ab3a3cd1.
 /**
  * ACP Registry's server entry: the driver and adapter driver the server
  * registers, the catalog layer it provides once, and the managed-binary

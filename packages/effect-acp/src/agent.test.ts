@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/agent.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/agent.test.ts @ ab3a3cd1.
 import * as Deferred from "effect/Deferred";
 import * as Effect from "effect/Effect";
 import * as Exit from "effect/Exit";

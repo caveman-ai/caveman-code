@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/compat.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/compat.ts @ ab3a3cd1.
 import * as Schema from "effect/Schema";
 import type * as V2 from "./_generated/schema.gen.ts";
 

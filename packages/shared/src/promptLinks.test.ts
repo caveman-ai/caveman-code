@@ -40,7 +40,7 @@ describe("sanitizeLinkedPrompt", () => {
 describe("parseNewThreadLink", () => {
   it("reads a shared prompt with its optional repository and model", () => {
     const result = parseNewThreadLink(
-      "?prompt=Rate+me&repo=https://github.com/pingdotgg/t3code.git&provider=Codex&model=gpt-5",
+      "?prompt=Rate+me&repo=https://github.com/acme/example-app.git&provider=Codex&model=gpt-5",
     );
     expect(result).toEqual({
       ok: true,
@@ -56,9 +56,9 @@ describe("parseNewThreadLink", () => {
 
   it("reads a pull request link, whose prompt is optional", () => {
     for (const pr of [
-      "pingdotgg/t3code/42",
-      "pingdotgg/t3code%2342",
-      "https://github.com/pingdotgg/t3code/pull/42/files",
+      "acme/example-app/42",
+      "acme/example-app%2342",
+      "https://github.com/acme/example-app/pull/42/files",
     ]) {
       expect(parseNewThreadLink(`?pr=${pr}`)).toEqual({
         ok: true,

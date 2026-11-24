@@ -2,8 +2,7 @@ import * as React from "react";
 import { cn } from "../lib/cn";
 
 /*
- * Effort: how hard the model thinks before it acts. One line at the foot of the model picker (founder
- * 2026-10-27: the old slider, cleaner): "Effort", a track with one stop per level the model offers, lowest on
+ * Effort: how hard the model thinks before it acts. One line at the foot of the model picker: "Effort", a track with one stop per level the model offers, lowest on
  * the left, and the level's name. The thumb is a notched pixel block that glides from stop to stop under the
  * pointer, the arrow keys or ←/→ from the picker's search; no free sliding between stops. The model chip names
  * the level beside the model.

@@ -80,7 +80,7 @@ it.effect("puts linked source control context in the Pi thread title prompt", ()
 
     const generated = yield* textGeneration.generateThreadTitle({
       cwd: process.cwd(),
-      message: "Review https://github.com/pingdotgg/t3code/pull/8588",
+      message: "Review https://github.com/acme/example-app/pull/8588",
       linkedContext: "Reset credits must route through the hub that owns the account.",
       modelSelection: createModelSelection(ProviderInstanceId.make("pi"), "default"),
     });

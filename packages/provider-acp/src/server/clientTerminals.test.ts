@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/clientTerminals.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/clientTerminals.test.ts @ ab3a3cd1.
 import * as NodeServices from "@effect/platform-node/NodeServices";
 import { describe, expect, it } from "@effect/vitest";
 import * as Deferred from "effect/Deferred";

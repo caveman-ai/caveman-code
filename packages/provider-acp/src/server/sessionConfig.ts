@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/sessionConfig.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/sessionConfig.ts @ ab3a3cd1.
 import type { ProviderOptionChoice, ProviderOptionDescriptor } from "@caveman-app/protocol";
 import type * as EffectAcpSchema from "@caveman-app/effect-acp/compat";
 

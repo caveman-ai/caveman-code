@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/coreRuntimeEvents.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/coreRuntimeEvents.ts @ ab3a3cd1.
 import {
   type RuntimeEventRawSource,
   RuntimeItemId,

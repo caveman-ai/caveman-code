@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-// Founder ruling 2026-10-17: Spaces became marketplaces and plugins; the words "space" and "drive" leave
+// Spaces became marketplaces and plugins; the words "space" and "drive" leave
 // the app's copy. This reads every source file's words people see (string literals with a space in them,
 // and JSX text) and fails on either word. Identifiers, method names and class names are not copy.
 import { readdirSync, readFileSync, statSync } from "node:fs";

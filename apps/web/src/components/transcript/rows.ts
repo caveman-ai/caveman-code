@@ -3,8 +3,7 @@
 // work log (apps/web/src/components/chat/MessagesTimeline.logic.ts): thoughts
 // and tool calls in a row are one work run. As in T3, a finished turn in a chat
 // reads as the person's message, one "Worked for 1m 12s" line and the answer:
-// the line holds the steps, the thoughts and the replies on the way (founder
-// 2026-11-18, "the in between details are not as important"). The Chief's
+// the line holds the steps, the thoughts and the replies on the way. The Chief's
 // turns fold only their work, never what it says: a Chief that answers, then
 // updates its items, then signs off showed only the sign-off.
 // What stays out of a fold: the answer, what the person said, asks, notices,

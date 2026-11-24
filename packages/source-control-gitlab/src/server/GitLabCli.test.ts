@@ -73,7 +73,7 @@ layer("GitLabCli.layer", (it) => {
             JSON.stringify({
               iid: 42,
               title: "Add MR thread creation",
-              web_url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/42",
+              web_url: "https://gitlab.com/acme/example-app/-/merge_requests/42",
               target_branch: "main",
               source_branch: "feature/mr-threads",
               sha: "a".repeat(40),
@@ -100,7 +100,7 @@ layer("GitLabCli.layer", (it) => {
       assert.deepStrictEqual(result, {
         number: 42,
         title: "Add MR thread creation",
-        url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/42",
+        url: "https://gitlab.com/acme/example-app/-/merge_requests/42",
         baseRefName: "main",
         headRefName: "feature/mr-threads",
         headSha: "a".repeat(40),
@@ -130,14 +130,14 @@ layer("GitLabCli.layer", (it) => {
               {
                 iid: 0,
                 title: "invalid",
-                web_url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/0",
+                web_url: "https://gitlab.com/acme/example-app/-/merge_requests/0",
                 target_branch: "main",
                 source_branch: "feature/invalid",
               },
               {
                 iid: 43,
                 title: "  Valid MR  ",
-                web_url: " https://gitlab.com/pingdotgg/t3code/-/merge_requests/43 ",
+                web_url: " https://gitlab.com/acme/example-app/-/merge_requests/43 ",
                 target_branch: " main ",
                 source_branch: " feature/mr-list ",
                 state: "merged",
@@ -161,7 +161,7 @@ layer("GitLabCli.layer", (it) => {
         {
           number: 43,
           title: "Valid MR",
-          url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/43",
+          url: "https://gitlab.com/acme/example-app/-/merge_requests/43",
           baseRefName: "main",
           headRefName: "feature/mr-list",
           state: "merged",
@@ -195,14 +195,14 @@ layer("GitLabCli.layer", (it) => {
     iid: 44,
     project_id: 100,
     title: "Fork MR",
-    web_url: "https://gitlab.com/pingdotgg/t3code/-/merge_requests/44",
+    web_url: "https://gitlab.com/acme/example-app/-/merge_requests/44",
     target_branch: "main",
     source_branch: "feature/fork",
     sha: "b".repeat(40),
     state: "opened",
     source_project_id: 101,
     target_project_id: 100,
-    references: { short: "!44", relative: "!44", full: "pingdotgg/t3code!44" },
+    references: { short: "!44", relative: "!44", full: "acme/example-app!44" },
     ...overrides,
   });
 

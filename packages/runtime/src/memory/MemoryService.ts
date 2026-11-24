@@ -1,5 +1,5 @@
 /**
- * Memory in the runtime (docs/memory.md, founder rulings 2026-10-16): one
+ * Memory in the runtime (docs/memory.md): one
  * store per account, a copy per session in the form each engine was trained
  * on, one commit path, and the Session Protocol's memory.* methods.
  *
@@ -62,7 +62,7 @@ import { alive, MemoryStore, metaOf, type NoteRow, type Operation, type WriterCo
 export interface MemorySettings {
   readonly enabled: boolean;
 }
-/** Founder ruling 2026-10-16: on unless the user turns it off. */
+/** on unless the user turns it off. */
 export const DEFAULT_MEMORY_SETTINGS: MemorySettings = { enabled: true };
 
 type Engine = "claude" | "codex" | "caveman" | "other";

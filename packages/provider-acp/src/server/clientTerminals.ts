@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/clientTerminals.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/clientTerminals.ts @ ab3a3cd1.
 import * as Deferred from "effect/Deferred";
 import * as Duration from "effect/Duration";
 import * as Effect from "effect/Effect";

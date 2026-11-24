@@ -4,8 +4,7 @@
 // Anthropic"), no rail. A row is 52pt: the model's vendor mark at 20, its name at 17, "Default" in grey where new
 // chats start on it, and a check on the chat's model. Your favorites lead the list. Older models wait behind one
 // "Older models" row at the foot, and search finds every model, older ones too. Effort is the slider under the list,
-// a stop for every level the model offers, and a model with a faster speed gets the bolt beside it (the founder,
-// 2026-11-06: "make effort a slider as well with a lightning icon next to it"). Nothing
+// a stop for every level the model offers, and a model with a faster speed gets the bolt beside it. Nothing
 // in a session says what a model costs (spend lives in Settings), so there are no price tiers and no smarts bars.
 // Arranging is behind the sheet's Edit: only then does each row offer its star and each favorite its handle, so a
 // fling down the list never moves a row. A row's long-press still names the model, stars it or makes it the default.

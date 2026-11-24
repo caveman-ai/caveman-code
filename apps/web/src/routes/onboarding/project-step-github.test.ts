@@ -86,7 +86,7 @@ test("an admin or an owner: Connect through Caveman stays, with the gh copy besi
 });
 
 test("a member with a gh login is not offered to use it through Caveman; an admin is", async () => {
-  const gh = { login: "masa", source: "gh" };
+  const gh = { login: "octocat", source: "gh" };
   const member = await row({ signed_in: true, role: "member", email: "a@b.c" }, gh);
   expect(member.textContent).toContain("From the GitHub CLI");
   expect(member.textContent).not.toContain("Use it on Cloud computers");

@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/mcpOverAcpBridge.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/mcpOverAcpBridge.test.ts @ ab3a3cd1.
 // The bridge intentionally treats MCP JSON-RPC messages as opaque JSON.
 import { describe, expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";

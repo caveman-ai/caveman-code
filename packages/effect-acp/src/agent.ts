@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/agent.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/agent.ts @ ab3a3cd1.
 import * as Context from "effect/Context";
 import * as Effect from "effect/Effect";
 import * as ErrorReporter from "effect/ErrorReporter";

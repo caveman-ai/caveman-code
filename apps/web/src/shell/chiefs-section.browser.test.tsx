@@ -1,5 +1,4 @@
-// The sidebar's Chiefs, in Chromium against the scripted runtime: a section of their own above Projects (the founder,
-// 2026-11-17), a row per Chief as a messenger lists a conversation: its name, when it last spoke, and "Working", its
+// The sidebar's Chiefs, in Chromium against the scripted runtime: a section of their own above Projects, a row per Chief as a messenger lists a conversation: its name, when it last spoke, and "Working", its
 // last reply or "No messages yet" under them. A click opens its page and fills the row; the amber dot says something
 // of its waits on you; + makes a blank or ready-made Chief and opens it at its name; ⋯ hides the list, kept on this
 // device.

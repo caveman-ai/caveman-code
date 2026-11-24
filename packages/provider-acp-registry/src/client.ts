@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/client.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/client.ts @ ab3a3cd1.
 /**
  * ACP Registry's client definition: settings form, label, and the registry
  * glyph clients fall back to while an agent's own icon loads.

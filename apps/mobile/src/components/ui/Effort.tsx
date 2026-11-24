@@ -11,8 +11,7 @@
 //
 // Beside the track, the bolt (the desktop's SpeedToggle): a quiet circle with the bolt in grey at standard, filled in
 // `speed` while a faster speed is on, two bolts at the fastest of two; a tap goes to the next speed and back to
-// standard after the fastest. A model with one speed shows it too, dimmed and inert (the founder asked for the bolt
-// beside the slider; the desktop hides it there).
+// standard after the fastest. A model with one speed shows it too, dimmed and inert.
 import { useEffect, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { GestureDetector, usePanGesture } from "react-native-gesture-handler";

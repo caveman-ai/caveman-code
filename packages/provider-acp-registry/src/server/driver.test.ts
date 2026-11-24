@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp-registry/src/server/driver.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp-registry/src/server/driver.test.ts @ ab3a3cd1.
 import { AcpRegistryOperationError, ProviderInstanceId } from "@caveman-app/protocol";
 import { AcpRegistrySettings } from "../settings.ts";
 import { describe, expect, it } from "@effect/vitest";

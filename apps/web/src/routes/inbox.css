@@ -11,7 +11,7 @@
 /* A Suggested chat the Chief just proposed (chief-cards.tsx Suggested, and its Queue row).
    While it is fresh (inbox-parts.tsx useFresh: a few seconds, or until you reach for it) it
    wears a warning ring and tint (chief-fresh); with motion on it fades in where it stands,
-   no rise, no scale and no bloom (founder 2026-10-23: nothing bounces). Under reduced motion
+   no rise, no scale and no bloom. Under reduced motion
    (pixel.css stops every animation) the ring and tint are the whole arrival. */
 .chief-suggested-in { animation: chief-suggested-in 200ms var(--ease-snap); }
 @keyframes chief-suggested-in { from { opacity: 0; } }

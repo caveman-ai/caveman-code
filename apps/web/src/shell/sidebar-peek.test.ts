@@ -29,7 +29,7 @@ test("a project's last activity is its newest chat or agent", () => {
 });
 
 test("a long path folds its middle folders and keeps its own", () => {
-  expect(fitPath("~/Desktop/GitHub/Caveman Cloud")).toBe("~/Desktop/GitHub/Caveman Cloud");
+  expect(fitPath("~/Desktop/GitHub/example-app")).toBe("~/Desktop/GitHub/example-app");
   expect(fitPath("~/Documents/work/clients/acme-industries/platform/sdk-python")).toBe("~/…/platform/sdk-python");
   expect(fitPath("C:\\Users\\me\\Documents\\work\\clients\\acme-industries\\platform\\sdk")).toBe("C:\\…\\acme-industries\\platform\\sdk");
   // A folder name longer than the card still shows whole; the line's own truncation takes over.

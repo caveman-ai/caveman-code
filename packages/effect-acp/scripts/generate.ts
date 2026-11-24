@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Ported from T3 Code (MIT), packages/effect-acp/scripts/generate.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/scripts/generate.ts @ ab3a3cd1.
 
 import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
 import * as NodeServices from "@effect/platform-node/NodeServices";
@@ -596,7 +596,7 @@ function generateSchemaEntries(definitions: Readonly<Record<string, Schema.Json>
 }
 
 const portedHeader = (file: string) =>
-  `// Ported from T3 Code (MIT), packages/effect-acp/src/_generated/${file} @ ab3a3cd1.`;
+  `// Ported from upstream (MIT), packages/effect-acp/src/_generated/${file} @ ab3a3cd1.`;
 
 function generateSchemaOutput(
   upstreamSchema: { readonly $defs: Readonly<Record<string, Schema.Json>> },

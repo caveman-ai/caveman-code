@@ -1,7 +1,7 @@
 /**
  * The one-time, consented import of Claude Agent's own memories
  * (`<CLAUDE_CONFIG_DIR>/projects/<sanitized cwd>/memory/*.md`) into the
- * store (docs/memory.md "How people see it"; founder ruling 2026-10-16).
+ * store (docs/memory.md "How people see it").
  * Every note comes in as a draft through the commit path (never told), so
  * none reaches a brief until the user pins or edits it. A
  * project folder is matched to a repository this account has opened by its

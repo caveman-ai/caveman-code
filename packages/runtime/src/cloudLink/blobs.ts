@@ -11,7 +11,7 @@ import { rawCall } from "./moves.ts";
 
 /** One chunk at most (Cloud MaxBlobChunk). */
 export const BLOB_CHUNK_BYTES = 8 * 1024 * 1024;
-/** One blob at most (Cloud MaxBlobBytes; founder call D4's default). Cloud cannot hold a writer to it; a reader does. */
+/** One blob at most (Cloud MaxBlobBytes). Cloud cannot hold a writer to it; a reader does. */
 export const BLOB_MAX_BYTES = 64 * 1024 * 1024;
 /** All of one chat's copy's chunks at most (Cloud MaxChatBlobBytes): what an adopt fetches at most. */
 export const BLOB_COPY_MAX_BYTES = 256 * 1024 * 1024;

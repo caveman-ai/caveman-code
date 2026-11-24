@@ -2474,9 +2474,9 @@ describe("orchestrator MCP toolkit", () => {
             const linked = {
               linkedPullRequest: {
                 projectId,
-                repository: "pingdotgg/t3code",
+                repository: "acme/example-app",
                 number: 8689,
-                url: "https://github.com/pingdotgg/t3code/pull/8689",
+                url: "https://github.com/acme/example-app/pull/8689",
               },
             };
             yield* orchestrator.dispatch({

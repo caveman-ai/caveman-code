@@ -50,7 +50,7 @@ describe("agents at work", () => {
     expect(agentsAtWork([sub("d", "running", [], { workspaceId: "w1" })], [chat("w1", "idle")])).toEqual([]);
   });
 
-  it("says what each is doing, and which step is newest (T3 Code #25299)", () => {
+  it("says what each is doing, and which step is newest", () => {
     const early = sub("e", "running", [tool("e1", "running", { verb: "Running", subject: "go test ./...", startedAt: "2026-10-17T10:00:05Z" })]);
     const late = sub("l", "running", [tool("l1", "running", { verb: "Reading", subject: "retry.go", startedAt: "2026-10-17T10:03:00Z" })]);
     const quiet = sub("q", "running", []);

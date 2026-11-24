@@ -165,8 +165,7 @@ const originOf = (url: string) => {
 };
 
 /**
- * The app's chats run through the app's own caveman-proxy (founder ruling
- * 2026-10-17) wherever they would reach the provider's own API, or the
+ * The app's chats run through the app's own caveman-proxy wherever they would reach the provider's own API, or the
  * person's own proxy (`caveman start`, whose mode is theirs): it records usage,
  * keeps the chosen model, and routes only Auto. Any other endpoint (a
  * company gateway, a cloud lane) is left as it is.

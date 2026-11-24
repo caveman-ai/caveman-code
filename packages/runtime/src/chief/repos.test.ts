@@ -90,7 +90,7 @@ describe("which repository a note means, from real checkouts", () => {
       { id: "repo:clone", name: "caveman-code", path: clone, lastChatAt: "2026-11-08T10:00:00Z" },
       { id: "repo:app", name: "caveman-code", path: app, lastChatAt: "2026-11-09T09:00:00Z" },
       { id: "repo:engine", name: "caveman-code", path: engine, lastChatAt: "2026-11-09T08:00:00Z" },
-      { id: "repo:site", name: "caveman-site", path: site },
+      { id: "repo:site", name: "docs-site", path: site },
     ];
     return Promise.all(base.map(async (p) => ({ ...p, ...repoFacts(p.path), profile: (await profiles(p.path))!, ...extra[p.id] })));
   };

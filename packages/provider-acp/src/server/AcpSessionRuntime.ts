@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/provider-acp/src/server/AcpSessionRuntime.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/provider-acp/src/server/AcpSessionRuntime.ts @ ab3a3cd1.
 // @effect-diagnostics nodeBuiltinImport:off
 import * as NodeCrypto from "node:crypto";
 import * as NodeFS from "node:fs";

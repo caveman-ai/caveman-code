@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/schema.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/schema.ts @ ab3a3cd1.
 export * from "./_generated/schema.gen.ts";
 export * from "./_generated/meta.gen.ts";
 

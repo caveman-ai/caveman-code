@@ -43,7 +43,7 @@ const answers = (issues: unknown[]) => ({
     if (method === "setup.scan") return { items: [] };
     if (method === "environment.draft") return { config: "", evidence: [], secret_names: [] };
     if (method === "github.issues") return { issues };
-    if (method === "github.status") return { login: "masa", source: "gh" };
+    if (method === "github.status") return { login: "octocat", source: "gh" };
     if (method === "account.get") return { signed_in: false };
     if (method === "workspace.create") return { id: "w1" };
     return {};

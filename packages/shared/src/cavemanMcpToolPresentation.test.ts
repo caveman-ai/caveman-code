@@ -210,7 +210,7 @@ describe("legacy Caveman Code MCP transcript names", () => {
     ["t3_thread_wait", "thread_wait"],
     ["mcp__t3code__t3_thread_read", "thread_read"],
     ["t3_code/t3_thread_read", "thread_read"],
-    ["T3 Code t3_thread_read completed", "thread_read"],
+    ["upstream t3_thread_read completed", "thread_read"],
     ["caveman-code.thread_read", "thread_read"],
     ["caveman-code-thread_with_underscores_thread_send", "thread_send"],
   ])("maps %s to %s", (legacy, canonical) => {

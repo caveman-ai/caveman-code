@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/protocol.test.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/protocol.test.ts @ ab3a3cd1.
 import * as Path from "effect/Path";
 import * as AcpError from "./errors.ts";
 import * as Effect from "effect/Effect";

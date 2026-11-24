@@ -1,4 +1,4 @@
-// Ported from T3 Code (MIT), packages/effect-acp/src/_internal/shared.ts @ ab3a3cd1.
+// Ported from upstream (MIT), packages/effect-acp/src/_internal/shared.ts @ ab3a3cd1.
 import * as Cause from "effect/Cause";
 import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
