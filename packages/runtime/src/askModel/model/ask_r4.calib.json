@@ -1,0 +1,63 @@
+{
+ "fit_on": "pub_dev gold",
+ "n": 600,
+ "T_class": 0.7174054040079638,
+ "T_level": 0.7697986755618293,
+ "platt_p_cheap": [
+  1.0065987963056895,
+  1.3485280213236686
+ ],
+ "ece": {
+  "pub_dev": {
+   "class raw": 0.09136249999999999,
+   "class cal": 0.06018783095222832,
+   "level raw": 0.053075499999999935,
+   "level cal": 0.02849617087157445,
+   "p_cheap raw": 0.1300325,
+   "p_cheap cal": 0.03969892686155667
+  },
+  "pub_nolicense": {
+   "class raw": 0.10067862500000001,
+   "class cal": 0.035269796929238144,
+   "level raw": 0.033656624999999996,
+   "level cal": 0.03296306124193684,
+   "p_cheap raw": 0.13877796250000002,
+   "p_cheap cal": 0.04234510771490441
+  },
+  "founder_dev": {
+   "class raw": 0.10154807692307692,
+   "class cal": 0.02932410234643258,
+   "level raw": 0.03952076923076904,
+   "level cal": 0.03786714524351086,
+   "p_cheap raw": 0.06646799038461536,
+   "p_cheap cal": 0.05992311748373304
+  }
+ },
+ "level_risk": 0.4,
+ "level_risk_offset": {
+  "auto-max": -0.14,
+  "auto-save": 0.14
+ },
+ "level_risk_budget": {
+  "auto": 0.1,
+  "auto-max": 0.05,
+  "auto-save": 0.2
+ },
+ "below_gold_at_level_risk": {
+  "auto": {
+   "pub_dev": 0.06166666666666667,
+   "pub_nolicense": 0.0975,
+   "founder_dev": 0.12403846153846154
+  },
+  "auto-max": {
+   "pub_dev": 0.03333333333333333,
+   "pub_nolicense": 0.05,
+   "founder_dev": 0.05096153846153846
+  },
+  "auto-save": {
+   "pub_dev": 0.135,
+   "pub_nolicense": 0.1925,
+   "founder_dev": 0.2173076923076923
+  }
+ }
+}

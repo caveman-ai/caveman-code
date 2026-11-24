@@ -1,0 +1,350 @@
+/* ══════════════════════════════════════════════════════════════════════════
+ * Beautiful UI foundation — Caveman bridge
+ *
+ * VENDORED + REWRITTEN. The upstream file
+ * (https://www.beautifului.dev/r/foundation.json) is Tailwind v4: it opens with
+ * `@import "tailwindcss"`, declares `@theme inline` and `@custom-variant`, and
+ * pulls in `shadow-plugin/unprefixed`. This repo is Tailwind 3.4, so that file
+ * cannot compile here. It also ships a global `body` rule — diagonal stripes,
+ * 14px base, its own letter-spacing — and a second, competing token system
+ * (a cool blue-tinted near-white canvas) that would fight DESIGN.md on every
+ * surface it touched.
+ *
+ * So this file keeps the upstream COMPONENT contract and throws away its
+ * palette. Every Beautiful UI token below is redefined in terms of a deck token
+ * from globals.css, which means their components render in Caveman's near-black
+ * instrument palette without a single edit to their markup. Their class names
+ * (`bg-surface`, `text-ink-2`, `border-line`, `rounded-card`, `shadow-card`)
+ * resolve through tailwind.config.js, which maps them to these same variables.
+ *
+ * What survives verbatim from upstream: the `.primitive-*` spacing utilities,
+ * the StreamText caret/tail, the shimmer/pixel/eq keyframes, the FilterTable
+ * status pills, and the InsightCards chart chrome — i.e. the craft. What is
+ * dropped: the palette, the body background, the global focus ring, and the
+ * marketing-site scaffolding (`.component-nav-scroll`, `.primitive-showcase`,
+ * `.home-reveal`, `.theme-switching`).
+ *
+ * Re-adding a component with `npx shadcn add https://www.beautifului.dev/r/<x>.json`
+ * writes the upstream file back to app/beautifui/. Move it here and re-apply
+ * this bridge: app/ is route space, and tests/web-surfaces.runtime.mjs fails an
+ * unclassified top-level segment.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* Hung off data-surface="deck" (not .dashboard-scope) so portaled menus,
+ * popovers, and dialogs — which render outside the dashboard subtree — inherit
+ * these too, exactly like the deck tokens they are derived from. */
+html[data-surface="deck"] {
+  /* surfaces */
+  --page: hsl(var(--background));
+  --canvas: hsl(var(--background));
+  --surface: hsl(var(--card));
+  --inset: hsl(var(--muted));
+  --hover: hsl(var(--accent));
+  --hover-2: hsl(var(--secondary));
+  --field: hsl(var(--control));
+
+  /* Secondary and subtle ink remain readable on every workspace surface. */
+  --ink: hsl(var(--foreground));
+  --ink-2: hsl(var(--muted-foreground));
+  --ink-3: hsl(var(--subtle-foreground));
+
+  /* hairlines */
+  --line: hsl(var(--border));
+  --line-strong: hsl(var(--input));
+  --line-soft: hsl(var(--border) / 0.6);
+  --grid-line: hsl(var(--border) / 0.78);
+  --stripe: transparent;
+  --stripe-bg: hsl(var(--background));
+
+  /* Upstream's accent is a blue used for links and emphasis; the deck's
+   * --accent is a hover FILL. Same word, different meanings, and the deck's
+   * wins — so the bridge renames theirs to --bui-accent and the vendored
+   * sources were rewritten to match. It resolves to chart-1, the lead blue. */
+  --bui-accent: hsl(var(--chart-1));
+  --bui-accent-ink: hsl(var(--chart-1));
+  --bui-accent-tint: hsl(var(--chart-1) / 0.16);
+
+  /* semantic — the deck's own state colors, never a second green. */
+  --green: hsl(var(--success));
+  --green-tint: hsl(var(--success) / 0.14);
+  --orange: hsl(var(--warning));
+  --orange-tint: hsl(var(--warning) / 0.14);
+  --red: hsl(var(--destructive));
+  --red-tint: hsl(var(--destructive) / 0.14);
+
+  /* chart overlays */
+  --tooltip-bg: hsl(var(--popover));
+  --tooltip-fg: hsl(var(--popover-foreground));
+  --tooltip-muted: hsl(var(--muted-foreground));
+  --tooltip-border: hsl(var(--border));
+
+  /* Shared depth: borders carry structure; neutral shadows lift surfaces. */
+  --shadow-hairline: 0 0 0 1px hsl(var(--border));
+  --shadow-btn: 0 0 0 1px hsl(var(--input));
+  --shadow-card: 0 0 0 1px hsl(var(--border)), var(--shadow-elevated);
+  --shadow-raised: 0 0 0 1px hsl(var(--border)), var(--shadow-elevated);
+  --shadow-inset-field: inset 0 1px 2px hsl(0 0% 0% / 0.04);
+
+  /* radii — mapped onto the deck's 0.5rem scale (§1). */
+  --radius-chip: calc(var(--radius) - 2px);
+  --radius-control: calc(var(--radius) - 2px);
+  --radius-card: var(--radius);
+  --radius-window: calc(var(--radius) + 4px);
+
+  /* easing: --ease-snap / --ease-swift / --ease-drawer come from
+     src/styles/motion.json through tailwind-preset.cjs, one source with the utilities. */
+}
+
+/* Dark retains the original field, ink ramp and border-only depth. */
+html.dark[data-surface="deck"] {
+  --field: hsl(var(--secondary));
+  --ink-3: hsl(var(--muted-foreground) / 0.62);
+  --shadow-card: 0 0 0 1px hsl(var(--border));
+  --shadow-raised: 0 0 0 1px hsl(var(--border));
+  --shadow-inset-field: none;
+}
+
+/* ── primitive spacing system (upstream, verbatim) ────────────────────────
+ * Shared optical offsets so small cards stop hand-tuning 10/12/14px each. */
+
+.primitive-card-pad {
+  padding: 12px;
+}
+
+.primitive-card-bar {
+  padding: 10px 12px;
+}
+
+.primitive-card-footer {
+  padding: 10px;
+}
+
+.primitive-table-cell {
+  padding: 10px 12px;
+}
+
+.primitive-icon-button {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-control);
+}
+
+.animated-underline {
+  position: relative;
+  display: inline-block;
+}
+
+.animated-underline::after {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  height: 1px;
+  content: "";
+  background: currentColor;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 280ms var(--ease-snap);
+}
+
+a:hover .animated-underline::after,
+a:focus-visible .animated-underline::after {
+  transform: scaleX(1);
+}
+
+.source-avatar {
+  box-shadow: 0 0 0 1px hsl(var(--border));
+}
+
+/* ── StreamText: the leading edge ─────────────────────────────────────────
+ * The newest few characters carry a soft masked blur so text resolves as it
+ * lands instead of snapping in. The caret holds solid while streaming and
+ * blinks once the string settles — a blinking caret mid-stream reads as a
+ * stall. */
+
+.stream-tail {
+  filter: blur(1.6px);
+  -webkit-mask-image: linear-gradient(to right, #000 20%, rgb(0 0 0 / 0.2));
+  mask-image: linear-gradient(to right, #000 20%, rgb(0 0 0 / 0.2));
+}
+
+.stream-caret {
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1.5px;
+  translate: 0 -0.5px;
+  border-radius: 1px;
+  background: var(--ink);
+  vertical-align: text-bottom;
+  animation: bui-caret-blink 1s step-end infinite;
+}
+
+.stream-caret.is-streaming {
+  animation: none;
+}
+
+/* Response while a reply streams: the same caret after the last line, held
+   solid (it moves with the text, so it needn't blink). Pure CSS, no element. */
+[data-slot="response"][data-streaming] > :is(p, h1, h2, h3, h4):last-child::after,
+[data-slot="response"][data-streaming] > :is(ul, ol):last-child > li:last-child::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-left: 1.5px;
+  translate: 0 -0.5px;
+  border-radius: 1px;
+  background: hsl(var(--foreground));
+  vertical-align: text-bottom;
+}
+
+@keyframes bui-caret-blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── FilterTable status pills ─────────────────────────────────────────────
+ * Upstream derives three hues by color-mix off a base. Kept, but the base
+ * hues are the deck's own state colors so a status pill in a Lucy table and a
+ * status chip on the traces page cannot disagree about what "done" looks like. */
+
+.filter-status-todo {
+  --tag-base: hsl(var(--warning));
+}
+.filter-status-progress {
+  --tag-base: hsl(var(--chart-1));
+}
+.filter-status-done {
+  --tag-base: hsl(var(--success));
+}
+
+.filter-status-todo,
+.filter-status-progress,
+.filter-status-done {
+  border: 1px solid transparent;
+  color: var(--tag-base);
+  background: color-mix(in srgb, var(--tag-base) 12%, var(--surface));
+  border-color: color-mix(in srgb, var(--tag-base) 22%, var(--surface));
+}
+
+/* ── InsightCards chart chrome ────────────────────────────────────────────── */
+
+.insight-chart-stage {
+  overflow: hidden;
+  touch-action: pan-y;
+}
+
+.insight-chart-cursor {
+  position: absolute;
+  z-index: 4;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--ink);
+  opacity: 0.26;
+  pointer-events: none;
+}
+
+.insight-chart-tooltip-anchor {
+  position: absolute;
+  z-index: 5;
+  top: 8px;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.insight-chart-tooltip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 5px 9px;
+  border: 1px solid var(--tooltip-border);
+  border-radius: 8px;
+  color: var(--tooltip-fg);
+  background: var(--tooltip-bg);
+  box-shadow: var(--shadow-overlay);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.insight-chart-tooltip-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.insight-chart-tooltip-dot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 8px;
+  border-radius: 50%;
+}
+
+/* ── shared keyframes (upstream, verbatim) ────────────────────────────────── */
+
+@keyframes shimmer-text {
+  from {
+    background-position: 150% center;
+  }
+  to {
+    background-position: -50% center;
+  }
+}
+
+@keyframes eq-bounce {
+  0%,
+  100% {
+    transform: scaleY(0.35);
+  }
+  50% {
+    transform: scaleY(1);
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* pixel-grid loader — brighten plateau, staggered per cell. The one Beautiful
+ * UI motif that was already Caveman's: the mark is a pixel flame. */
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  18%,
+  42% {
+    opacity: 1;
+  }
+  62% {
+    opacity: 0.15;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stream-caret {
+    animation: none;
+  }
+  .stream-tail {
+    filter: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}

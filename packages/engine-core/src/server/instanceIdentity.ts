@@ -1,0 +1,29 @@
+// ), packages/provider-core/src/server/instanceIdentity.ts @ ab3a3cd1.
+import type { ProviderDriverKind, ServerProvider } from "@caveman-app/protocol";
+
+import type { ProviderInstance } from "@caveman-app/engine-core/server/driver";
+import type { ServerProviderDraft } from "@caveman-app/engine-core/server/snapshotProbe";
+
+/**
+ * Stamp instance identity onto a `ServerProvider` snapshot produced by the
+ * driver-kind-only snapshot helpers. Every driver builds its snapshot without
+ * knowing its own instance, so it pipes the draft through this stamper before
+ * publishing. Once `buildServerProvider` in `providerSnapshot.ts` is widened to
+ * accept `instanceId`/`driver`, this wrapper disappears.
+ */
+export const withInstanceIdentity =
+  (input: {
+    readonly instanceId: ProviderInstance["instanceId"];
+    readonly driverKind: ProviderDriverKind;
+    readonly displayName: string | undefined;
+    readonly accentColor: string | undefined;
+    readonly continuationGroupKey: string;
+  }) =>
+  (snapshot: ServerProviderDraft): ServerProvider => ({
+    ...snapshot,
+    instanceId: input.instanceId,
+    driver: input.driverKind,
+    ...(input.displayName ? { displayName: input.displayName } : {}),
+    ...(input.accentColor ? { accentColor: input.accentColor } : {}),
+    continuation: { groupKey: input.continuationGroupKey },
+  });

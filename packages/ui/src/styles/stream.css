@@ -1,0 +1,109 @@
+/* Streaming behavior studied against Cursor 3.27.22 (2026-11-05).
+ * Independent implementation; evidence and intentional differences live in
+ * docs/ Existing Caveman tokens/identity remain. */
+
+/* Words arrive at their original fade age, including Markdown reparents. */
+@keyframes word-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+[data-slot="response"].word-fading [data-word-fade]:not([data-word-settled]) {
+  animation: word-fade-in 150ms linear both;
+}
+
+/* No serial entrance queue: running work is visible as soon as it arrives. */
+@keyframes step-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: none; }
+}
+.work-step[data-entering] {
+  animation: step-in 150ms var(--ease-step) both;
+}
+
+/* A line that says something new in place (ai/rolling.tsx): the step running
+ * now, the live end's words. The old words roll up out of the line as the new
+ * ones roll up into it, inside its own height, so nothing around it moves.
+ * The old words are gone before the new ones show, most of a line apart:
+ * two sets of words never sit on top of each other mid-roll. */
+@keyframes rolling-out {
+  from { opacity: 1; transform: none; }
+  60% { opacity: 0; }
+  to { opacity: 0; transform: translateY(-70%); }
+}
+@keyframes rolling-in {
+  from { opacity: 0; transform: translateY(70%); }
+  30% { opacity: 0; }
+  to { opacity: 1; transform: none; }
+}
+.rolling { position: relative; overflow: hidden; }
+.rolling-ghost { position: absolute; inset-inline: 0; top: 0; pointer-events: none; }
+.rolling-ghost.rolling-out { animation: rolling-out 140ms ease-in both; }
+.rolling-in { animation: rolling-in 180ms var(--ease-step) both; }
+/* What the step is on, beside the line's words: a new name fades in where the old one was. */
+.stream-detail { animation: word-fade-in 140ms linear both; }
+
+/* Shared by all transcript disclosures. Flow must shrink/grow to move following
+ * text with the body; a scale would squash text and leave an empty slot. Only
+ * this bounded disclosure animates layout. Ordinary steps animate opacity and
+ * transform. CSS transitions retarget when reversed mid-flight. */
+.stream-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows 200ms var(--ease-disclosure), opacity 150ms linear;
+}
+.stream-disclosure[data-open="true"] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+.stream-disclosure[data-immediate] { transition: none; }
+.stream-disclosure-inner { min-height: 0; overflow: hidden; }
+/* Partial previews rest at a CSS size (a max-height while collapsed) and measure only on deliberate toggles, for WAAPI.
+ * Streaming/resizing itself stays immediate. No permanently fixed expanded height. */
+.stream-preview { min-width: 0; overflow: hidden; }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="response"].word-fading [data-word-fade],
+  .work-step[data-entering],
+  .rolling-in,
+  .stream-detail { animation: none; }
+  .rolling-ghost { display: none; }
+  .stream-disclosure { transition: none; }
+}
+
+/* A message just sent rises out of the composer (apps/web Transcript
+ * usePromptRise); what follows it in the turn (its "working for" line, the first
+ * steps, the answer) waits unseen, then fades up 10px into place: compact
+ * prompt-turn-reveal (upstream, MIT, src/styles/index.css @
+ * 26465c6). "the Caveman needs to pop in smoothly as well".
+ * Rows move; a sprite keeps its own held frames inside its row. */
+@keyframes prompt-turn-reveal {
+  from { opacity: 0; transform: translateY(10px); }
+}
+[data-prompt-rise="rising"] ~ * {
+  opacity: 0;
+}
+[data-prompt-rise="revealing"] ~ * {
+  animation: prompt-turn-reveal 360ms var(--ease-snap) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-prompt-rise] ~ * { opacity: 1; animation: none; }
+}
+
+/* The selection menu (apps/web QuoteSelection) grows out of the words it
+ * acts on: compact .popover-open, 170ms from 94% and 4px toward the line,
+ * on ease-snap (theirs is the same strong ease-out). */
+@keyframes selection-menu-in {
+  from { opacity: 0; transform: translateY(var(--menu-lift, 4px)) scale(0.94); }
+}
+.selection-menu {
+  transform-origin: 50% 100%;
+  animation: selection-menu-in 170ms var(--ease-snap) both;
+}
+.selection-menu[data-side="bottom"] {
+  --menu-lift: -4px;
+  transform-origin: 50% 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .selection-menu { animation: none; }
+}

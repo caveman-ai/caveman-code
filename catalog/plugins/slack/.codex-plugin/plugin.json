@@ -1,0 +1,38 @@
+{
+  "name": "slack",
+  "version": "1.0.0",
+  "description": "Catch up on Slack channels and threads, and draft updates about the work in this repository for you to approve before they post.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://slack.com/",
+  "keywords": [
+    "chat",
+    "messaging",
+    "channels"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Slack",
+    "shortDescription": "Read channels and post updates",
+    "longDescription": "Catch up on Slack channels and threads, and draft updates about the work in this repository for you to approve before they post.",
+    "developerName": "Slack",
+    "category": "Communication",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://slack.com/",
+    "privacyPolicyURL": "https://slack.com/trust/privacy/privacy-policy",
+    "termsOfServiceURL": "https://slack.com/terms-of-service/user",
+    "defaultPrompt": [
+      "Summarize what I missed in #engineering today",
+      "Draft a Slack update about this pull request"
+    ],
+    "brandColor": "#4A154B",
+    "brandColorDark": "#ECB22E",
+    "logo": "./assets/logo.png"
+  }
+}

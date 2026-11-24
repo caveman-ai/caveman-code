@@ -1,0 +1,23 @@
+pr-review · Project                                      .caveman/automations/pr-review.yaml
+  Review every pull request that changes code and keep one comment up to date
+  triggers     Pull request opened or updated touching anything but **/*.md, **/*.mdx, docs/** · By hand
+  runs on      This Mac
+               Triggers fire in Caveman Code, which polls GitHub, from the default branch's copy of this file.
+  budget       $0.75 per run, all attempts               line 13
+  worst case   $0.75 or 10m, whichever comes first
+               At most 1 attempt across 1 step.
+  levers       Caveman harness: on                       vs the classic engine: Opus 5.5 at 0.47x the cost over three working days, 48/48 steps done against 44/48 (measured in the app's own runner, one run)
+
+review                                                   automations/pr-review.yaml:16
+  agent        pr-reviewer                               agents/pr-reviewer.md
+  decides      approve or request_changes                agents/pr-reviewer.md
+  engine       caveman                                   the new-chat default
+  model        base · anthropic/claude-sonnet-5-5        class map: Models & keys
+  effort       low                                       agents/pr-reviewer.md
+  computer     readonly: a copy at the run's commit; changes are discarded  default
+               On This Mac, which is not isolated.
+  attempts     1, at most 10m each                       default
+  sees         the pull_request.opened or pull_request.synchronize event; its result from the last run on the pull request
+               As data blocks after its instructions, never as instructions.
+  outputs      github.comment: review.summary            line 21
+               The runtime writes it when the run ends, if review succeeded, editing its one comment. A manual run waits for you to apply it.

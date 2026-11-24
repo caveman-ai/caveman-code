@@ -1,0 +1,20 @@
+{
+  "results": [
+    {
+      "title": "Effect Documentation: Introduction",
+      "url": "https://effect.website/docs",
+      "snippet": "Effect is a powerful TypeScript library.\n\nIt helps you build robust applications.",
+      "date": "2026-08-01",
+      "last_updated": "2026-10-01"
+    },
+    {
+      "title": "Effect on GitHub",
+      "url": "https://github.com/Effect-TS/effect",
+      "snippet": "Build production-ready applications in TypeScript.",
+      "date": null,
+      "last_updated": "2026-10-12"
+    }
+  ],
+  "id": "8b0c9f63-8f5c-4b1e-9b1a-1f2e3d4c5b6a",
+  "server_time": null
+}

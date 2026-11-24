@@ -1,0 +1,41 @@
+{
+  "name": "github",
+  "version": "1.0.0",
+  "description": "Read and review pull requests, triage issues, and read GitHub Actions logs through GitHub's MCP server. Signs in with this computer's GitHub login.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://github.com/",
+  "keywords": [
+    "git",
+    "pull requests",
+    "issues",
+    "code review",
+    "actions"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "GitHub",
+    "shortDescription": "Pull requests, issues and Actions",
+    "longDescription": "Read and review pull requests, triage issues, and read GitHub Actions logs through GitHub's MCP server. Signs in with this computer's GitHub login.",
+    "developerName": "GitHub",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://github.com/",
+    "privacyPolicyURL": "https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement",
+    "termsOfServiceURL": "https://docs.github.com/en/site-policy/github-terms/github-terms-of-service",
+    "defaultPrompt": [
+      "Review the open pull request for this branch",
+      "Find why the last CI run on main failed and fix it"
+    ],
+    "brandColor": "#181717",
+    "brandColorDark": "#FFFFFF",
+    "logo": "./assets/logo.svg",
+    "logoDark": "./assets/logo-dark.svg"
+  }
+}

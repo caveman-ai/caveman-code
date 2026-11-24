@@ -1,0 +1,11 @@
+// ), apps/server/src/mcp/toolkits/attachment/input.ts @ ab3a3cd1.
+import { ChatFileAttachment, ChatImageAttachment } from "@caveman-app/protocol";
+import * as Schema from "effect/Schema";
+import * as Struct from "effect/Struct";
+
+// Screenshot provenance is app-owned. Existing attachments recover it from stored
+// metadata; exposing its recursive accessibility tree breaks model tool schemas.
+export const McpAttachmentInput = Schema.Union([
+  ChatImageAttachment.mapFields(Struct.omit(["source"])),
+  ChatFileAttachment,
+]);

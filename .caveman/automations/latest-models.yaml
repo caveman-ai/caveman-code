@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Every morning, find newly released models and open a reviewed draft PR that adds them to Caveman Code's model lists
+
+on:
+  schedule: { at: "07:30", timezone: Europe/Amsterdam }
+
+budget: $2
+
+steps:
+  scan:
+    agent: model-scout            # decides update or current
+    model: openai/gpt-6-luna
+    computer: readonly
+  update:
+    if: { scan: update }
+    agent: model-updater
+    model: openai/gpt-6-luna
+    computer: full
+    checks:
+      - pnpm install --frozen-lockfile
+      - pnpm typecheck
+      - pnpm test
+      - agent: reviewer           # request_changes fails the attempt; its findings go to the retry
+    retries: 1
+    timeout: 45m
+
+outputs:
+  github.pull_request: { from: update, draft: true }

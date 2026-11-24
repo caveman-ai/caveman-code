@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "sentry": {
+      "auth": "oauth"
+    }
+  }
+}

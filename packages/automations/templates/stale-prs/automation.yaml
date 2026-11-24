@@ -1,0 +1,13 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Every Monday, list the pull requests that stalled and what would move each one
+
+on:
+  schedule: { at: "09:00", timezone: Europe/Amsterdam, weekdays: [mon] }   # your time zone
+
+budget: $1
+
+steps:
+  sweep:
+    agent: pr-sweeper
+    model: fast

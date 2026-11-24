@@ -1,0 +1,275 @@
+// ), apps/server/src/environment/ServerEnvironment.ts @ ab3a3cd1.
+import {
+  EnvironmentId,
+  ORCHESTRATION_PROTOCOL_VERSION,
+  PROVIDER_SEND_TURN_MAX_FILE_BYTES,
+  type ExecutionEnvironmentDescriptor,
+} from "@caveman-app/protocol";
+import * as HostProcess from "@caveman-app/shared/HostProcess";
+import * as Context from "effect/Context";
+import * as SecureRandom from "effect/crypto/SecureRandom";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
+import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
+
+import { RUNTIME_VERSION } from "../runtimeVersion.ts";
+import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import { resolveServerInstallation } from "../cli/invocation.ts";
+import * as ServerConfig from "../config.ts";
+import * as ProcessRunner from "../processRunner.ts";
+import { resolveServerEnvironmentLabel } from "./ServerEnvironmentLabel.ts";
+import { detectServerEnvironmentMachineKind } from "./ServerEnvironmentMachine.ts";
+
+export class ServerEnvironmentIdPersistenceError extends Schema.TaggedError<ServerEnvironmentIdPersistenceError>()(
+  "ServerEnvironmentIdPersistenceError",
+  {
+    operation: Schema.Literals(["check", "read", "write", "initialize"]),
+    environmentIdPath: Schema.String,
+    cause: Schema.optional(Schema.Defect()),
+  },
+) {
+  override get message(): string {
+    if (this.operation === "initialize") {
+      return `Server environment ID file is missing or empty after initialization at '${this.environmentIdPath}'.`;
+    }
+    return `Server environment ID ${this.operation} failed at '${this.environmentIdPath}'.`;
+  }
+}
+
+export class ServerEnvironment extends Context.Service<
+  ServerEnvironment,
+  {
+    readonly getEnvironmentId: Effect.Effect<EnvironmentId>;
+    readonly getDescriptor: Effect.Effect<ExecutionEnvironmentDescriptor>;
+  }
+>()("t3/environment/ServerEnvironment") {}
+
+export class ServerEnvironmentIdentity extends Context.Service<
+  ServerEnvironmentIdentity,
+  {
+    readonly getEnvironmentId: Effect.Effect<EnvironmentId>;
+  }
+>()("t3/environment/ServerEnvironment/ServerEnvironmentIdentity") {}
+
+function platformOs(platform: NodeJS.Platform): ExecutionEnvironmentDescriptor["platform"]["os"] {
+  switch (platform) {
+    case "darwin":
+      return "darwin";
+    case "linux":
+      return "linux";
+    case "win32":
+      return "windows";
+    default:
+      return "unknown";
+  }
+}
+
+function platformArch(
+  architecture: NodeJS.Architecture,
+): ExecutionEnvironmentDescriptor["platform"]["arch"] {
+  switch (architecture) {
+    case "arm64":
+      return "arm64";
+    case "x64":
+      return "x64";
+    default:
+      return "other";
+  }
+}
+
+const makeIdentity = Effect.gen(function* () {
+  const fileSystem = yield* FileSystem.FileSystem;
+  const serverConfig = yield* ServerConfig.ServerConfig;
+  const random = yield* SecureRandom.SecureRandom;
+
+  const readPersistedEnvironmentId = Effect.gen(function* () {
+    const exists = yield* fileSystem.exists(serverConfig.environmentIdPath).pipe(
+      Effect.mapError(
+        (cause) =>
+          new ServerEnvironmentIdPersistenceError({
+            operation: "check",
+            environmentIdPath: serverConfig.environmentIdPath,
+            cause,
+          }),
+      ),
+    );
+    if (!exists) {
+      return null;
+    }
+
+    const raw = yield* fileSystem.readFileString(serverConfig.environmentIdPath).pipe(
+      Effect.map((value) => value.trim()),
+      Effect.mapError(
+        (cause) =>
+          new ServerEnvironmentIdPersistenceError({
+            operation: "read",
+            environmentIdPath: serverConfig.environmentIdPath,
+            cause,
+          }),
+      ),
+    );
+
+    return raw.length > 0 ? raw : null;
+  });
+
+  const persistEnvironmentId = Effect.fn("ServerEnvironmentIdentity.persistEnvironmentId")(
+    function* (value: string, mode: "create" | "recover") {
+      const destinationPath =
+        mode === "recover"
+          ? `${serverConfig.environmentIdPath}.recovery`
+          : serverConfig.environmentIdPath;
+      const tempPath = yield* fileSystem.makeTempFileScoped({
+        directory: serverConfig.stateDir,
+        prefix: ".environment-id-",
+      });
+      yield* fileSystem.writeFileString(tempPath, `${value}\n`);
+      // Publish the completed file without replacing an ID created by another process.
+      yield* fileSystem.link(tempPath, destinationPath).pipe(
+        Effect.catchIf(
+          (cause) => cause.reason._tag === "AlreadyExists",
+          () => Effect.void,
+        ),
+      );
+      if (mode === "recover") {
+        // Keep the recovery ID so delayed initializers also publish the same winner.
+        yield* fileSystem.remove(tempPath);
+        yield* fileSystem.copyFile(destinationPath, tempPath);
+        yield* fileSystem.rename(tempPath, serverConfig.environmentIdPath);
+      }
+    },
+    Effect.scoped,
+    Effect.mapError(
+      (cause) =>
+        new ServerEnvironmentIdPersistenceError({
+          operation: "write",
+          environmentIdPath: serverConfig.environmentIdPath,
+          cause,
+        }),
+    ),
+  );
+
+  const environmentIdRaw = yield* Effect.gen(function* () {
+    const persisted = yield* readPersistedEnvironmentId;
+    if (persisted) {
+      return persisted;
+    }
+
+    const generated = yield* random.uuidV4();
+    yield* persistEnvironmentId(generated, "create");
+    let winner = yield* readPersistedEnvironmentId;
+    if (winner === null) {
+      yield* persistEnvironmentId(generated, "recover");
+      winner = yield* readPersistedEnvironmentId;
+    }
+    if (winner === null) {
+      return yield* new ServerEnvironmentIdPersistenceError({
+        operation: "initialize",
+        environmentIdPath: serverConfig.environmentIdPath,
+      });
+    }
+    return winner;
+  });
+
+  const environmentId = EnvironmentId.make(environmentIdRaw);
+  return ServerEnvironmentIdentity.of({
+    getEnvironmentId: Effect.succeed(environmentId),
+  });
+});
+
+/** @public Service construction is part of the canonical Effect module API. */
+export const make = Effect.gen(function* () {
+  const path = yield* Path.Path;
+  const serverConfig = yield* ServerConfig.ServerConfig;
+  const identity = yield* ServerEnvironmentIdentity;
+  const hostPlatform = yield* HostProcess.Platform;
+  const hostArchitecture = yield* HostProcess.Architecture;
+  const environmentId = yield* identity.getEnvironmentId;
+  const cwdBaseName = path.basename(serverConfig.cwd).trim();
+  const label = yield* resolveServerEnvironmentLabel({ cwdBaseName });
+  const machine = yield* detectServerEnvironmentMachineKind();
+ // upstream server self-update and desktop-update handoff are not ported. The
+  // desktop app manages its bundled runtime; other installs are reported so
+  // clients can show how to update them.
+  const serverInstallation = serverConfig.mode === "desktop" ? null : yield* resolveServerInstallation;
+
+  const descriptor: ExecutionEnvironmentDescriptor = {
+    environmentId,
+    label,
+    platform: {
+      os: platformOs(hostPlatform),
+      arch: platformArch(hostArchitecture),
+      ...(machine === null ? {} : { machine }),
+    },
+    serverVersion: RUNTIME_VERSION,
+    orchestrationProtocolVersion: ORCHESTRATION_PROTOCOL_VERSION,
+    capabilities: {
+      repositoryIdentity: true,
+      connectionProbe: true,
+      attachmentUploads: true,
+      questionAttachments: true,
+      fileAttachments: { maxUploadBytes: PROVIDER_SEND_TURN_MAX_FILE_BYTES },
+      pullRequests: true,
+      pullRequestChecks: true,
+      inlineMessageContext: true,
+      requiredWorktreeBootstrap: true,
+      threadSettlement: true,
+      threadAutoSettlement: true,
+      storageCleanup: true,
+      storageCleanupRun: true,
+      otlpEndpointCheck: true,
+      projectWorktreeCleanup: true,
+      settledWorktreeCleanup: true,
+      worktreesDirectory: true,
+      threadAutoSettlementScope: true,
+      threadRestartContinuation: true,
+      projectSettingsOverrides: true,
+      projectProviderInstanceOverrides: true,
+      threadSnooze: true,
+      environmentThemes: true,
+      usagePriceOverrides: true,
+      usageModelAliases: true,
+      threadPinning: true,
+      threadPinReorder: true,
+      threadActiveReorder: true,
+      threadAutoSettleOptOut: true,
+      threadTitleRegeneration: true,
+      commandOutputStreaming: true,
+      threadVisitedTracking: true,
+      threadPullRequests: true,
+      threadPullRequestWatch: true,
+      pullRequestStackActions: true,
+      threadPullRequestLinking: true,
+      serverResolvedCommandContext: true,
+      ...(hostPlatform === "win32" ? {} : { localServerStop: true }),
+      environmentIcon: true,
+      projectCloneTracking: true,
+      projectOrganization: true,
+      ...(serverInstallation === null ? {} : { serverInstallation }),
+      serverBrowser: true,
+    },
+  };
+
+  return ServerEnvironment.of({
+    getEnvironmentId: Effect.succeed(environmentId),
+    // No T3 Connect relay, so agent activity is never published.
+    getDescriptor: Effect.succeed({
+      ...descriptor,
+      capabilities: { ...descriptor.capabilities, agentActivityPublishing: false },
+    }),
+  });
+});
+
+export const layerIdentity = Layer.effect(ServerEnvironmentIdentity, makeIdentity);
+
+/**
+ * ServerEnvironment is acquired from persisted filesystem and host-process
+ * state. It intentionally has no fallback Layer.succeed value: callers must
+ * provide the external platform services, a ServerConfig, and the
+ * ServerSecretStore.
+ */
+export const layer = Layer.effect(ServerEnvironment, make).pipe(
+  Layer.provideMerge(layerIdentity),
+  Layer.provide(ProcessRunner.layer),
+);

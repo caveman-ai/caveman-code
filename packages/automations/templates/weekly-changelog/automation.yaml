@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Every Friday, draft the changelog for what merged this week as a pull request
+
+on:
+  schedule: { at: "16:00", timezone: Europe/Amsterdam, weekdays: [fri] }   # your time zone
+
+budget: $2
+
+steps:
+  draft:
+    agent: changelog-writer
+    model: fast
+    computer: full
+
+outputs:
+  github.pull_request: { from: draft, draft: true }

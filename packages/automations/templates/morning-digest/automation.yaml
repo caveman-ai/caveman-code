@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Weekday mornings, a short digest of what changed in this repo since the last working day
+
+on:
+  schedule: { at: "09:00", timezone: Europe/Amsterdam, weekdays: [mon, tue, wed, thu, fri] }   # your time zone
+
+budget: $0.50
+
+steps:
+  digest:
+    prompt: >-
+      Summarise what changed in this repository since the start of the last working day
+      (on a Monday, since Friday morning): pull requests merged and opened, issues opened
+      and closed, and CI runs that failed on the default branch. Lead with anything that
+      needs me today, then the rest in a few bullets.
+    model: fast

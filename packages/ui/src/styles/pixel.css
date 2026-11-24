@@ -1,0 +1,563 @@
+/* ══════════════════════════════════════════════════════════════════════════
+ * Caveman Code pixel layer.
+ *
+ * packages/ui/STYLE.md is the law; this file is its tokens and utilities.
+ * The chrome stays quiet Linear-dark (globals.css). Pixel art is the identity
+ * layer on top: the mascot, identity icons, special nav buttons, empty and
+ * first-run states, working indicators. Never body text, data, tables or code.
+ *
+ * Plain CSS on purpose (not @layer): every rule here is always emitted, so a
+ * class another lane builds at runtime still works. Base rules sit in :where()
+ * so any Tailwind utility on the same element wins.
+ * ══════════════════════════════════════════════════════════════════════════ */
+
+/* Geist Pixel (Circle), Vercel, SIL OFL 1.1 (fonts/GeistPixel-OFL.txt). Display accents only: see STYLE.md
+ * "Type". Never body copy, numbers, paths or code. */
+@font-face {
+  font-family: "Geist Pixel";
+  src: url("./fonts/GeistPixel-Circle.woff2") format("woff2");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+ /* upstream mention accent, used for file references in running text. */
+  --file-chip: 189 100% 34%;
+  --font-pixel: "Geist Pixel";
+
+  /* Identity palette, sampled from the launch video's sprites
+   * (packages/ui/scripts/caveman-avatar.py, assets/rock.svg). HSL triplets like
+   * every deck token. Identity only: the mascot, engine tiles, pixel art. Never
+   * a state colour (done/failed/working use --success/--destructive/--warning),
+   * never a fill for chrome. */
+  --id-outline: 262 38% 6%;     /* #0d0914 sprite outline */
+  --id-hair: 16 42% 12%;        /* #2c1912 hair and beard */
+  --id-hair-hi: 23 49% 23%;     /* #58341e hair highlight */
+  --id-skin: 28 80% 73%;        /* #f1b582 */
+  --id-skin-shade: 21 58% 56%;  /* #d07c4f */
+  --id-skin-edge: 14 49% 37%;   /* #8b4530 */
+  --id-skin-light: 30 97% 86%;  /* #fedbb7 */
+  --id-tunic: 33 81% 58%;       /* #eb9e3d */
+  --id-tunic-shade: 26 62% 41%; /* #aa6128 */
+  --id-bead: 142 68% 58%;       /* #4add80 the one green bead */
+  --id-rock-deep: 60 4% 9%;     /* #181816 */
+  --id-rock-dark: 40 7% 16%;    /* #2c2a26 */
+  --id-rock-mid: 43 3% 41%;     /* #6b6964 */
+  --id-rock: 44 4% 52%;         /* #8a877f */
+  --id-rock-light: 43 10% 73%;  /* #c2beb4 */
+  /* The cast (Settings > Companion): every companion is drawn in the tokens
+   * above plus these. */
+  --id-wood: 14 49% 37%;        /* #8b4530 the club */
+  --id-wood-hi: 21 58% 56%;     /* #d07c4f its lit side */
+  --id-glint: 30 97% 86%;       /* #fedbb7 stars, sparks, teeth */
+  --id-bone: 43 44% 86%;        /* #ebe2cc bone, tusks, white hair */
+  --id-ginger: 14 60% 34%;      /* #8a3b22 the cavewoman's hair */
+  --id-ginger-hi: 19 63% 46%;   /* #c0592b its highlight */
+  --id-fur: 22 45% 38%;         /* #8d5636 the mammoth */
+  --id-fur-hi: 27 43% 50%;      /* #b67a48 its lit fur */
+  --id-dino: 255 48% 59%;       /* #7f66c9 the dino */
+  --id-dino-shade: 255 38% 42%; /* #574394 its spots and shade */
+  --id-dino-light: 255 66% 74%; /* #a690e8 its lit side */
+  --id-teal: 171 40% 41%;       /* #3f9286 the triceratops, the pet rock's moss */
+  --id-teal-shade: 172 40% 28%; /* #2b645c its shade */
+  --id-teal-light: 168 42% 62%; /* #75c7b7 its lit side */
+  --id-slate: 225 14% 47%;      /* #676f89 the bat, the wolf */
+  --id-slate-shade: 226 17% 33%; /* #464d62 its shade */
+  --id-slate-light: 224 22% 67%; /* #98a2bd its lit fur */
+  --id-sand: 39 45% 64%;        /* #cdb07a the sloth, the owl, muzzles */
+  --id-sand-shade: 37 32% 46%;  /* #9b7e50 its shade */
+  --id-pink: 0 52% 70%;         /* #da8b8b snouts, noses, inner ears */
+
+  /* Engine tile tints: vendor-adjacent, never a vendor logo or brand colour. */
+  --id-engine-claude: 15 52% 58%; /* warm clay */
+  --id-engine-codex: 220 6% 86%;  /* paper white */
+  --id-engine-acp: 199 64% 58%;   /* open sky: any agent that speaks ACP */
+  /* Harness accents (a delegated agent's card edge, Settings > Agents): one per harness, both themes. */
+  /* One neutral only (Codex); the monochrome vendors take a hue of their own so no two edges read alike. */
+  --id-engine-cursor: 40 35% 60%;   /* sand */
+  --id-engine-antigravity: 255 60% 66%; /* violet */
+  --id-engine-pi: 170 40% 55%;      /* teal */
+  --id-engine-grok: 215 25% 55%;    /* steel */
+  --id-engine-opencode: 28 93% 75%; /* peach, OpenCode's terminal accent */
+  --id-engine-muse: 209 100% 49%;   /* Meta blue, Muse Code's mark */
+
+  /* Runner accents (RunnerBadge): a delegated agent's 2px card edge and its faint running wash,
+   * one per harness. Dark takes the tints above; light lifts the pale ones to 3:1 on the white
+   * panel (below). Never text, never a fill under text beyond the 8% wash. */
+  --runner-caveman: var(--id-tunic);
+  --runner-claude-agent: var(--id-engine-claude);
+  --runner-codex: var(--id-engine-codex);
+  --runner-cursor: var(--id-engine-cursor);
+  --runner-opencode: var(--id-engine-opencode);
+  --runner-muse: var(--id-engine-muse);
+  --runner-grok: var(--id-engine-grok);
+  --runner-pi: var(--id-engine-pi);
+  --runner-antigravity: var(--id-engine-antigravity);
+  --runner-acp: var(--id-engine-acp);
+
+  /* The one chrome blue (STYLE.md "Colour"): where something lands. Split
+   * view drop zones and their pill, the pane that just landed, the focus
+   * underline of a picker's search field. Never a state, never a fill for
+   * resting chrome. */
+  --target: 217 91% 60%;            /* #3b82f6 */
+  --target-foreground: 0 0% 100%;
+  /* Filled uses with small white text on them (the "Split view" pill): 4.6:1. */
+  --target-strong: 217 91% 53%;
+
+  /* Effort tiers (components/effort.tsx, STYLE.md 3): past the ceiling the level changes colour.
+   * Max is danger red, Ultracode purple; each holds 4.5:1 on the popover as text. */
+  --effort-max: 0 88% 66%;
+  --effort-ultra: 268 90% 76%;
+
+  /* Speed (components/speed.tsx, STYLE.md 3): a faster tier than standard is on. Amber, apart from the effort
+   * tiers; the bolt and its word, nothing else. 9:1 on the popover. */
+  --speed: 42 92% 62%;
+}
+
+/* Light: every accent darkened to at least 3:1 on #fff (WCAG 1.4.11); hue kept. */
+:root:not(.dark) {
+  --runner-caveman: 30 75% 40%;
+  --runner-codex: 220 6% 22%;
+  --runner-cursor: 40 40% 36%;
+  --runner-opencode: 28 80% 42%;
+  --runner-grok: 215 30% 38%;
+  --runner-pi: 170 50% 30%;
+  --runner-antigravity: 255 50% 48%;
+  --runner-acp: 199 64% 38%;
+
+  /* Effort on white: darker inks. */
+  --effort-max: 0 74% 46%;
+  --effort-ultra: 266 64% 52%;
+  /* Speed on white: 4.9:1, 4.4:1 on a hover row. */
+  --speed: 35 92% 33%;
+}
+
+/* ── Runner identity (components/runner-badge.tsx) ───────────────────────
+ * runner-edge: the harness accent as a 3px rule on the left edge; while
+ * running the card takes an 8% accent wash. Nothing loops (the status text
+ * shimmers).
+ * runner-tile: the harness logo on a white tile, an app icon on its card,
+ * the same in both themes; a mark with no colour of its own inks in the
+ * sprite outline.
+ * runner-enter: a new agent card arrives (opacity only).
+ * runner-settle: its logo fades in just after it, no scale. Reduced motion
+ * (below) leaves the still: rule, wash, logo in place. */
+.runner-edge {
+  position: relative;
+}
+.runner-edge::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 6px;
+  bottom: 6px;
+  width: 3px;
+  border-radius: 2px;
+  background: var(--runner);
+  pointer-events: none;
+}
+.runner-edge[data-running] {
+  background-image: linear-gradient(90deg, color-mix(in srgb, var(--runner) 8%, transparent), transparent 55%);
+}
+.runner-tile {
+  border-radius: 28%;
+  background: hsl(0 0% 100%);
+  color: hsl(var(--id-outline));
+  box-shadow: inset 0 0 0 1px hsl(var(--id-outline) / 0.06), 0 1px 2px hsl(var(--id-hair) / 0.18), 0 4px 12px -4px hsl(var(--id-hair) / 0.45);
+}
+.runner-enter {
+  animation: runner-in 200ms var(--ease-snap) both;
+}
+@keyframes runner-in {
+  from { opacity: 0; }
+}
+.runner-settle {
+  animation: runner-settle 150ms var(--ease-snap) 80ms both;
+}
+@keyframes runner-settle {
+  from { opacity: 0; }
+}
+
+/* ── Rendering ─────────────────────────────────────────────────────────────
+ * Any raster or SVG pixel art. SVG art also sets shape-rendering="crispEdges"
+ * on its root. Size art only at integer multiples of its grid (1x/2x/3x/4x). */
+:where(.px-art) {
+  image-rendering: pixelated;
+  shape-rendering: crispEdges;
+}
+
+/* ── Frames and corners ────────────────────────────────────────────────────
+ * .px-frame draws a 1px outline OUTSIDE the box with the four corner pixels
+ * missing (the stepped corner), using box-shadow so nothing is clipped.
+ * Colour: --px-line (defaults to the deck's input border). Pair with
+ * rounded-none: a radius under a stepped frame reads as a mistake. */
+:where(.px-frame) {
+  --px-line: hsl(var(--input));
+  box-shadow:
+    0 -1px 0 0 var(--px-line),
+    0 1px 0 0 var(--px-line),
+    -1px 0 0 0 var(--px-line),
+    1px 0 0 0 var(--px-line);
+}
+/* Raised: the frame plus a hard 1px ground line under it. Pressing it
+ * (.px-press) sinks the box 1px onto that line. */
+:where(.px-frame-raised) {
+  --px-line: hsl(var(--input));
+  box-shadow:
+    0 -1px 0 0 var(--px-line),
+    0 1px 0 0 var(--px-line),
+    -1px 0 0 0 var(--px-line),
+    1px 0 0 0 var(--px-line),
+    0 2px 0 0 hsl(0 0% 0% / 0.6);
+}
+:where(.px-press) {
+  transition: transform 80ms steps(1, jump-end), box-shadow 80ms steps(1, jump-end);
+}
+:where(.px-press):active {
+  transform: translateY(1px);
+}
+:where(.px-frame-raised.px-press):active {
+  box-shadow:
+    0 -1px 0 0 var(--px-line),
+    0 1px 0 0 var(--px-line),
+    -1px 0 0 0 var(--px-line),
+    1px 0 0 0 var(--px-line);
+}
+
+/* Stepped corners on a FILLED shape (engine tiles). Clips
+ * outlines and shadows too, so a notched fill never also carries a shadow. */
+:where(.px-notch) {
+  clip-path: polygon(
+    0 1px, 1px 1px, 1px 0, calc(100% - 1px) 0, calc(100% - 1px) 1px, 100% 1px,
+    100% calc(100% - 1px), calc(100% - 1px) calc(100% - 1px), calc(100% - 1px) 100%,
+    1px 100%, 1px calc(100% - 1px), 0 calc(100% - 1px)
+  );
+}
+:where(.px-notch-2) {
+  clip-path: polygon(
+    0 2px, 1px 2px, 1px 1px, 2px 1px, 2px 0,
+    calc(100% - 2px) 0, calc(100% - 2px) 1px, calc(100% - 1px) 1px, calc(100% - 1px) 2px, 100% 2px,
+    100% calc(100% - 2px), calc(100% - 1px) calc(100% - 2px), calc(100% - 1px) calc(100% - 1px),
+    calc(100% - 2px) calc(100% - 1px), calc(100% - 2px) 100%,
+    2px 100%, 2px calc(100% - 1px), 1px calc(100% - 1px), 1px calc(100% - 2px), 0 calc(100% - 2px)
+  );
+}
+
+/* ── Dither ────────────────────────────────────────────────────────────────
+ * Ordered dither in currentColor, so a text colour sets it:
+ * `px-dither-50 text-muted-foreground/25`. Grounds, sleeping overlays,
+ * empty-state floors. Never behind text you must read. */
+:where(.px-dither-25) {
+  background-image: conic-gradient(from 90deg at 1px 1px, currentColor 25%, transparent 0);
+  background-size: 2px 2px;
+}
+:where(.px-dither-50) {
+  background-image: conic-gradient(currentColor 25%, transparent 0 50%, currentColor 0 75%, transparent 0);
+  background-size: 2px 2px;
+}
+
+/* ── Sprite strips ─────────────────────────────────────────────────────────
+ * One horizontal sheet, frames side by side, shown through a window one frame
+ * wide. Used by the mascot and by any icon with hover frames.
+ *
+ *   <span class="px-strip" style="--px-w:16;--px-h:16;--px-frames:4;--px-fps:8;--px-scale:2">
+ *     <img class="px-strip-track px-art" src="sheet.svg" alt="" />
+ *   </span>
+ *
+ * --px-frame (0-based) picks a still frame. data-play="loop" loops at
+ * --px-fps. Inside a .px-play-hover element the strip plays once on hover,
+ * keyboard focus or as a list's active row, and holds its last frame. Reduced motion shows the still. */
+:where(.px-strip) {
+  display: inline-block;
+  flex-shrink: 0;
+  overflow: hidden;
+  width: calc(var(--px-w, 16) * var(--px-scale, 1) * 1px);
+  height: calc(var(--px-h, 16) * var(--px-scale, 1) * 1px);
+}
+:where(.px-strip-track) {
+  display: block;
+  width: calc(100% * var(--px-frames, 1));
+  max-width: none;
+  height: 100%;
+  transform: translateX(calc(-100% * var(--px-frame, 0) / var(--px-frames, 1)));
+}
+.px-strip[data-play="loop"] > .px-strip-track {
+  animation: px-strip-loop calc(var(--px-frames, 1) / var(--px-fps, 8) * 1s) steps(var(--px-frames, 1), jump-end) infinite;
+}
+/* Plays once on mount and rests on its last frame (--px-frame, set inline), also under reduced motion. */
+.px-strip[data-play="once"] > .px-strip-track {
+  animation: px-strip-once calc(var(--px-frames, 2) / var(--px-fps, 12) * 1s) steps(var(--px-frames, 2), jump-none) backwards;
+}
+.px-play-hover:is(:hover, :focus-visible, [data-highlighted], [data-active="true"], [data-selected="true"]) .px-strip:not([data-play]) > .px-strip-track {
+  animation: px-strip-once calc(var(--px-frames, 2) / var(--px-fps, 12) * 1s) steps(var(--px-frames, 2), jump-none) forwards;
+}
+@keyframes px-strip-loop {
+  from { transform: translateX(0); }
+  to { transform: translateX(-100%); }
+}
+@keyframes px-strip-once {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-100% + 100% / var(--px-frames, 2))); }
+}
+
+/* ── Wire ──────────────────────────────────────────────────────────────────
+ * A connection being made between two tiles (the install dialog's sign-in):
+ * one grid pixel thick, dashes of one pixel on and one off, in currentColor,
+ * on the scene's grid (--px-scale, as its sprites) at a fixed length (--px-len,
+ * grid pixels; never stretched by flex). data-flow="in" marches the dashes
+ * toward the mark between the wires (data-side="start" is the wire before it,
+ * "end" the one after) while a sign-in is open, at the ring's pace.
+ * data-state="made" draws it solid; with data-land it fills out from the mark
+ * in four held steps as the check comes down (frame 3 of the landing). */
+:where(.px-wire) {
+  --px-unit: calc(var(--px-scale, 1) * 1px);
+  display: block;
+  flex-shrink: 0;
+  width: calc(var(--px-len, 24) * var(--px-unit));
+  height: var(--px-unit);
+  background-image: linear-gradient(90deg, currentColor 50%, transparent 50%);
+  background-size: calc(2 * var(--px-unit)) 100%;
+}
+.px-wire[data-flow="in"] {
+  animation: px-wire-in 333ms steps(2, jump-end) infinite;
+}
+.px-wire[data-flow="in"][data-side="end"] {
+  animation-direction: reverse;
+}
+.px-wire[data-state="made"] {
+  background: currentColor;
+}
+.px-wire[data-state="made"][data-land][data-side="start"] {
+  animation: px-wire-fill-start 333ms steps(4, jump-start) 250ms backwards;
+}
+.px-wire[data-state="made"][data-land][data-side="end"] {
+  animation: px-wire-fill-end 333ms steps(4, jump-start) 250ms backwards;
+}
+@keyframes px-wire-in {
+  to { background-position-x: calc(2 * var(--px-unit)); }
+}
+@keyframes px-wire-fill-start {
+  from { clip-path: inset(0 0 0 100%); }
+  to { clip-path: inset(0); }
+}
+@keyframes px-wire-fill-end {
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0); }
+}
+
+/* Skin tones (Settings > Companion): one sprite's skin ramp swapped through
+ * the custom properties its paths read. The ramp in :root is "medium-light".
+ * Skin letters paint skin only (scripts/caveman-avatar.py), so the club,
+ * teeth and sparks keep their colour. */
+.px-skin-light {
+  --id-skin: 28 80% 84%;         /* #f7d4b6 */
+  --id-skin-shade: 22 61% 69%;   /* #e0a37f */
+  --id-skin-edge: 16 37% 47%;    /* #a3634b */
+  --id-skin-light: 30 100% 94%;  /* #fff0e1 */
+}
+.px-skin-medium {
+  --id-skin: 27 56% 61%;         /* #d39563 */
+  --id-skin-shade: 24 47% 47%;   /* #b06d3f */
+  --id-skin-edge: 23 58% 29%;    /* #74401f */
+  --id-skin-light: 30 70% 72%;   /* #e9b684 */
+}
+.px-skin-medium-dark {
+  --id-skin: 24 45% 45%;         /* #a5683f */
+  --id-skin-shade: 21 51% 34%;   /* #82492a */
+  --id-skin-edge: 22 53% 22%;    /* #55301a */
+  --id-skin-light: 27 47% 56%;   /* #c48a5c */
+}
+.px-skin-dark {
+  --id-skin: 24 34% 37%;         /* #80593f */
+  --id-skin-shade: 23 36% 29%;   /* #654430 */
+  --id-skin-edge: 23 43% 18%;    /* #41291a */
+  --id-skin-light: 25 26% 50%;   /* #a07a5e */
+}
+
+/* The project folder (PixelFolder): a shut folder lifts its front while its
+ * row is hovered or focused (frame 1), so a click always opens from the lifted
+ * frame to the open one (frame 2) and shuts back through it. */
+.px-folder {
+  display: inline-flex;
+}
+.px-folder[data-open] .px-strip {
+  --px-frame: 2;
+}
+.group:is(:hover, :has(:focus-visible)) .px-folder:not([data-open]) .px-strip {
+  --px-frame: 1;
+}
+
+/* ── Special nav buttons ───────────────────────────────────────────────────
+ * The nav row keeps the deck's look (28px row, hairline-quiet hover fill from
+ * Tailwind utilities). The pixel layer adds, per row:
+ *   hover   the icon's toy wakes up (Toys, below)
+ *   active  aria-current="page": a 2x8 pixel tick in the left gutter
+ *   pressed the icon's toy goes off
+ *   focus   neutral 2px ring, inset, no glow
+ * Mark the row `px-nav px-play-hover`, the icon wrapper `px-nav-icon`. */
+.px-nav {
+  position: relative;
+  -webkit-tap-highlight-color: transparent;
+}
+.px-nav:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: -2px;
+}
+.px-nav[aria-current="page"]::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: 2px;
+  height: 8px;
+  margin-top: -4px;
+  background: hsl(var(--foreground));
+  animation: px-tick-in 120ms steps(2, jump-end) backwards;
+}
+@keyframes px-tick-in {
+  from { transform: scaleY(0.5); opacity: 0.5; }
+}
+.px-nav-icon {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+/* ── Toys ──────────────────────────────────────────────────────────────────
+ * Every pixel icon is a little toy (icons/toys.ts): one small gesture in its
+ * own box, never a hop. Inside a `.px-play-hover` host (nav rows, <Button>,
+ * menu rows) PixelIcon draws two flipbooks beside its still drawing (.px-rest):
+ *   hover   hover, keyboard focus or a list's active row (data-highlighted /
+ *           data-active / data-selected) plays .px-hover once: the toy wakes up
+ *   press   a press or Enter/Space sets the host's data-pop (icons/pop.ts) and
+ *           .px-pop plays once: the toy goes off. The host keeps data-pop until
+ *           pointer and focus have left it, so the hover never replays on top.
+ * Each frame (.px-f) shows for its own beat (--t, --d); the still hides for
+ * the whole book (--px-hover, --px-pop on the SVG). Every frame is drawn on the
+ * icon's own grid, so nothing lands between pixels at any scale. Leaving the
+ * host stops a book at once: the still is back. */
+:root {
+  --px-shine: var(--id-glint);
+}
+.dark {
+  --px-shine: var(--id-tunic);
+}
+.px-f {
+  opacity: 0;
+  pointer-events: none;
+}
+.px-play-hover:is(:hover, :focus-visible, [data-highlighted], [data-active="true"], [data-selected="true"]) .px-rest {
+  animation: px-hide-hover var(--px-hover, 0ms) steps(1, jump-end) 1;
+}
+.px-play-hover:is(:hover, :focus-visible, [data-highlighted], [data-active="true"], [data-selected="true"]) .px-hover > .px-f {
+  animation: px-show var(--d) steps(1, jump-end) var(--t) 1;
+}
+.px-play-hover[data-pop] .px-rest {
+  animation: px-hide-pop var(--px-pop, 0ms) steps(1, jump-end) 1;
+}
+.px-play-hover[data-pop] .px-hover > .px-f {
+  animation: none;
+}
+.px-play-hover[data-pop] .px-pop > .px-f {
+  animation: px-show var(--d) steps(1, jump-end) var(--t) 1;
+}
+@keyframes px-show {
+  0%, 100% { opacity: 1; }
+}
+/* Two names for one move, so a press swaps the still's animation and restarts it. */
+@keyframes px-hide-hover {
+  0%, 100% { opacity: 0; }
+}
+@keyframes px-hide-pop {
+  0%, 100% { opacity: 0; }
+}
+/* Drawings with no flipbook (the mascot bust, the Automations page's own marks) stay still on hover and
+ * sink a pixel while pressed: .px-body inside an SVG in its grid's units, .px-rise on HTML by grid pixels
+ * at its --px-scale. */
+.px-play-hover:active .px-body {
+  transform: translateY(1px);
+}
+.px-play-hover:active .px-rise {
+  transform: translateY(calc(1px * var(--px-scale, 1)));
+}
+/* A pixel icon waiting on something short (the mic while it starts or stops): on, dim, in held frames. */
+.px-blink-loop {
+  animation: px-blink-loop 800ms steps(1, jump-end) infinite;
+}
+@keyframes px-blink-loop {
+  50%, 100% { opacity: 0.35; }
+}
+
+/* A count that just went up: one 1px hop, then still. */
+.px-bump {
+  display: inline-block;
+  animation: px-bump 240ms steps(1, jump-end) 1;
+}
+@keyframes px-bump {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1px); }
+}
+
+/* The bonk word over the mascot: rises in held steps like an old score popup,
+ * holds, then blinks out. --dx and --rise are whole pixels set inline. */
+.mascot-bonk {
+  translate: calc(-50% + var(--dx, 0px)) 0;
+  animation: mascot-bonk 720ms steps(1, jump-end) forwards;
+}
+@keyframes mascot-bonk {
+  0% { transform: translateY(0); }
+  12% { transform: translateY(calc(var(--rise) * 0.5)); }
+  24% { transform: translateY(var(--rise)); }
+  70% { opacity: 1; }
+  76% { opacity: 0; }
+  82% { opacity: 1; }
+  88%, 100% { opacity: 0; transform: translateY(var(--rise)); }
+}
+
+/* ── Reduced motion ────────────────────────────────────────────────────────
+ * The whole app, not just this file: every animation stops (sprites rest on
+ * their still frame), transitions resolve at once but still fire
+ * transitionend, smooth scrolling turns off. JS motion (the `motion` package)
+ * must sit under <MotionConfig reducedMotion="user">. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── Checks ──────────────────────────────────────────────────────────────────
+ * The done disc and the bare check are vectors (icons/check.ts), not pixels.
+ * Landing: the disc grows from 60% with no overshoot, then the check draws
+ * along its own length (pathLength 1). Reduced motion: it is simply there. */
+.px-check-land {
+  transform-origin: center;
+  animation: px-check-disc 220ms var(--ease-snap) backwards;
+}
+.px-check-land .px-check-path {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: px-check-draw 200ms 120ms var(--ease-snap) forwards;
+}
+@keyframes px-check-disc {
+  from {
+    transform: scale(0.6);
+    opacity: 0;
+  }
+}
+@keyframes px-check-draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .px-check-land,
+  .px-check-land .px-check-path {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}

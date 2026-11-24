@@ -1,0 +1,1202 @@
+/* Beautiful UI (beautifului.dev) component contract, bridged onto the deck's
+   own tokens. See the header of foundation.css — it is a rewrite of the
+   upstream Tailwind-v4 foundation, not a copy.
+
+   These live in styles/, NOT app/: anything under app/ is route space, and
+   tests/web-surfaces.runtime.mjs rightly fails an unclassified top-level
+   segment. `npx shadcn add` writes them back to app/beautifui/ — move them
+   here again after any re-install.
+
+   @import must precede every rule, so this sits above the @tailwind directives
+   (which ARE rules). That ordering is also what we want in the cascade: a
+   Tailwind utility comes later and so still overrides a Beautiful UI class. */
+@import "./beautifui/foundation.css";
+@import "./beautifui/sidebar-nav.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Inbox: the deck's neutrals already hold readable secondary copy; dark only
+   lifts the two tints its queue writes text in. */
+@layer base {
+  html.dark[data-surface="deck"]:not([data-theme]) .inbox-surface {
+    --info: 213 94% 68%;
+    --destructive: 357 70% 70%;
+  }
+}
+
+
+/*
+  Caveman Cloud design tokens — "dark instrument deck."
+  A cool, near-black onyx canvas (Linear-grade) with a single rationed accent:
+  savings-green. Green is BOTH the primary action color and the savings/positive
+  semantic — money is the action. Everything else lives in a tight cool-gray
+  scale (slate → fog → mist → snow). Ember is retired to the brand mark only;
+  indigo/cyan are decorative supporting accents, never the theme. Cards earn
+  elevation from 1px hairline borders, not fills. Dark is the hero theme.
+*/
+
+@layer base {
+  :root {
+    /* One neutral grotesk across marketing body and display type. */
+    --font-display: var(--font-geist-sans);
+
+    /* Cool light theme (secondary) — kept coherent; dark is the hero. */
+    --background: 210 20% 98%;
+    --foreground: 213 18% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 213 18% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 213 18% 10%;
+
+    /* savings-green = primary action AND savings semantic (one color) */
+    --primary: 145 63% 36%;
+    --primary-foreground: 210 30% 99%;
+
+    --secondary: 214 16% 95%;
+    --secondary-foreground: 213 18% 18%;
+
+    --muted: 214 16% 95%;
+    --muted-foreground: 214 9% 42%;
+
+    --accent: 214 18% 93%;
+    --accent-foreground: 213 18% 14%;
+
+    --destructive: 0 72% 50%;
+    --destructive-foreground: 210 30% 99%;
+
+    --success: 145 63% 34%;
+    --success-foreground: 210 30% 99%;
+    --info: 217 91% 42%;
+    --info-foreground: 210 30% 99%;
+
+    --warning: 35 92% 42%;
+    --warning-foreground: 210 30% 99%;
+
+    --border: 214 16% 89%;
+    --input: 214 16% 86%;
+    --ring: 145 63% 38%;
+
+    --chart-1: 145 60% 38%;
+    --chart-2: 232 52% 56%;
+    --chart-3: 187 90% 36%;
+    --chart-4: 35 90% 46%;
+    --chart-5: 214 10% 50%;
+
+    --sidebar: 214 20% 97%;
+    --sidebar-foreground: 214 12% 32%;
+    --sidebar-accent: 214 18% 92%;
+    --sidebar-accent-foreground: 213 18% 14%;
+    --sidebar-border: 214 16% 88%;
+
+    --radius: 0.5rem;
+
+    --shadow-elevated: 0 1px 2px -1px hsl(214 20% 20% / 0.08), 0 8px 24px -16px hsl(214 20% 16% / 0.16);
+  }
+
+  .dark {
+    /* Onyx canvas + the 4-step cool surface stack (canvas → nav → card → input) */
+    --background: 210 11% 4%;     /* onyx  #08090a */
+    --foreground: 210 16% 97%;    /* snow  #f7f8f8 */
+
+    --card: 210 7% 6%;            /* charcoal #0f1011 */
+    --card-foreground: 210 16% 97%;
+
+    --popover: 210 5% 9%;         /* obsidian #161718 */
+    --popover-foreground: 210 16% 97%;
+
+    /* savings-green — the one status light: CTA, selected nav, focus, savings */
+    --primary: 142 69% 58%;       /* #4ade80 */
+    --primary-foreground: 210 11% 4%;
+
+    --secondary: 210 5% 9%;       /* obsidian raised */
+    --secondary-foreground: 217 21% 85%;  /* mist */
+
+    --muted: 210 6% 8%;
+    --muted-foreground: 218 9% 57%;       /* fog  #8a8f98 */
+
+    --accent: 213 8% 12%;         /* hover surface */
+    --accent-foreground: 210 16% 97%;
+
+    --destructive: 0 79% 63%;     /* crimson #eb5757 */
+    --destructive-foreground: 210 16% 97%;
+
+    --success: 142 69% 55%;       /* = primary green (fused) */
+    --success-foreground: 210 11% 4%;
+    --info: 213 94% 68%;          /* sky blue #60a5fa */
+    --info-foreground: 210 11% 4%;
+
+    --warning: 38 91% 55%;        /* amber #f5a623 */
+    --warning-foreground: 210 11% 4%;
+
+    --border: 216 9% 15%;         /* graphite #23252a */
+    --input: 214 7% 19%;          /* iron / steel */
+    --ring: 142 69% 58%;          /* green focus */
+
+    --chart-1: 142 69% 58%;       /* green   — savings / primary series */
+    --chart-2: 232 56% 64%;       /* indigo  #5e6ad2 */
+    --chart-3: 187 90% 45%;       /* cyan    #02b8cc */
+    --chart-4: 38 91% 58%;        /* amber */
+    --chart-5: 218 9% 60%;        /* fog     — neutral series */
+
+    --sidebar: 210 7% 6%;         /* charcoal */
+    --sidebar-foreground: 218 9% 70%;
+    --sidebar-accent: 213 8% 11%;
+    --sidebar-accent-foreground: 210 16% 97%;
+    --sidebar-border: 216 9% 14%;
+
+    /* Border-defined elevation: a faint top edge + a soft drop, no chromatic halo. */
+    --shadow-elevated: 0 1px 0 0 hsl(0 0% 100% / 0.02), 0 2px 4px 0 hsl(0 0% 0% / 0.4);
+  }
+
+  /*
+    The deck (dashboard) — a neutral, layered workspace.
+    Canvas, navigation, cards, fields and overlays each have a distinct role.
+    Soft shadows reinforce that hierarchy; structural rules stay hairlines. Chroma = semantic state (success/destructive/warning) + chart
+    series identity only. Hung off data-surface="deck" on <html> (set by the
+    dashboard layout) so portaled menus, dialogs, and tooltips inherit the
+    same tokens. The marketing site keeps :root/.dark above untouched.
+  */
+  html[data-surface="deck"] {
+    /* Light (Codex desktop reference): a soft grey shell frames a white
+       working panel; cards, menus and fields are white, set off by hairlines. */
+    --background: 0 0% 100%;        /* #ffffff the inset panel */
+    --foreground: 240 3.1% 12.5%;   /* #1f1f21 */
+
+    --card: 0 0% 100%;              /* #ffffff */
+    --card-foreground: 240 3.1% 12.5%;
+
+    --popover: 0 0% 100%;           /* #ffffff */
+    --popover-foreground: 240 3.1% 12.5%;
+
+    --primary: 240 3.1% 12.5%;      /* #1f1f21 */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 94.1%;        /* #f0f0f0 filled pill, kbd, code chip */
+    --secondary-foreground: 240 2.4% 24%; /* #3c3c3f */
+
+    --muted: 0 0% 96.1%;            /* #f5f5f5 group bars, tracks (= shell) */
+    --muted-foreground: 240 1.1% 36.5%; /* #5c5c5e — 6.3:1 on the panel */
+
+    --accent: 0 0% 95.3%;           /* #f3f3f3 hover / selected row */
+    --accent-foreground: 240 3.1% 12.5%;
+
+    --destructive: 358 65% 48%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 145 60% 32%;
+    --success-foreground: 0 0% 100%;
+    --info: 212.41 63.13% 42.55%; /* #2867b1 */
+    --info-foreground: 0 0% 100%;
+
+    --warning: 32.24 77.91% 33.73%; /* #995b13 */
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 90.6%;           /* #e7e7e7 */
+    --input: 222.00 4.10% 52.16%; /* #80838a — field edges keep 3:1 */
+    --ring: 240 2.3% 42.9%;         /* #6b6b70 */
+
+    /* Chart series — fixed identity order, CVD-validated on both surfaces. */
+    --chart-1: 210 100% 45%;      /* #0077e6 blue — lead series, bars */
+    --chart-line: 213 95% 65%;    /* #519dfa the single-series line */
+    --chart-2: 40 100% 38%;       /* #c07f00 amber */
+    --chart-3: 155 67% 37%;       /* #1fa06b green */
+    --chart-4: 257 71% 70%;       /* #9a7ce8 purple */
+    --chart-5: 332 59% 60%;       /* #d45d94 pink */
+    --chart-other: 0 0% 54%;      /* neutral "Other" bucket */
+    /* Tonal blues — shades of the lead series for 2–3-way composition splits
+       of ONE measure (input/output, cached/uncached). Not categorical identity. */
+    --chart-tone-1: 210 100% 45%;
+    --chart-tone-2: 213 95% 76%;
+    --chart-tone-3: 214 90% 30%;
+
+    /* The shell: sidebar, and the margin around the panel. */
+    --sidebar: 0 0% 96.1%;          /* #f5f5f5 */
+    --sidebar-foreground: 0 0% 20%; /* #333333 rows read dark, as Codex's */
+    --sidebar-accent: 0 0% 90.6%;   /* #e7e7e7 selected row */
+    --sidebar-accent-foreground: 0 0% 10.2%; /* #1a1a1a */
+    --sidebar-border: 0 0% 90.6%;   /* #e7e7e7 */
+
+    --radius: 0.5rem;   /* cards rounded-xl = 12px, controls rounded-md = 6px */
+
+    --shadow-elevated: 0 1px 2px hsl(0 0% 0% / 0.04), 0 4px 12px -6px hsl(0 0% 0% / 0.08);
+    --shadow-overlay: 0 12px 32px -8px hsl(0 0% 0% / 0.16), 0 2px 6px hsl(0 0% 0% / 0.08);
+    --control: 0.00 0.00% 100.00%; /* #ffffff */
+    --control-surface: hsl(var(--control));
+    --subtle-foreground: 222.86 3.32% 41.37%; /* #66686d */
+    --shadow-frame: 0 1px 2px hsl(0 0% 0% / 0.03);  /* the inset page panel */
+ /* Lines added and removed (compact diff palette, ): the -ink pair is every "+12 −3" count
+       and a diff's marks, the bare pair tints changed lines at 6 to 10%. Never a state: success and destructive stay
+       done and failed. */
+    --diff-add: 160 84% 39%;        /* #10b981 */
+    --diff-add-ink: 163 94% 24%;    /* #047857 */
+    --diff-del: 350 89% 60%;        /* #f43f5e */
+    --diff-del-ink: 345 83% 41%;    /* #be123c */
+  }
+  html.dark[data-surface="deck"] {
+ /* Dark deck (minimal runtime theme, inspected 2026-10-05): a near-black
+       shell, the working panel one step up, cards and menus above it. Grays
+       carry a faint cool tint. */
+    --background: 240 2.7% 7.3%;    /* #121213 the inset panel */
+    --foreground: 220 5.7% 89.6%;   /* #e3e4e6 */
+
+    --card: 240 1.9% 10.4%;         /* #1a1a1b */
+    --card-foreground: 220 5.7% 89.6%;
+
+    --popover: 210 3.6% 11%;        /* #1b1c1d */
+    --popover-foreground: 220 5.7% 89.6%;
+
+    --primary: 220 5.7% 89.6%;      /* white filled action, black text */
+    --primary-foreground: 240 2.7% 7.3%;
+
+    --secondary: 240 2.8% 14.1%;    /* #232325 quiet filled controls */
+    --secondary-foreground: 240 2% 80%;
+
+    --muted: 240 4% 9.8%;           /* #18181a skeletons, meter tracks */
+    --muted-foreground: 240 1% 58.8%; /* #959597 — 6.3:1 on the panel */
+    /* Tertiary text (timestamps, release dates, hints, line numbers, section heads): light's #66686d was 3.1:1
+       on a dark card; this keeps the 4.5:1 every other built-in theme gets (apps/web state/themes.ts), on hover rows
+       and filled controls too. Dim text is this token, never foreground at an alpha (tokens.test.ts). */
+    --subtle-foreground: 240 1% 54.5%; /* #8a8a8c neutral, as muted — 5.4:1 on the panel, 5.0:1 on cards, 4.5:1 on hover and filled */
+
+    --accent: 240 2.9% 13.7%;       /* #222224 hover / selected */
+    --accent-foreground: 220 5.7% 89.6%;
+
+    --destructive: 357 70% 64%;   /* #e5636a */
+    --destructive-foreground: 0 0% 98%;
+
+    --success: 145 60% 53%;       /* #3ecf7a — live/verified state only */
+    --success-foreground: 0 0% 7%;
+
+    --warning: 34 87% 56%;        /* #f0a12e */
+    --warning-foreground: 0 0% 7%;
+
+    --border: 220 4.1% 14.3%;     /* #232426 every hairline */
+    --input: 240 3.2% 18.6%;      /* #2e2e31 input borders */
+    --ring: 240 1.8% 56.5%;       /* #8e8e92 */
+
+    --chart-1: 211 95% 55%;       /* blue lead, lifted for dark surface */
+    --chart-line: 213 95% 66%;
+    --chart-2: 40 100% 45%;
+    --chart-3: 155 67% 42%;
+    --chart-4: 257 71% 70%;
+    --chart-5: 332 59% 62%;
+    --chart-other: 0 0% 54%;
+    --chart-tone-1: 211 95% 55%;  /* mid blue */
+    --chart-tone-2: 213 95% 76%;  /* light blue */
+    --chart-tone-3: 214 80% 38%;  /* deep blue */
+
+    --sidebar: 240 5.3% 3.7%;     /* #09090a the shell */
+    --sidebar-foreground: 240 0.9% 57.6%; /* #929294 */
+    --sidebar-accent: 240 2.8% 14.1%; /* #232325 selected row */
+    --sidebar-accent-foreground: 240 6.7% 97.1%; /* #f7f7f8 */
+    --sidebar-border: 240 3.4% 11.4%; /* #1c1c1e */
+
+    --shadow-elevated: 0 0 0 0 transparent;
+    --shadow-frame: 0 0.5px 1px 1px hsl(0 0% 0% / 0.3);
+    --diff-add: 160 84% 39%;        /* #10b981 */
+    --diff-add-ink: 156 72% 67%;    /* #6ee7b7 */
+    --diff-del: 350 89% 60%;        /* #f43f5e */
+    --diff-del-ink: 352 96% 82%;    /* #fda4af */
+ /* minimal layered elevation: several low-opacity black layers. */
+    --shadow-overlay: 0 4px 40px hsl(0 0% 0% / 0.1), 0 3px 20px hsl(0 0% 0% / 0.125), 0 3px 12px hsl(0 0% 0% / 0.125), 0 2px 8px hsl(0 0% 0% / 0.125), 0 1px 1px hsl(0 0% 0% / 0.125);
+    --info: 217 80% 40%;
+    --info-foreground: 0 0% 100%;
+    --control-surface: transparent;
+  }
+  html[data-surface="deck"] ::selection {
+    background: hsl(var(--foreground) / 0.16);
+    color: hsl(var(--foreground));
+  }
+  html:not(.dark)[data-surface="deck"] :is(input, textarea)::placeholder {
+    color: hsl(var(--muted-foreground));
+    opacity: 1;
+  }
+  /* Solid canvas: no ambient marketing glow behind the console. */
+  html[data-surface="deck"] body {
+    background-image: none;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+    scroll-padding-top: 6rem;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    min-height: 100vh;
+  }
+
+  /*
+    Dashboard typography scope — Linear's instrument-panel voice. The operator
+    console renders in the system faces (fonts.css: SF Pro and SF Mono on a Mac)
+    with no stylistic sets: those were Inter's. Remapping
+    the Tailwind font variables here means every `font-sans`/`font-mono` utility
+    inside the shell re-points without touching the marketing site (which keeps
+    Geist by never carrying `.dashboard-scope`). Weights are capped at Linear's
+    510/590 — the system never shouts with 700+. The remap also sits on the
+    deck's <html> (set server-side) so portaled menus, dialogs and toasts
+    render in the same faces, and Geist is never requested on the deck.
+  */
+  html[data-surface="deck"],
+  .dashboard-scope {
+    --font-geist-sans: var(--font-inter);
+    --font-geist-mono: var(--font-jetbrains);
+  }
+ /* Whole hundreds only: the system face renders 510 and 590 (minimal Inter weights) as a smeared faux bold. */
+  .dashboard-scope .font-medium { font-weight: 500; }
+  .dashboard-scope .font-semibold,
+  .dashboard-scope .font-bold { font-weight: 600; }
+
+  /* Readable on both the canvas and cards, without a perpetual paint loop. */
+  html[data-surface="deck"] [data-skeleton] {
+    background-color: hsl(var(--foreground) / 0.07);
+  }
+
+  /* Near-flat onyx with a single faint green status-light glow at the top.
+     Linear keeps surfaces flat — this is the one ambient gradient, rationed. */
+  .dark body {
+    background-image:
+      radial-gradient(110% 70% at 50% -15%, hsl(142 69% 40% / 0.06) 0%, transparent 55%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: hsl(var(--primary) / 0.30);
+    color: hsl(var(--primary-foreground));
+  }
+
+  /* Shiki dual-theme switch: inline colors are the light theme; dark mode flips
+     every token to its --shiki-dark var (shiki-client-highlight.tsx). Background
+     stays the panel's own — the component forces .shiki bg transparent. */
+  .dark .shiki,
+  .dark .shiki span {
+    color: var(--shiki-dark) !important;
+  }
+
+  /*
+    Inline links and bare buttons in the deck. ~30 of them carried
+    `hover:text-foreground` with no transition, so the colour cut instantly on
+    hover. One element-level rule fixes every one of them. It weighs nothing
+    (`:where`), so any class that sets a transition (a `transition-*` utility,
+    `.key`, `.composer-key`) wins and this only fills the gaps; at
+    `.dashboard-scope button` it outweighed them all, and Send's width never
+    eased. Colour only — never a shorthand that could catch a layout property.
+  */
+  :where(.dashboard-scope) :where(a, button) {
+    transition: color 150ms var(--ease-snap),
+      text-decoration-color 150ms var(--ease-snap);
+  }
+
+  /* Tabular figures for all numeric data surfaces */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Custom thin scrollbars that match the cave palette */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.6);
+    background-clip: padding-box;
+  }
+
+  /* A view holding its previous answer while the next loads (DataState marks
+     it). Dims only if the load outlasts 300ms, and the stale answer can't be
+     clicked. Leaving the state snaps back: the new answer is never faded. */
+  [data-held] {
+    opacity: 0.6;
+    pointer-events: none;
+    transition: opacity 200ms var(--ease-snap) 300ms;
+  }
+
+  /* One fade per skeleton: a composite nested inside another inherits the
+     outer fade instead of multiplying it. */
+  .animate-skeleton-in .animate-skeleton-in {
+    animation: none;
+  }
+
+  /* Native disclosures open like every other panel (panelMotion). Zero
+     specificity: a child's own animate-* class, or animate-none where the
+     disclosure is keyboard-walked, always wins. */
+  :where(details[open] > summary ~ *) {
+    @apply animate-panel-in;
+  }
+
+  /* Reduced-motion respect for the animated brand loaders */
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer components {
+  @media (prefers-contrast: more) {
+    .bento-tile {
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+  }
+
+  /* Hairline divider with a warm sheen, used across cards */
+  .cave-hairline {
+    background-image: linear-gradient(
+      90deg,
+      transparent,
+      hsl(var(--border)),
+      transparent
+    );
+  }
+
+  /* Etched label — instrument-panel microtype: mono, uppercase, tracked.
+     The Berkeley-Mono "this is a tool, not a marketing site" voice. */
+  .etched {
+    @apply font-mono text-2xs font-medium uppercase tracking-[0.16em] text-muted-foreground;
+  }
+
+ /* Inset hairline border — minimal card edge. Pairs with shadow-elevated so
+     cards read as objects sitting on the canvas, not filled blocks. */
+  .hairline-card {
+    box-shadow: inset 0 0 0 1px hsl(var(--border)), var(--shadow-elevated);
+  }
+
+  /* Fine dot-matrix texture for hero / empty / landing surfaces */
+  .dotgrid {
+    background-image: radial-gradient(hsl(var(--foreground) / 0.10) 1px, transparent 1px);
+    background-size: 16px 16px;
+  }
+
+  /* A row of pixels acting as a divider */
+  .pixel-divider {
+    height: 3px;
+    background-image: radial-gradient(hsl(var(--border)) 1px, transparent 1px);
+    background-size: 6px 3px;
+    background-repeat: repeat-x;
+  }
+
+  /* Accent focus glow for primary surfaces — savings-green status light. */
+  .ember-ring {
+    box-shadow: 0 0 0 1px hsl(var(--primary) / 0.45), 0 0 22px -6px hsl(var(--primary) / 0.45);
+  }
+
+  /* Animated dashed flow along a diagram's primary path (the byte-safe route).
+     Reduced-motion is already neutralized globally above. */
+  .flow-dash {
+    stroke-dasharray: 3 7;
+    animation: docs-flow 1.1s linear infinite;
+  }
+  @keyframes docs-flow {
+    to {
+      stroke-dashoffset: -20;
+    }
+  }
+
+  /* Glass (STYLE.md 4): the one material for what floats over the work: ⌘K,
+     menus, selects, popovers, tooltips and dialogs. The page shows through,
+     blurred and a little richer; a lit top edge and the overlay shadow lift
+     it. Owns its fill, hairline and shadow, so a surface writes `glass` and
+     no border-, bg- or shadow- class beside it. Rows on it highlight with
+     ink at low alpha, which stays glass, never the solid accent. */
+  .glass {
+    border: 1px solid hsl(var(--foreground) / 0.08);
+    background-color: hsl(var(--popover) / 0.8);
+    /* Prefixed first: the minifier keeps only the last of the two, and Chromium reads only the unprefixed one. */
+    -webkit-backdrop-filter: blur(40px) saturate(1.8);
+    backdrop-filter: blur(40px) saturate(1.8);
+    box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6), var(--shadow-overlay);
+  }
+  :where(.dark) .glass {
+    border-color: hsl(var(--foreground) / 0.1);
+    background-color: hsl(var(--popover) / 0.72);
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.07), var(--shadow-overlay);
+  }
+  @media (prefers-reduced-transparency: reduce) {
+    .glass,
+    :where(.dark) .glass {
+      background-color: hsl(var(--popover));
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
+  }
+
+  /* Keys (STYLE.md 5): the send key's physical treatment, shared by the
+     composer's keys, <Button> default and secondary, <Keycap> and the switch.
+     Lit from above: a lit top edge, a shaded bottom edge and a hairline,
+     all inside its own shape; no drop shadow under it (founder 2026-11-13).
+     Pressed, the key sinks a pixel, shrinks to --key-press and shades from
+     the top inside in 60 ms. Tones: rest (a key with nothing to do), lit (the white
+     key), card (one step above what it sits on), ghost (no surface until
+     hovered), and a call's coloured keys, end (hang up, red) and answer
+     (green), lit and pressed as the white key is. Tailwind 3's @layer is no cascade layer, so the tones sit at
+     one class's weight (:where) and any utility beside them wins: the
+     focus ring, a call site's fill. */
+  .key {
+    --key-edge: 0 0 0 0.5px hsl(0 0% 0% / 0.32);
+    --key-press: 0.96;
+    transition:
+      background-color 150ms var(--ease-snap),
+      color 150ms var(--ease-snap),
+      box-shadow 120ms var(--ease-snap),
+      transform 120ms var(--ease-snap),
+      filter 120ms var(--ease-snap);
+  }
+  .key:where([data-tone="rest"]) {
+    color: hsl(var(--subtle-foreground));
+    background-color: hsl(var(--foreground) / 0.07);
+    box-shadow: inset 0 0 0 0.5px hsl(var(--foreground) / 0.08);
+  }
+  :where(.dark) .key:where([data-tone="rest"]) {
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.06), inset 0 0 0 0.5px hsl(var(--foreground) / 0.06);
+  }
+  .key:where([data-tone="lit"], [data-tone="end"], [data-tone="answer"]) {
+    color: hsl(var(--key-ink));
+    background-color: hsl(var(--key-fill));
+    background-image: linear-gradient(to bottom, hsl(0 0% 100% / 0.1), hsl(0 0% 0% / 0.1));
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.18),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+      var(--key-edge);
+  }
+  :where(.dark) .key:where([data-tone="lit"]) {
+    --key-edge: 0 0 0 0.5px hsl(0 0% 0% / 0.6);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.7),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.14),
+      var(--key-edge);
+  }
+  .key:where([data-tone="lit"]) { --key-fill: var(--primary); --key-ink: var(--primary-foreground); }
+  .key:where([data-tone="end"]) { --key-fill: var(--destructive); --key-ink: 0 0% 100%; }
+  .key:where([data-tone="answer"]) { --key-fill: var(--success); --key-ink: 0 0% 100%; }
+  /* A coloured key in dark: the white key's darker edge, under a softer top edge than white's. */
+  :where(.dark) .key:where([data-tone="end"], [data-tone="answer"]) {
+    --key-edge: 0 0 0 0.5px hsl(0 0% 0% / 0.6);
+    box-shadow:
+      inset 0 1px 0 hsl(0 0% 100% / 0.22),
+      inset 0 -1px 0 hsl(0 0% 0% / 0.2),
+      var(--key-edge);
+  }
+  .key:where([data-tone="card"]) {
+    background-color: hsl(var(--foreground) / 0.08);
+    background-image: linear-gradient(to bottom, hsl(var(--foreground) / 0.03), transparent);
+    box-shadow: inset 0 0 0 0.5px hsl(var(--foreground) / 0.12);
+  }
+  :where(.dark) .key:where([data-tone="card"]) {
+    box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.08), inset 0 0 0 0.5px hsl(var(--foreground) / 0.1);
+  }
+  .key:is([data-tone="lit"], [data-tone="end"], [data-tone="answer"], [data-tone="card"]):hover { filter: brightness(1.06); }
+  .key:is([data-tone="lit"], [data-tone="end"], [data-tone="answer"], [data-tone="card"]):active:not([aria-disabled="true"], :disabled, [data-state="open"]) {
+    transform: translateY(1px) scale(var(--key-press));
+    filter: brightness(0.94);
+    transition-duration: 150ms, 150ms, 60ms, 60ms, 60ms;
+  }
+  .key:is([data-tone="lit"], [data-tone="end"], [data-tone="answer"]):active:not([aria-disabled="true"], :disabled, [data-state="open"]) {
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.18), var(--key-edge);
+  }
+  .key[data-tone="card"]:active:not([aria-disabled="true"], :disabled, [data-state="open"]) {
+    box-shadow: inset 0 1px 2px hsl(0 0% 0% / 0.25), inset 0 0 0 0.5px hsl(var(--foreground) / 0.1);
+  }
+  .key:where([data-tone="ghost"]) { color: hsl(var(--muted-foreground)); }
+  .key[data-tone="ghost"]:hover:not([aria-disabled="true"]) { color: hsl(var(--foreground)); background-color: hsl(var(--accent)); }
+  .key[data-tone="ghost"]:active:not([aria-disabled="true"]) { transform: translateY(1px) scale(0.94); transition-duration: 150ms, 150ms, 60ms, 60ms, 60ms; }
+  @media (prefers-reduced-motion: reduce) {
+    .key:active { transform: none !important; }
+  }
+
+  /* Depth is neutral and tokenized; decorative colored glows stay off. */
+  html[data-surface="deck"] [class*="shadow-ember"],
+  html[data-surface="deck"] .shadow-torch,
+  html[data-surface="deck"] .ember-ring {
+    box-shadow: none !important;
+  }
+  html.dark[data-surface="deck"] .shadow-elevated {
+    box-shadow: none !important;
+  }
+  html[data-surface="deck"] .hairline-card {
+    box-shadow: inset 0 0 0 1px hsl(var(--border)) !important;
+  }
+  /* A deck surface written with bg-popover: solid fill + hairline + one soft
+     shadow. What floats over the work is `.glass` instead. */
+  html[data-surface="deck"] .bg-popover {
+    background-color: hsl(var(--popover));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    box-shadow: var(--shadow-overlay);
+  }
+
+  /* Retired instrument voice: legacy .etched call sites render as plain quiet
+     labels on the deck — sans, sentence-case, untracked. (New code writes
+     `text-xs text-muted-foreground` directly.) */
+  html[data-surface="deck"] .etched {
+    font-family: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+    color: hsl(var(--muted-foreground));
+  }
+
+  /* First-run wizard step transitions — forward arrives from the right, back
+     from the left, so travel matches the flow direction. Reduced motion is
+     flattened by the global rule above. */
+  .onb-step-forward {
+    animation: onb-step-in-forward 0.24s var(--ease-snap) both;
+  }
+  .onb-step-back {
+    animation: onb-step-in-back 0.24s var(--ease-snap) both;
+  }
+
+  /* Grid texture used on hero / empty surfaces */
+  .cave-grid {
+    background-size: 32px 32px;
+    background-image:
+      linear-gradient(to right, hsl(var(--border) / 0.5) 1px, transparent 1px),
+      linear-gradient(to bottom, hsl(var(--border) / 0.5) 1px, transparent 1px);
+    -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 40%, transparent 100%);
+  }
+}
+
+@keyframes onb-step-in-forward {
+  from {
+    opacity: 0;
+    transform: translateX(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes onb-step-in-back {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Labs glyph field: the moss cells breathe. Nothing else in the field moves. */
+@keyframes glyph-drift {
+  0%, 100% { opacity: 0.35; }
+  50%      { opacity: 1; }
+}
+.animate-glyph-drift { animation-name: glyph-drift; animation-iteration-count: infinite; animation-timing-function: ease-in-out; }
+
+/* Labs research articles: editorial monochrome on the near-black canvas.
+   The MDX renderer (mdx-components.tsx) speaks the docs register; these
+   overrides re-tune it for the bauhaus article room — enormous display title,
+   a narrow measure, white ink instead of the docs' green accents. */
+.article-prose h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 8vw, 7rem);
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  font-weight: 500;
+  color: hsl(var(--foreground));
+  margin-bottom: 4rem;
+}
+.article-prose h2 {
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+}
+.article-prose p,
+.article-prose li {
+  color: rgb(255 255 255 / 0.66);
+  font-size: 0.95rem;
+  line-height: 1.85;
+  max-width: 42rem;
+}
+.article-prose strong { color: rgb(255 255 255 / 0.9); font-weight: 600; }
+.article-prose a {
+  color: rgb(255 255 255 / 0.9);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.3);
+  text-underline-offset: 4px;
+}
+.article-prose a:hover { text-decoration-color: rgb(255 255 255 / 0.7); }
+/* Headings self-link for the anchor hash; they must not read as hyperlinks. */
+.article-prose h1 a,
+.article-prose h2 a,
+.article-prose h3 a,
+.article-prose h4 a {
+  text-decoration: none;
+  color: inherit;
+}
+.article-prose ul > li::before { background: rgb(255 255 255 / 0.3); }
+.article-prose blockquote {
+  border-left: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 0;
+  background: transparent;
+  padding-left: 1.25rem;
+  color: rgb(255 255 255 / 0.45);
+}
+.article-prose table { font-size: 0.85rem; color: rgb(255 255 255 / 0.66); }
+/* Paper front matter: the author/venue/date line under the display title. */
+.article-prose .paper-meta {
+  margin-bottom: 4rem;
+  max-width: none;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1.6;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgb(255 255 255 / 0.35);
+}
+/* Result tables keep the bauhaus register: square corners, hairlines, no glow. */
+.article-prose div:has(> table) {
+  border-radius: 0;
+  border-color: rgb(255 255 255 / 0.12);
+  box-shadow: none;
+}
+.article-prose thead { background: rgb(255 255 255 / 0.04); }
+.article-prose th { border-color: rgb(255 255 255 / 0.1); color: rgb(255 255 255 / 0.4); }
+.article-prose td { border-color: rgb(255 255 255 / 0.07); }
+
+/* ==========================================================================
+   /news — the essay room. Same MDX renderer as the docs, re-tuned for reading
+   at length: a lede paragraph, numbered section rules that line up with the
+   contents ledger, and a measure sized for prose rather than reference.
+   ======================================================================== */
+.news-prose {
+  counter-reset: news-section;
+}
+.news-prose p,
+.news-prose li {
+  color: rgb(255 255 255 / 0.72);
+  font-size: 1.0625rem;
+  line-height: 1.8;
+  max-width: 42rem;
+}
+.news-prose > p:first-child {
+  font-size: clamp(1.15rem, 2.2vw, 1.35rem);
+  line-height: 1.55;
+  letter-spacing: -0.015em;
+  color: rgb(255 255 255 / 0.92);
+  margin-top: 0;
+}
+.news-prose h2 {
+  font-size: clamp(1.5rem, 3vw, 1.95rem);
+  line-height: 1.14;
+  letter-spacing: -0.03em;
+  font-weight: 600;
+  color: hsl(var(--foreground));
+  margin-top: 5rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+}
+.news-prose h2::before {
+  counter-increment: news-section;
+  content: counter(news-section, decimal-leading-zero);
+  display: block;
+  margin-bottom: 1.25rem;
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.18em;
+  color: rgb(255 255 255 / 0.28);
+}
+.news-prose h3 {
+  margin-top: 3rem;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+  color: rgb(255 255 255 / 0.9);
+}
+.news-prose h1 a,
+.news-prose h2 a,
+.news-prose h3 a {
+  text-decoration: none;
+  color: inherit;
+}
+.news-prose strong {
+  color: rgb(255 255 255 / 0.95);
+  font-weight: 600;
+}
+.news-prose a {
+  color: rgb(255 255 255 / 0.9);
+  text-decoration: underline;
+  text-decoration-color: rgb(255 255 255 / 0.3);
+  text-underline-offset: 4px;
+}
+.news-prose a:hover {
+  text-decoration-color: rgb(255 255 255 / 0.75);
+}
+.news-prose ul > li::before {
+  background: rgb(255 255 255 / 0.3);
+}
+.news-prose blockquote {
+  border-left: 1px solid rgb(255 255 255 / 0.15);
+  border-radius: 0;
+  background: transparent;
+  padding-left: 1.5rem;
+  color: rgb(255 255 255 / 0.5);
+}
+.news-prose div:has(> table) {
+  border-radius: 0;
+  border-color: rgb(255 255 255 / 0.12);
+  box-shadow: none;
+}
+.news-prose table {
+  font-size: 0.875rem;
+  color: rgb(255 255 255 / 0.7);
+}
+.news-prose thead {
+  background: rgb(255 255 255 / 0.04);
+}
+.news-prose th {
+  border-color: rgb(255 255 255 / 0.1);
+  color: rgb(255 255 255 / 0.4);
+}
+.news-prose td {
+  border-color: rgb(255 255 255 / 0.07);
+}
+
+/* Pull quote: the prose paragraph rules must not flatten it back to body copy. */
+.news-prose .news-pull p {
+  font-size: inherit;
+  line-height: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  margin-top: 0;
+}
+
+/* Reference palette: opaque fills, a quiet 1px edge and regular 14px ink.
+   Keep these separate from charts and semantic text colors. */
+@layer base {
+  :root {
+    --tag-neutral: #f0f0f0; --tag-neutral-border: #d8d8d8; --tag-neutral-ink: #525252;
+    --tag-blue: #eaf1fc; --tag-blue-border: #c5d5ee; --tag-blue-ink: #315682;
+    --tag-green: #e5efdf; --tag-green-border: #c3d7b8; --tag-green-ink: #365e2d;
+    --tag-mint: #e5f1e9; --tag-mint-border: #bbd8c5; --tag-mint-ink: #306344;
+    --tag-yellow: #f6f0d7; --tag-yellow-border: #ddd09c; --tag-yellow-ink: #6d5915;
+    --tag-orange: #f8eade; --tag-orange-border: #dfc0a8; --tag-orange-ink: #85502e;
+    --tag-purple: #eeeafa; --tag-purple-border: #cfc4e9; --tag-purple-ink: #66508d;
+    --tag-red: #f9e8e8; --tag-red-border: #e8c3c7; --tag-red-ink: #8e414b;
+  }
+  .dark {
+    --tag-neutral: #2a2a2a; --tag-neutral-border: #363636; --tag-neutral-ink: #cfcfcf;
+    --tag-blue: #202b3d; --tag-blue-border: #27354a; --tag-blue-ink: #c5dafb;
+    --tag-green: #2b4422; --tag-green-border: #364f2d; --tag-green-ink: #bdeac8;
+    --tag-mint: #253a2e; --tag-mint-border: #325039; --tag-mint-ink: #bdeac8;
+    --tag-yellow: #33301d; --tag-yellow-border: #59532e; --tag-yellow-ink: #f9e796;
+    --tag-orange: #3b2a1f; --tag-orange-border: #704f39; --tag-orange-ink: #e5b695;
+    --tag-purple: #221f38; --tag-purple-border: #4a4378; --tag-purple-ink: #b6afe5;
+    --tag-red: #3a1f1f; --tag-red-border: #472525; --tag-red-ink: #f5c2c7;
+  }
+}
+
+@layer components {
+  .tag {
+    --tag-fill: var(--tag-neutral);
+    --tag-edge: var(--tag-neutral-border);
+    --tag-ink: var(--tag-neutral-ink);
+    display: inline-flex;
+    max-width: 100%;
+    min-width: 0;
+    flex-shrink: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--tag-edge);
+    border-radius: 9999px;
+    background: var(--tag-fill);
+    color: var(--tag-ink);
+    padding: 0 8px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    white-space: nowrap;
+    overflow: hidden;
+    vertical-align: middle;
+  }
+  .tag-wrap { border-radius: 11px; }
+  .tag-wrap .tag-label { white-space: normal; overflow-wrap: anywhere; }
+  .tag-sm { min-height: 22px; }
+  .tag-md { min-height: 28px; padding-inline: 10px; }
+  .tag-blue { --tag-fill: var(--tag-blue); --tag-edge: var(--tag-blue-border); --tag-ink: var(--tag-blue-ink); }
+  .tag-green { --tag-fill: var(--tag-green); --tag-edge: var(--tag-green-border); --tag-ink: var(--tag-green-ink); }
+  .tag-mint { --tag-fill: var(--tag-mint); --tag-edge: var(--tag-mint-border); --tag-ink: var(--tag-mint-ink); }
+  .tag-yellow { --tag-fill: var(--tag-yellow); --tag-edge: var(--tag-yellow-border); --tag-ink: var(--tag-yellow-ink); }
+  .tag-orange { --tag-fill: var(--tag-orange); --tag-edge: var(--tag-orange-border); --tag-ink: var(--tag-orange-ink); }
+  .tag-purple { --tag-fill: var(--tag-purple); --tag-edge: var(--tag-purple-border); --tag-ink: var(--tag-purple-ink); }
+  .tag-red { --tag-fill: var(--tag-red); --tag-edge: var(--tag-red-border); --tag-ink: var(--tag-red-ink); }
+
+  .tag:is([aria-pressed="false"], [aria-selected="false"], [aria-checked="false"], [data-state="inactive"], [data-selected="false"]) {
+    background: transparent;
+    border-color: var(--tag-neutral-border);
+    color: var(--tag-neutral-ink);
+  }
+  /* Deck pills (Linear reference): the selected one is a gray fill in full
+     ink, the rest sit on the control surface in secondary ink. */
+  html[data-surface="deck"] {
+    --tag-neutral: hsl(var(--secondary));
+    --tag-neutral-border: hsl(var(--border));
+    --tag-neutral-ink: hsl(var(--secondary-foreground));
+  }
+  html.dark[data-surface="deck"] { --tag-neutral-border: hsl(var(--input)); }
+  html[data-surface="deck"] .tag-neutral:is([aria-pressed="true"], [aria-selected="true"], [aria-checked="true"], [data-state="active"], [data-selected="true"]) {
+    --tag-ink: hsl(var(--foreground));
+  }
+  html[data-surface="deck"] .tag:is([aria-pressed="false"], [aria-selected="false"], [aria-checked="false"], [data-state="inactive"], [data-selected="false"]) {
+    background: var(--control-surface, transparent);
+    color: hsl(var(--muted-foreground));
+  }
+  .tag-label { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+  .tag svg { display: inline-block; width: 12px; height: 12px; flex-shrink: 0; vertical-align: -2px; }
+  .tag-label > svg { margin-inline-end: 4px; }
+  .tag-remove { display: inline-grid; min-width: 16px; min-height: 18px; flex-shrink: 0; place-items: center; border-radius: 9999px; }
+  .tag-remove:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: -2px; }
+  @media (pointer: coarse) { .tag-remove { min-width: 44px; min-height: 44px; } }
+  .tag:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+  .tag:is(button, a, [role="tab"]) {
+    flex-shrink: 0;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 100ms, border-color 100ms, color 100ms;
+  }
+  .tag:disabled, .tag[aria-disabled="true"] { opacity: 0.45; cursor: not-allowed; }
+  @media (hover: hover) {
+    .tag:is(button, a, [role="tab"]):not(:disabled):not([aria-disabled="true"]):hover {
+      background: var(--tag-fill);
+      border-color: color-mix(in srgb, var(--tag-edge) 70%, var(--tag-ink));
+      color: var(--tag-ink);
+    }
+  }
+  @media (pointer: coarse) {
+    .tag:is(button, a, [role="tab"]) { min-height: 44px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tag { transition: none; }
+  }
+}
+
+
+/* Ask Caveman: the live turn.
+ * A label that shimmers while the agent works, and a chart that draws in from
+ * the left when its JSON has landed. Both collapse to static under reduced
+ * motion: the wait is still shown, just not animated. */
+.lucy-shimmer {
+  color: transparent;
+  background: linear-gradient(90deg, hsl(var(--muted-foreground)) 0 38%, hsl(var(--foreground)) 50%, hsl(var(--muted-foreground)) 62% 100%);
+  background-size: 220% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: lucy-shimmer 1.8s linear infinite;
+}
+@keyframes lucy-shimmer {
+  from { background-position: 120% 0; }
+  to { background-position: -120% 0; }
+}
+.lucy-chart-wipe {
+  animation: lucy-chart-wipe 500ms var(--ease-snap) both;
+}
+@keyframes lucy-chart-wipe {
+  from { clip-path: inset(0 100% 0 0); opacity: 0.4; }
+  to { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+/* Ask in ⌘K (apps/web shell/GoTo.tsx): while a model reads the chats, a short
+ * light runs along the search field's bottom hairline. Transform only. */
+.lucy-sweep {
+  background: linear-gradient(90deg, transparent, hsl(var(--foreground) / 0.5), transparent);
+  animation: lucy-sweep 1.2s var(--ease-swift) infinite;
+}
+@keyframes lucy-sweep {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(250%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lucy-shimmer { animation: none; color: hsl(var(--muted-foreground)); background: none; }
+  .lucy-chart-wipe { animation: none; }
+  .lucy-sweep { animation: none; opacity: 0; }
+}
+
+/* The agent's screen in use (apps/web panels/live/LiveDot.tsx): a ring of the
+ * one blue pulses out of its dot, once every 1.6 s, for as long as the agent
+ * uses its browser or computer. Transform and opacity only; reduced motion
+ * keeps the dot. */
+.live-ring {
+  animation: live-ring 1.6s var(--ease-snap) infinite;
+}
+@keyframes live-ring {
+  from { transform: scale(1); opacity: 0.7; }
+  to { transform: scale(3); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .live-ring { animation: none; opacity: 0; }
+}
+
+/* Isometric empty-state art (components/common/iso-art.tsx, DESIGN.md §4, §8).
+   Curves are the deck's named ones: ease-snap for arrivals, ease-swift for
+   something on screen moving elsewhere.
+   Faces fill with the surface behind the art so hidden lines vanish; inside a
+   card or popover the surface is that one. Motion is transform and opacity
+   (one stroke-dashoffset typing line); each element's base style is its still, which reduced motion shows. */
+.iso-art {
+  --iso-surface: hsl(var(--background));
+  --iso-ink: hsl(var(--foreground));
+  --iso-line: color-mix(in srgb, hsl(var(--foreground)) 52%, var(--iso-surface));
+  --iso-faint: color-mix(in srgb, hsl(var(--foreground)) 22%, var(--iso-surface));
+  overflow: visible;
+}
+:where(.bg-card) .iso-art { --iso-surface: hsl(var(--card)); }
+:where(.bg-popover) .iso-art { --iso-surface: hsl(var(--popover)); }
+.iso-art .f { fill: var(--iso-surface); stroke: var(--iso-line); stroke-width: 1.15; stroke-linejoin: round; stroke-linecap: round; }
+.iso-art .ft { fill: color-mix(in srgb, hsl(var(--foreground)) 4%, var(--iso-surface)); }
+.iso-art .fr { fill: color-mix(in srgb, hsl(var(--foreground)) 1.5%, var(--iso-surface)); }
+.iso-art .hi .f, .iso-art .f.hi { stroke: var(--iso-ink); }
+.iso-art .hi .ft, .iso-art .ft.hi { fill: color-mix(in srgb, hsl(var(--foreground)) 7%, var(--iso-surface)); }
+.iso-art .l { fill: none; stroke: var(--iso-line); stroke-width: 1.15; stroke-linecap: round; stroke-linejoin: round; }
+.iso-art .ink { fill: none; stroke: var(--iso-ink); stroke-width: 1.3; stroke-linecap: round; stroke-linejoin: round; }
+.iso-art .d { fill: none; stroke: var(--iso-faint); stroke-width: 1; stroke-dasharray: 2 3; stroke-linecap: round; }
+.iso-art .d2 { stroke-dasharray: 1.5 3.5; opacity: 0.7; }
+.iso-art .dot { fill: var(--iso-ink); }
+.iso-art .tint { fill: hsl(var(--foreground) / 0.07); }
+.iso-art .vn { vector-effect: non-scaling-stroke; }
+.iso-art [class*="a-"] { transform-box: view-box; transform-origin: 0 0; }
+.iso-art :is(.a-seq, .a-ghost, .a-wave, .a-hop, .a-pass, .a-glow, .a-route) { opacity: 0; }
+.iso-art .a-blip { opacity: 0.5; }
+
+@keyframes iso-drop { 0% { transform: translateY(-16px); opacity: 0; } 22% { opacity: 1; } 38%, 78% { transform: translateY(0); opacity: 1; } 92%, 100% { transform: translateY(0); opacity: 0; } }
+@keyframes iso-tilt { 0% { transform: rotate(-6deg); } 14% { transform: rotate(4deg); } 26% { transform: rotate(-2deg); } 36% { transform: rotate(0.8deg); } 44%, 74% { transform: rotate(0); } 100% { transform: rotate(-6deg); } }
+@keyframes iso-panl { 0% { transform: translateY(3.8px); } 14% { transform: translateY(-2.5px); } 26% { transform: translateY(1.3px); } 36% { transform: translateY(-0.5px); } 44%, 74% { transform: translateY(0); } 100% { transform: translateY(3.8px); } }
+@keyframes iso-panr { 0% { transform: translateY(-3.8px); } 14% { transform: translateY(2.5px); } 26% { transform: translateY(-1.3px); } 36% { transform: translateY(0.5px); } 44%, 74% { transform: translateY(0); } 100% { transform: translateY(-3.8px); } }
+@keyframes iso-stamp { 0%, 38% { transform: translateY(-15px); } 50%, 60% { transform: translateY(0); } 78%, 100% { transform: translateY(-15px); } }
+@keyframes iso-mark { 0%, 48% { opacity: 0.18; } 54%, 88% { opacity: 1; } 100% { opacity: 0.18; } }
+@keyframes iso-spin { to { transform: rotate(360deg); } }
+@keyframes iso-blip { 0% { opacity: 1; } 40%, 100% { opacity: 0.12; } }
+@keyframes iso-wave { 0% { transform: scale(0.15); opacity: 0.9; } 100% { transform: scale(1); opacity: 0; } }
+@keyframes iso-type { 0% { stroke-dashoffset: var(--len); } 45%, 85% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: var(--len); } }
+@keyframes iso-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+@keyframes iso-seq { 0%, 8% { opacity: 0; } 14%, 40% { opacity: 1; } 56%, 100% { opacity: 0; } }
+@keyframes iso-flowa { 0% { transform: translate(0, 0); opacity: 0; } 15%, 85% { opacity: 1; } 100% { transform: translate(26px, 15px); opacity: 1; } }
+@keyframes iso-flowb { 0% { transform: translate(0, 0); opacity: 0; } 12%, 80% { opacity: 1; } 100% { transform: translate(26px, 15px); opacity: 0; } }
+@keyframes iso-hop { 0% { transform: translate(0, 0); opacity: 0; } 6% { opacity: 1; } 14% { transform: translate(10.4px, -9px); } 22% { transform: translate(20.8px, 8px); } 34% { transform: translate(31.2px, -1px); } 42% { transform: translate(41.6px, 16px); } 54% { transform: translate(52px, 7px); } 62%, 84% { transform: translate(62.4px, 24px); opacity: 1; } 96%, 100% { transform: translate(62.4px, 24px); opacity: 0; } }
+@keyframes iso-landed { 0%, 58% { opacity: 0; } 64%, 86% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes iso-pass { 0% { transform: translate(0, 0); opacity: 0; } 10%, 90% { opacity: 1; } 100% { transform: translate(69px, 40px); opacity: 0; } }
+@keyframes iso-glow { 0%, 40% { opacity: 0; } 50%, 62% { opacity: 1; } 75%, 100% { opacity: 0; } }
+@keyframes iso-slide { 0%, 30% { transform: translate(0, 0); opacity: 1; } 60% { transform: translate(26px, 15px); opacity: 0; } 61% { transform: translate(0, -12px); opacity: 0; } 80%, 100% { transform: translate(0, 0); opacity: 1; } }
+@keyframes iso-cursor { 0% { transform: translate(44px, -30px); opacity: 0; } 15% { opacity: 1; } 40% { transform: translate(0, 0); } 62% { transform: translate(0, 0); opacity: 1; } 85%, 100% { transform: translate(40px, -34px); opacity: 0; } }
+@keyframes iso-ghost { 0%, 44% { opacity: 1; } 50%, 86% { opacity: 0; } 100% { opacity: 1; } }
+@keyframes iso-solid { 0%, 44% { opacity: 0; } 50%, 86% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes iso-hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+@keyframes iso-route { 0% { transform: translate(0, 0); opacity: 0; } 8% { opacity: 1; } 45% { transform: translate(var(--bx), var(--by)); } 88% { transform: translate(var(--cx), var(--cy)); opacity: 1; } 100% { transform: translate(var(--cx), var(--cy)); opacity: 0; } }
+@keyframes iso-pulse { 0%, 100% { opacity: 0.45; } 50% { opacity: 1; } }
+@keyframes iso-lift { 0%, 30%, 100% { transform: translateY(0); } 45%, 75% { transform: translateY(-4px); } }
+@keyframes iso-bounce { 0%, 100% { transform: translate(0, 0); } 40% { transform: translate(9px, 5px); } 48% { transform: translate(7.5px, 4.3px); } }
+@keyframes iso-scan { 0% { transform: translate(0, 0); opacity: 0; } 8%, 90% { opacity: 1; } 100% { transform: translate(69px, 40px); opacity: 0; } }
+.iso-art .a-drop { animation: iso-drop 4.8s var(--ease-snap) infinite; }
+.iso-art .a-tilt { animation: iso-tilt 6s ease-in-out infinite; }
+.iso-art .a-panl { animation: iso-panl 6s ease-in-out infinite; }
+.iso-art .a-panr { animation: iso-panr 6s ease-in-out infinite; }
+.iso-art .a-stamp { animation: iso-stamp 3.4s var(--ease-swift) infinite; }
+.iso-art .a-mark { animation: iso-mark 3.4s ease infinite; }
+.iso-art .a-spin { animation: iso-spin 5s linear infinite; }
+.iso-art .a-blip { animation: iso-blip 5s ease-out infinite; }
+.iso-art .a-wave { animation: iso-wave 2.6s ease-out infinite; }
+.iso-art .a-type { stroke-dasharray: var(--len); animation: iso-type 4s steps(14) infinite; }
+.iso-art .a-blink { animation: iso-blink 1.05s step-end infinite; }
+.iso-art .a-seq { animation: iso-seq 3.6s ease infinite; }
+.iso-art .a-flowa { animation: iso-flowa 2.4s linear infinite; }
+.iso-art .a-flowb { animation: iso-flowb 2.4s linear -1.2s infinite; }
+.iso-art .a-hop { animation: iso-hop 4.2s ease-in-out infinite; }
+.iso-art .a-landed { animation: iso-landed 4.2s ease infinite; }
+.iso-art .a-pass { animation: iso-pass 3.6s linear infinite; }
+.iso-art .a-glow { animation: iso-glow 3.6s ease infinite; }
+.iso-art .a-slide { animation: iso-slide 4s var(--ease-swift) infinite; }
+.iso-art .a-cursor { animation: iso-cursor 4.4s var(--ease-swift) infinite; }
+.iso-art .a-ghost { animation: iso-ghost 4.4s ease infinite; }
+.iso-art .a-solid { animation: iso-solid 4.4s ease infinite; }
+.iso-art .a-hover { animation: iso-hover 2.8s ease-in-out infinite; }
+.iso-art .a-route { animation: iso-route 3.6s ease-in-out infinite; }
+.iso-art .a-pulse { animation: iso-pulse 2.4s ease-in-out infinite; }
+.iso-art .a-lift { animation: iso-lift 3.6s var(--ease-swift) infinite; }
+.iso-art .a-bounce { animation: iso-bounce 2.8s var(--ease-swift) infinite; }
+.iso-art .a-scan { animation: iso-scan 4s linear infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .iso-art * { animation: none !important; }
+}
+
+/* Isometric illustrations (components/onboarding/isometric.tsx). Transform and
+   opacity only; the global reduced-motion rule collapses them. Keyframe names
+   avoid the empty-state art's iso-blink and iso-pulse above. */
+@keyframes iso-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+@keyframes iso-onb-blink {
+  0%, 45% { opacity: 1; }
+  50%, 95% { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes iso-onb-pulse {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+@keyframes iso-sweep {
+  0%, 100% { transform: translate(-17px, 9.8px); }
+  50% { transform: translate(17px, -9.8px); }
+}
+.iso-float { animation: iso-float 5s ease-in-out infinite; }
+.iso-blink { animation: iso-onb-blink 1.3s steps(1) infinite; }
+.iso-pulse { animation: iso-onb-pulse 3.2s ease-in-out infinite; }
+.iso-sweep { animation: iso-sweep 3.2s ease-in-out infinite; }
+.iso-delay-b { animation-delay: -1.1s; }
+.iso-delay-c { animation-delay: -2.2s; }
+
+/* Brief annotations (components/briefs/annotations.tsx): painted with the CSS
+ * Custom Highlight API, so the prose DOM is never rewritten. */
+::highlight(brief-note-summary),
+::highlight(brief-note-body) {
+  background-color: hsl(var(--warning) / 0.16);
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--warning) / 0.65);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+::highlight(brief-note-summary-active),
+::highlight(brief-note-body-active) {
+  background-color: hsl(var(--warning) / 0.32);
+}
+
+/* Provenance on demand: a card's source glyph shows on the card's hover or
+   focus, not as a mark in every header. */
+.group\/card .source-tag { opacity: 0; }
+.group\/card:hover .source-tag,
+.group\/card:focus-within .source-tag,
+.source-tag:focus-visible { opacity: 1; }

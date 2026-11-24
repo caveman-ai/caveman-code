@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "hugging-face": {
+      "auth": "oauth"
+    }
+  }
+}

@@ -1,0 +1,1412 @@
+[
+  {
+    "slug": "midnight-currents",
+    "tags": "abstract blue navy dark",
+    "light": 0.0804,
+    "name": "Midnight Currents",
+    "category": "Dark & cool",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#142e52",
+      "#7ab8ff",
+      "#86d4e6"
+    ],
+    "id": "super-visuals-midnight-currents",
+    "file": "midnight-currents-4550d80e50a1781d.webp",
+    "sha256": "4550d80e50a1781d9a346716ec3a807a7181f4f660477f098c7f19fed5076c60",
+    "bytes": 65736,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "blue-silk",
+    "tags": "abstract blue silver dark",
+    "light": 0.0949,
+    "name": "Blue Silk",
+    "category": "Dark & cool",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#182647",
+      "#8aa8ed",
+      "#b4c1ed"
+    ],
+    "id": "super-visuals-blue-silk",
+    "file": "blue-silk-7c92cfa470a9b2d3.webp",
+    "sha256": "7c92cfa470a9b2d3f1d9eb07d16f883f6adc9ee971005a15391fd17411cd2e8e",
+    "bytes": 25030,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "arctic-light",
+    "tags": "abstract blue cyan dark",
+    "light": 0.3359,
+    "name": "Arctic Light",
+    "category": "Dark & cool",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#173c50",
+      "#8dd6e7",
+      "#a0bbd8"
+    ],
+    "id": "super-visuals-arctic-light",
+    "file": "arctic-light-81cd60833abee4e3.webp",
+    "sha256": "81cd60833abee4e3f60a4e3eb4b6608bac24120d4e75c44a00dc70f12776969e",
+    "bytes": 13210,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "teal-edge",
+    "tags": "abstract teal cyan dark",
+    "light": 0.1907,
+    "name": "Teal Edge",
+    "category": "Dark & cool",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#0a343c",
+      "#6ad2c4",
+      "#70aee2"
+    ],
+    "id": "super-visuals-teal-edge",
+    "file": "teal-edge-626364b31793618c.webp",
+    "sha256": "626364b31793618c9bbf321df1b19022bf1013f7cf1b623aebbf7c7a3dae7667",
+    "bytes": 104518,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "monochrome-moon",
+    "tags": "abstract monochrome black grey dark",
+    "light": 0.0456,
+    "name": "Monochrome Moon",
+    "category": "Dark & cool",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#26292e",
+      "#d6d7dc",
+      "#a0adb9"
+    ],
+    "id": "super-visuals-monochrome-moon",
+    "file": "monochrome-moon-9e2ed9f6b631e063.webp",
+    "sha256": "9e2ed9f6b631e06331405f0c65696484546f0320cad171af45d1ceb84a5b2f3e",
+    "bytes": 91146,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "peach-and-ice",
+    "tags": "abstract peach pink blue pastel",
+    "light": 0.92,
+    "name": "Peach and Ice",
+    "category": "Soft & pastel",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#735b74",
+      "#d58f7e",
+      "#78bdd8"
+    ],
+    "id": "super-visuals-peach-and-ice",
+    "file": "peach-and-ice-72ce8bd92ce26f8d.webp",
+    "sha256": "72ce8bd92ce26f8d94b0f2cd80e8c6a57fd02671c026ff0659a302db5fa11f42",
+    "bytes": 20854,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "lilac-haze",
+    "tags": "abstract lilac purple pastel",
+    "light": 0.8755,
+    "name": "Lilac Haze",
+    "category": "Soft & pastel",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#5c527d",
+      "#b4a3dd",
+      "#95c4df"
+    ],
+    "id": "super-visuals-lilac-haze",
+    "file": "lilac-haze-d257ee900f1d8cb8.webp",
+    "sha256": "d257ee900f1d8cb847040e7b7409a6f70f815a5cd07b748c145a65d2460ca37b",
+    "bytes": 9738,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "mint-drift",
+    "tags": "abstract mint green cream pastel",
+    "light": 0.8893,
+    "name": "Mint Drift",
+    "category": "Soft & pastel",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#426957",
+      "#80bd9b",
+      "#d1c981"
+    ],
+    "id": "super-visuals-mint-drift",
+    "file": "mint-drift-f06d6f9fabe8fa77.webp",
+    "sha256": "f06d6f9fabe8fa774dccbab2057e610a29abfa3321bff0b9f8d8899a85e24a84",
+    "bytes": 11754,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "aqua-veil",
+    "tags": "abstract aqua cyan blue pastel",
+    "light": 0.8746,
+    "name": "Aqua Veil",
+    "category": "Soft & pastel",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#315e70",
+      "#72c7d4",
+      "#bba2d1"
+    ],
+    "id": "super-visuals-aqua-veil",
+    "file": "aqua-veil-351a9e754d36ee7f.webp",
+    "sha256": "351a9e754d36ee7f2fdb0470c7881f6bad1166bd6916138bb491806e5ba7260b",
+    "bytes": 15618,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "opal-glass",
+    "tags": "abstract glass blue silver pastel",
+    "light": 0.693,
+    "name": "Opal Glass",
+    "category": "Soft & pastel",
+    "width": 1487,
+    "height": 1058,
+    "colors": [
+      "#465a76",
+      "#a0bbdf",
+      "#d6b8cd"
+    ],
+    "id": "super-visuals-opal-glass",
+    "file": "opal-glass-d0ad36133b67f186.webp",
+    "sha256": "d0ad36133b67f1865e86620211cb4903b6eab476008c55da3e8108a71594fec9",
+    "bytes": 76644,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "ember-silk",
+    "tags": "abstract orange red purple warm",
+    "light": 0.4828,
+    "name": "Ember Silk",
+    "category": "Vivid & warm",
+    "width": 1491,
+    "height": 1055,
+    "colors": [
+      "#703936",
+      "#ed9c6d",
+      "#b59bd4"
+    ],
+    "id": "super-visuals-ember-silk",
+    "file": "ember-silk-89e9b8e75cf2c0e3.webp",
+    "sha256": "89e9b8e75cf2c0e3ee45febb90793ce8e5e1589a3fa973eacb6de370ccce5138",
+    "bytes": 63890,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "molten-glass",
+    "tags": "abstract glass orange gold purple warm",
+    "light": 0.16,
+    "name": "Molten Glass",
+    "category": "Vivid & warm",
+    "width": 1487,
+    "height": 1058,
+    "colors": [
+      "#62352b",
+      "#efa977",
+      "#d291ba"
+    ],
+    "id": "super-visuals-molten-glass",
+    "file": "molten-glass-b75f401ec8d9ac1a.webp",
+    "sha256": "b75f401ec8d9ac1a73a6e0aab8514d36d8351c934b9f1726be8feae663f902a0",
+    "bytes": 45114,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "coral-prism",
+    "tags": "abstract glass coral pink orange",
+    "light": 0.6235,
+    "name": "Coral Prism",
+    "category": "Vivid & warm",
+    "width": 1487,
+    "height": 1058,
+    "colors": [
+      "#70423d",
+      "#ed9c8e",
+      "#b8a4de"
+    ],
+    "id": "super-visuals-coral-prism",
+    "file": "coral-prism-c151d302cac0b707.webp",
+    "sha256": "c151d302cac0b707a9e16895a0ab4f9e4c8dec696759cb9db5c28fcd1daecff1",
+    "bytes": 73246,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "emerald-and-lime",
+    "tags": "abstract glass emerald green lime",
+    "light": 0.3745,
+    "name": "Emerald and Lime",
+    "category": "Vivid & warm",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#174b43",
+      "#8bd9ac",
+      "#d7db86"
+    ],
+    "id": "super-visuals-emerald-and-lime",
+    "file": "emerald-and-lime-3feff98fde8efd8f.webp",
+    "sha256": "3feff98fde8efd8f811268883476ca423924fcc624fbe82d16a6d7e78c2ae0ce",
+    "bytes": 18352,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "electric-streaks",
+    "tags": "abstract motion blue gold orange",
+    "light": 0.1523,
+    "name": "Electric Streaks",
+    "category": "Vivid & warm",
+    "width": 4096,
+    "height": 2731,
+    "colors": [
+      "#33384e",
+      "#e9b06c",
+      "#86bfe0"
+    ],
+    "id": "super-visuals-electric-streaks",
+    "file": "electric-streaks-aadf75ce30e85dbe.webp",
+    "sha256": "aadf75ce30e85dbe8b7633ae57f2ad4c289cc020435ebee9dee268830a5a9f6b",
+    "bytes": 303312,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "painted-twilight",
+    "tags": "painting clouds oil orange blue",
+    "light": 0.3422,
+    "name": "Painted Twilight",
+    "category": "Painterly & textured",
+    "width": 4096,
+    "height": 2914,
+    "colors": [
+      "#4b3945",
+      "#e4ad7d",
+      "#91bacb"
+    ],
+    "id": "super-visuals-painted-twilight",
+    "file": "painted-twilight-b0d43aef88557967.webp",
+    "sha256": "b0d43aef885579676ce10bf04e649235aebee134d2646cbb66b95043093cfd9e",
+    "bytes": 512768,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "apricot-clouds",
+    "tags": "painting clouds peach apricot blue pastel",
+    "light": 0.794,
+    "name": "Apricot Clouds",
+    "category": "Painterly & textured",
+    "width": 4096,
+    "height": 2914,
+    "colors": [
+      "#716158",
+      "#e2ba91",
+      "#9bb9cd"
+    ],
+    "id": "super-visuals-apricot-clouds",
+    "file": "apricot-clouds-3b8e23960ea2472d.webp",
+    "sha256": "3b8e23960ea2472dc101b2c7617b191e608a183b12144e952c5019cf11e2022d",
+    "bytes": 487484,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "tangerine-skies",
+    "tags": "painting clouds orange warm",
+    "light": 0.5586,
+    "name": "Tangerine Skies",
+    "category": "Painterly & textured",
+    "width": 4096,
+    "height": 2914,
+    "colors": [
+      "#754331",
+      "#edac77",
+      "#d7bd9a"
+    ],
+    "id": "super-visuals-tangerine-skies",
+    "file": "tangerine-skies-10fe1542828ab5e2.webp",
+    "sha256": "10fe1542828ab5e2db2ab848c8dd63cfd4f8d5c35b7eeaf827508674bc15e870",
+    "bytes": 612544,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "golden-mountain-canvas",
+    "tags": "painting mountain canvas gold green",
+    "light": 0.6278,
+    "name": "Golden Mountain Canvas",
+    "category": "Painterly & textured",
+    "width": 4096,
+    "height": 2913,
+    "colors": [
+      "#4d5034",
+      "#d9bf71",
+      "#a6b691"
+    ],
+    "id": "super-visuals-golden-mountain-canvas",
+    "file": "golden-mountain-canvas-cd0ee38c2ae2e30d.webp",
+    "sha256": "cd0ee38c2ae2e30d9fdf6dcd0a41a0ed2bc0c6abf70f630a1910b1161447f7f1",
+    "bytes": 2474318,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "pastel-rainbow-dunes",
+    "tags": "illustration grain rainbow pink blue",
+    "light": 0.5344,
+    "name": "Pastel Rainbow Dunes",
+    "category": "Painterly & textured",
+    "width": 4096,
+    "height": 2262,
+    "colors": [
+      "#394b7c",
+      "#e5abd5",
+      "#9cd0c5"
+    ],
+    "id": "super-visuals-pastel-rainbow-dunes",
+    "file": "pastel-rainbow-dunes-4c5f44b9e172dfa2.webp",
+    "sha256": "4c5f44b9e172dfa20816ff57577a2edd72a7ef17081bc5caf3098093ec5d0c5f",
+    "bytes": 1448978,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "dune-above-blue-sea",
+    "tags": "minimal sand ocean blue beige",
+    "light": 0.4702,
+    "name": "Dune above Blue Sea",
+    "category": "Minimal & surreal",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#294a57",
+      "#d9b381",
+      "#7dbbcf"
+    ],
+    "id": "super-visuals-dune-above-blue-sea",
+    "file": "dune-above-blue-sea-fd5f5ef4438c0a8e.webp",
+    "sha256": "fd5f5ef4438c0a8e47df1e6043ace43a8c76df3258374a19fc0259acee363a11",
+    "bytes": 856072,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "pebbles-in-meadow",
+    "tags": "minimal cream ivory green",
+    "light": 0.8716,
+    "name": "Pebbles in Meadow",
+    "category": "Minimal & surreal",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#535c42",
+      "#c8c4a0",
+      "#99b48b"
+    ],
+    "id": "super-visuals-pebbles-in-meadow",
+    "file": "pebbles-in-meadow-3699fc29cdf7715d.webp",
+    "sha256": "3699fc29cdf7715d6c2cd273b5ca2127f1ebe1bf88cae775050f02ecbd7eb6e5",
+    "bytes": 202798,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "moonlit-acacia-desert",
+    "tags": "surreal desert orange teal moon",
+    "light": 0.4292,
+    "name": "Moonlit Acacia Desert",
+    "category": "Minimal & surreal",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#3b4e50",
+      "#e4a16a",
+      "#87bdc5"
+    ],
+    "id": "super-visuals-moonlit-acacia-desert",
+    "file": "moonlit-acacia-desert-11d85351a288b7ce.webp",
+    "sha256": "11d85351a288b7ce892ff783d68344dad73c76a13b207e8ba235c4dace9cca75",
+    "bytes": 628492,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "white-arch-in-desert",
+    "tags": "surreal desert orange blue architecture",
+    "light": 0.5026,
+    "name": "White Arch in Desert",
+    "category": "Minimal & surreal",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#4a5b58",
+      "#e5b789",
+      "#9dcbcf"
+    ],
+    "id": "super-visuals-white-arch-in-desert",
+    "file": "white-arch-in-desert-40b8805b9e740653.webp",
+    "sha256": "40b8805b9e74065346cd581af6b0eb98b008fa3565e73928efe30a85fdfae6a3",
+    "bytes": 505148,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "crimson-hills-and-clouds",
+    "tags": "surreal desert crimson red beige",
+    "light": 0.6816,
+    "name": "Crimson Hills and Clouds",
+    "category": "Minimal & surreal",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#6c4137",
+      "#d99a87",
+      "#cbbb9d"
+    ],
+    "id": "super-visuals-crimson-hills-and-clouds",
+    "file": "crimson-hills-and-clouds-e68a6e9b6f4969d7.webp",
+    "sha256": "e68a6e9b6f4969d7cccfeaee3bbd37de34b97af27f62671343b76504f7530348",
+    "bytes": 292134,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "sunlit-green-valley",
+    "tags": "landscape green valley gold",
+    "light": 0.355,
+    "name": "Sunlit Green Valley",
+    "category": "Natural landscapes",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#384c2b",
+      "#b6cc86",
+      "#dfca83"
+    ],
+    "id": "super-visuals-sunlit-green-valley",
+    "file": "sunlit-green-valley-5f4e7118f1d68416.webp",
+    "sha256": "5f4e7118f1d684169e10a1b9e3e76b56d1094f12bee1a008e62195d8664a92e8",
+    "bytes": 1670680,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "violet-mountains-at-sunset",
+    "tags": "landscape mountain orange violet",
+    "light": 0.4241,
+    "name": "Violet Mountains at Sunset",
+    "category": "Natural landscapes",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#4c3c59",
+      "#e5ad7b",
+      "#af9bc7"
+    ],
+    "id": "super-visuals-violet-mountains-at-sunset",
+    "file": "violet-mountains-at-sunset-efd0c0d317c01d4f.webp",
+    "sha256": "efd0c0d317c01d4f635a2a05748e135f3bb3a86066f9e351fff0f1484aec4465",
+    "bytes": 191330,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "crimson-rolling-hills",
+    "tags": "landscape red blue hills",
+    "light": 0.3768,
+    "name": "Crimson Rolling Hills",
+    "category": "Natural landscapes",
+    "width": 4096,
+    "height": 2262,
+    "colors": [
+      "#593544",
+      "#db9b8b",
+      "#88accb"
+    ],
+    "id": "super-visuals-crimson-rolling-hills",
+    "file": "crimson-rolling-hills-97711e99bd76cb9e.webp",
+    "sha256": "97711e99bd76cb9e7a7d0573d11660bb765822d52ddace542dfb7e7397493056",
+    "bytes": 1363828,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "alpine-sunrise",
+    "tags": "landscape alpine green pink",
+    "light": 0.3297,
+    "name": "Alpine Sunrise",
+    "category": "Natural landscapes",
+    "width": 4096,
+    "height": 2731,
+    "colors": [
+      "#3d4b46",
+      "#e0b48f",
+      "#9abebe"
+    ],
+    "id": "super-visuals-alpine-sunrise",
+    "file": "alpine-sunrise-248b25ccded30cc4.webp",
+    "sha256": "248b25ccded30cc45e10897d74468e6feab2178884f6efd2b8c7539204057de3",
+    "bytes": 904544,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "birds-over-teal-water",
+    "tags": "painting aerial teal green birds",
+    "light": 0.3393,
+    "name": "Birds over Teal Water",
+    "category": "Natural landscapes",
+    "width": 3840,
+    "height": 2160,
+    "colors": [
+      "#174f50",
+      "#8bceb5",
+      "#d1dc99"
+    ],
+    "id": "super-visuals-birds-over-teal-water",
+    "file": "birds-over-teal-water-e5cd9b0109fc38fb.webp",
+    "sha256": "e5cd9b0109fc38fb28165d1068c799a911f7bb38f2fe34e0dabc33278a394764",
+    "bytes": 1580206,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "pixel-river-valley",
+    "tags": "pixel art illustration rainbow green river",
+    "light": 0.458,
+    "name": "Pixel River Valley",
+    "category": "Fantasy & illustration",
+    "width": 4096,
+    "height": 2731,
+    "colors": [
+      "#4b426e",
+      "#c9a2eb",
+      "#83d5bf"
+    ],
+    "id": "super-visuals-pixel-river-valley",
+    "file": "pixel-river-valley-fcf9ea706961355e.webp",
+    "sha256": "fcf9ea706961355ee0119fda99f319f0dc311e6cd6009780b3777f72786ba539",
+    "bytes": 499772,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "autumn-woodland",
+    "tags": "painting illustration autumn orange green",
+    "light": 0.6096,
+    "name": "Autumn Woodland",
+    "category": "Fantasy & illustration",
+    "width": 4096,
+    "height": 2731,
+    "colors": [
+      "#4b514a",
+      "#dca384",
+      "#aac7ac"
+    ],
+    "id": "super-visuals-autumn-woodland",
+    "file": "autumn-woodland-5d86472e4c3d0d56.webp",
+    "sha256": "5d86472e4c3d0d5626300b23cc2695072f6b102f98b15722938bbcb37f490955",
+    "bytes": 301984,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "crimson-moon-portal",
+    "tags": "fantasy science fiction red moon dark",
+    "light": 0.1983,
+    "name": "Crimson Moon Portal",
+    "category": "Fantasy & illustration",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#55313f",
+      "#e8918b",
+      "#c4a1b8"
+    ],
+    "id": "super-visuals-crimson-moon-portal",
+    "file": "crimson-moon-portal-22e4407e6055f189.webp",
+    "sha256": "22e4407e6055f1893d1a6359750bb88d925b4ea4d6944328d63014a45bb92a89",
+    "bytes": 65000,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "blue-moon-valley",
+    "tags": "fantasy science fiction blue moon dark",
+    "light": 0.2797,
+    "name": "Blue Moon Valley",
+    "category": "Fantasy & illustration",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#203d55",
+      "#91c7e6",
+      "#a8b8df"
+    ],
+    "id": "super-visuals-blue-moon-valley",
+    "file": "blue-moon-valley-24657b8c49e05fb5.webp",
+    "sha256": "24657b8c49e05fb5b3cb7c8fe0941a95796c73c74a912a8e525def9f9513d9d5",
+    "bytes": 96042,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "slug": "ember-doorway",
+    "tags": "fantasy minimal orange architecture dark",
+    "light": 0.1235,
+    "name": "Ember Doorway",
+    "category": "Fantasy & illustration",
+    "width": 1536,
+    "height": 1024,
+    "colors": [
+      "#50372e",
+      "#e8a17a",
+      "#bfc3b6"
+    ],
+    "id": "super-visuals-ember-doorway",
+    "file": "ember-doorway-cf39c080135d9b35.webp",
+    "sha256": "cf39c080135d9b35c4d9d1cda8e6904b8273022642a127fd2c6160acfb36a6ac",
+    "bytes": 59254,
+    "credit": {
+      "author": "Ahmed Hassan",
+      "authorUrl": "https://www.figma.com/@supervisuals",
+      "collection": "Super Visuals",
+      "sourceUrl": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/"
+    }
+  },
+  {
+    "id": "night-river-at-midnight",
+    "slug": "river-at-midnight",
+    "name": "River at Midnight",
+    "category": "Painterly & textured",
+    "tags": "dark night painterly & textured",
+    "file": "river-at-midnight-2ba10ca410afe94c.webp",
+    "sha256": "2ba10ca410afe94c56f44516f023408d6d37ad4fdf32a53ced515c32f32ccc3b",
+    "bytes": 154816,
+    "width": 1255,
+    "height": 1034,
+    "light": 0.1972,
+    "colors": [
+      "#51533c",
+      "#403c28",
+      "#696b4e"
+    ],
+    "credit": {
+      "author": "Aert van der Neer",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Aert_van_der_Neer_-_Night_Landscape_with_a_River_-_WGA16489.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/6/66/Aert_van_der_Neer_-_Night_Landscape_with_a_River_-_WGA16489.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-moonlit-countryside",
+    "slug": "moonlit-countryside",
+    "name": "Moonlit Countryside",
+    "category": "Painterly & textured",
+    "tags": "dark night painterly & textured",
+    "file": "moonlit-countryside-3491918d0543ca46.webp",
+    "sha256": "3491918d0543ca463f387d93a219564081718fe9cc09a8c10b09bb2aafd72e19",
+    "bytes": 395964,
+    "width": 2500,
+    "height": 1826,
+    "light": 0.3075,
+    "colors": [
+      "#747f6b",
+      "#464d3d",
+      "#413e2d"
+    ],
+    "credit": {
+      "author": "Feliks Brzozowski",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Feliks_Brzozowski_-_Countryside_landscape_at_night_-_MP_2328_MNW_-_National_Museum_in_Warsaw.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/7/71/Feliks_Brzozowski_-_Countryside_landscape_at_night_-_MP_2328_MNW_-_National_Museum_in_Warsaw.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-kuindzhi-night",
+    "slug": "kuindzhi-night",
+    "name": "Kuindzhi Night",
+    "category": "Painterly & textured",
+    "tags": "dark night painterly & textured",
+    "file": "kuindzhi-night-16c02506d4fd50f7.webp",
+    "sha256": "16c02506d4fd50f720792f92b8a4f093855fcbb4fa990f28fd0e1d8df1c70b55",
+    "bytes": 119870,
+    "width": 1000,
+    "height": 812,
+    "light": 0.2074,
+    "colors": [
+      "#1d458e",
+      "#17313c",
+      "#123376"
+    ],
+    "credit": {
+      "author": "Arkhip Kuindzhi",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Kuindzhi_Night_landscape.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a9/Kuindzhi_Night_landscape.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-night-study",
+    "slug": "night-study",
+    "name": "Night Study",
+    "category": "Painterly & textured",
+    "tags": "dark night painterly & textured",
+    "file": "night-study-1784aabf249c070c.webp",
+    "sha256": "1784aabf249c070c3c1f3be8d8041f6245187123e280a9e2229b77ec32298a4c",
+    "bytes": 972676,
+    "width": 2560,
+    "height": 1692,
+    "light": 0.193,
+    "colors": [
+      "#493720",
+      "#342413",
+      "#3b2a16"
+    ],
+    "credit": {
+      "author": "L\u00e1szl\u00f3 Medny\u00e1nszky",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ladislav_Medny%C3%A1nszky_-_Study_of_a_Night_Landscape_-_O_5022_-_Slovak_National_Gallery.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a6/Ladislav_Medny%C3%A1nszky_-_Study_of_a_Night_Landscape_-_O_5022_-_Slovak_National_Gallery.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-moonrise-over-sea",
+    "slug": "moonrise-over-sea",
+    "name": "Moonrise over Sea",
+    "category": "Painterly & textured",
+    "tags": "dark night painterly & textured",
+    "file": "moonrise-over-sea-39df37de1120e791.webp",
+    "sha256": "39df37de1120e7911cb66447d154df38f41fda9d5ea6f799afd00bf4067f4fda",
+    "bytes": 511164,
+    "width": 2560,
+    "height": 1958,
+    "light": 0.3082,
+    "colors": [
+      "#3d354d",
+      "#bba389",
+      "#9aabc0"
+    ],
+    "credit": {
+      "author": "Caspar David Friedrich",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Mondaufgang_am_Meer_-_Google_Art_Project.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/01/Caspar_David_Friedrich_-_Mondaufgang_am_Meer_-_Google_Art_Project.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-starry-night",
+    "slug": "starry-night",
+    "name": "Starry Night",
+    "category": "Painterly & textured",
+    "tags": "dark night painterly & textured",
+    "file": "starry-night-98bf7ba385ae1e4e.webp",
+    "sha256": "98bf7ba385ae1e4e4bd4bdd5c2f1178745efe44002f30ca64429f118131afc1a",
+    "bytes": 1260706,
+    "width": 2560,
+    "height": 1978,
+    "light": 0.1843,
+    "colors": [
+      "#273237",
+      "#424f46",
+      "#424f46"
+    ],
+    "credit": {
+      "author": "Vincent van Gogh",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/01/Vincent_van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-southern-sky",
+    "slug": "southern-sky",
+    "name": "Southern Sky",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "southern-sky-1e4b77399a01eb84.webp",
+    "sha256": "1e4b77399a01eb844bfc705a16790a9c244190c7c99e8685477553cb9d80423d",
+    "bytes": 369102,
+    "width": 2560,
+    "height": 778,
+    "light": 0.1825,
+    "colors": [
+      "#667c91",
+      "#96a3b4",
+      "#759098"
+    ],
+    "credit": {
+      "author": "ESO/H.H. Heyer",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:360-degree_Panorama_of_the_Southern_Sky.jpg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/f4/360-degree_Panorama_of_the_Southern_Sky.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-atacama-night",
+    "slug": "atacama-night",
+    "name": "Atacama Night",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "atacama-night-f266e75bd4b0f971.webp",
+    "sha256": "f266e75bd4b0f971e6538c701858dc70a1a3985d37bdce4665918d8b4114ddd0",
+    "bytes": 395452,
+    "width": 2560,
+    "height": 1707,
+    "light": 0.1377,
+    "colors": [
+      "#667c91",
+      "#96a3b4",
+      "#759098"
+    ],
+    "credit": {
+      "author": "ESO",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:AT4_under_the_night_sky_(eso-paranal-lv3).jpg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/8/84/AT4_under_the_night_sky_%28eso-paranal-lv3%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-california-nebula",
+    "slug": "california-nebula",
+    "name": "California Nebula",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "california-nebula-ab8ab748c9e96937.webp",
+    "sha256": "ab8ab748c9e96937d95ab1806a2009c314dee7472df84a3178d140225fafe1ca",
+    "bytes": 695524,
+    "width": 2560,
+    "height": 1738,
+    "light": 0.0467,
+    "colors": [
+      "#667c91",
+      "#96a3b4",
+      "#759098"
+    ],
+    "credit": {
+      "author": "Joshua Tree National Park",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:California_Nebula_(55209560382).jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/a/a5/California_Nebula_%2855209560382%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-crab-nebula",
+    "slug": "crab-nebula",
+    "name": "Crab Nebula",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "crab-nebula-bc6fd205f5b7b21f.webp",
+    "sha256": "bc6fd205f5b7b21f94b50ecade8ed2e0092f75d1109f13af487028ca874ac334",
+    "bytes": 200702,
+    "width": 2560,
+    "height": 1574,
+    "light": 0.1072,
+    "colors": [
+      "#515d4a",
+      "#515d4a",
+      "#515d4a"
+    ],
+    "credit": {
+      "author": "Taavi Niittee/T\u00f5rva Astronoomiaklubi/T\u00f5rva Astronomy Club",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Crab_nebula_from_T%C3%B5rva.jpg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c4/Crab_nebula_from_T%C3%B5rva.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-trifid-nebula",
+    "slug": "trifid-nebula",
+    "name": "Trifid Nebula",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "trifid-nebula-92e8638bbd643e7a.webp",
+    "sha256": "92e8638bbd643e7a7a62576e9568b5bf2078a8b869b37cac0ec52dfa39ed43bc",
+    "bytes": 765996,
+    "width": 2541,
+    "height": 2560,
+    "light": 0.2299,
+    "colors": [
+      "#92573b",
+      "#964917",
+      "#6f3e1e"
+    ],
+    "credit": {
+      "author": "NASA, ESA, and The Hubble Heritage Team (AURA/STScI )",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Full_HST_WFPC2_image_of_Trifid_Nebula_(opo0417g).jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/4/41/Full_HST_WFPC2_image_of_Trifid_Nebula_%28opo0417g%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-rosette-nebula",
+    "slug": "rosette-nebula",
+    "name": "Rosette Nebula",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "rosette-nebula-c64dc005aa06d24b.webp",
+    "sha256": "c64dc005aa06d24b2b41fa2e97bcd901b28049089bf8124eb51454381233512a",
+    "bytes": 630994,
+    "width": 2560,
+    "height": 1662,
+    "light": 0.0492,
+    "colors": [
+      "#667c91",
+      "#96a3b4",
+      "#759098"
+    ],
+    "credit": {
+      "author": "Joshua Tree National Park",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Rosette_Nebula_(55224917056).jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/f/fd/Rosette_Nebula_%2855224917056%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-cygnus-veil",
+    "slug": "cygnus-veil",
+    "name": "Cygnus Veil",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "cygnus-veil-b6246f65b059cfdd.webp",
+    "sha256": "b6246f65b059cfdd959b68d0957333182ad1a3dcb43d39cad39296a496595ddd",
+    "bytes": 1034640,
+    "width": 1920,
+    "height": 1667,
+    "light": 0.0882,
+    "colors": [
+      "#133966",
+      "#111f3a",
+      "#122a4e"
+    ],
+    "credit": {
+      "author": "NASA/JPL-Caltech",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Ultraviolet_image_of_the_Cygnus_Loop_Nebula_crop.jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5b/Ultraviolet_image_of_the_Cygnus_Loop_Nebula_crop.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-carina-nebula",
+    "slug": "carina-nebula",
+    "name": "Carina Nebula",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "carina-nebula-37671b77c01bec42.webp",
+    "sha256": "37671b77c01bec424971fdbfaf0242675f94739db9eb5ebfba1c1345d1823130",
+    "bytes": 645610,
+    "width": 1574,
+    "height": 1377,
+    "light": 0.185,
+    "colors": [
+      "#514d64",
+      "#434052",
+      "#3b3946"
+    ],
+    "credit": {
+      "author": "ESO/S. Brunier",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:The_Carina_Nebula_(b08).jpg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/c/c2/The_Carina_Nebula_%28b08%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-cachuma-after-dark",
+    "slug": "cachuma-after-dark",
+    "name": "Cachuma after Dark",
+    "category": "Natural landscapes",
+    "tags": "dark night natural landscapes",
+    "file": "cachuma-after-dark-f4c1479f08ddab45.webp",
+    "sha256": "f4c1479f08ddab45aab45402172431301b7d8e79b8fdc6466070192b77f3438c",
+    "bytes": 51092,
+    "width": 2048,
+    "height": 1536,
+    "light": 0.1697,
+    "colors": [
+      "#2a323a",
+      "#232a33",
+      "#232a33"
+    ],
+    "credit": {
+      "author": "Derek Petersen",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Lake_Cachuma_At_Night_(26948891).jpeg",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/0/0d/Lake_Cachuma_At_Night_%2826948891%29.jpeg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-red-mountain-night",
+    "slug": "red-mountain-night",
+    "name": "Red Mountain Night",
+    "category": "Natural landscapes",
+    "tags": "dark night natural landscapes",
+    "file": "red-mountain-night-2954eeb26ff3c931.webp",
+    "sha256": "2954eeb26ff3c931f30205be30fb76fdb87eb00733baf21131194e92e86e1778",
+    "bytes": 553414,
+    "width": 2560,
+    "height": 1707,
+    "light": 0.1558,
+    "colors": [
+      "#7f776c",
+      "#7f776c",
+      "#7f776c"
+    ],
+    "credit": {
+      "author": "John Fowler from Placitas, NM, USA",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Red_Mountain_at_Night_-_Flickr_-_snowpeak.jpg",
+      "license": "CC BY 2.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/2/21/Red_Mountain_at_Night_-_Flickr_-_snowpeak.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-steens-starlight",
+    "slug": "steens-starlight",
+    "name": "Steens Starlight",
+    "category": "Natural landscapes",
+    "tags": "dark night natural landscapes",
+    "file": "steens-starlight-aa0361b6433dcd1a.webp",
+    "sha256": "aa0361b6433dcd1ad178407ac1c3418c4a61625904068aa872d1b5295f0fed72",
+    "bytes": 594448,
+    "width": 2560,
+    "height": 1706,
+    "light": 0.2215,
+    "colors": [
+      "#324366",
+      "#49618e",
+      "#415880"
+    ],
+    "credit": {
+      "author": "Bureau of Land Management",
+      "sourceUrl": "https://commons.wikimedia.org/wiki/File:Steens_Mountain_in_eastern_Oregon_(9683731272).jpg",
+      "license": "Public domain",
+      "licenseUrl": "https://creativecommons.org/publicdomain/mark/1.0/"
+    },
+    "originalUrl": "https://upload.wikimedia.org/wikipedia/commons/5/5e/Steens_Mountain_in_eastern_Oregon_%289683731272%29.jpg?utm_source=commons.wikimedia.org&utm_campaign=imageinfo&utm_content=original"
+  },
+  {
+    "id": "night-aurora-over-earth",
+    "slug": "aurora-over-earth",
+    "name": "Aurora over Earth",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "aurora-over-earth-ae8599956a0a2b06.webp",
+    "sha256": "ae8599956a0a2b0688459102d419a308e7cefce0ab0bd442cf0f130aad249bf7",
+    "bytes": 361530,
+    "width": 2560,
+    "height": 1707,
+    "light": 0.1123,
+    "colors": [
+      "#2f2c21",
+      "#585f52",
+      "#585f52"
+    ],
+    "credit": {
+      "author": "NASA",
+      "sourceUrl": "https://images.nasa.gov/details/iss073e0293986",
+      "license": "Public domain",
+      "licenseUrl": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+    },
+    "originalUrl": "https://images-assets.nasa.gov/image/iss073e0293986/iss073e0293986~orig.jpg"
+  },
+  {
+    "id": "night-atmospheric-glow",
+    "slug": "atmospheric-glow",
+    "name": "Atmospheric Glow",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "atmospheric-glow-da09a3efe3a7b5be.webp",
+    "sha256": "da09a3efe3a7b5becb67f78bf8c0dfd77b3143f5a84d5d10ed8255acc690cf77",
+    "bytes": 101898,
+    "width": 2560,
+    "height": 1707,
+    "light": 0.0209,
+    "colors": [
+      "#203723",
+      "#203723",
+      "#203723"
+    ],
+    "credit": {
+      "author": "NASA",
+      "sourceUrl": "https://images.nasa.gov/details/iss073e0035898",
+      "license": "Public domain",
+      "licenseUrl": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+    },
+    "originalUrl": "https://images-assets.nasa.gov/image/iss073e0035898/iss073e0035898~orig.jpg"
+  },
+  {
+    "id": "night-milky-way-horizon",
+    "slug": "milky-way-horizon",
+    "name": "Milky Way Horizon",
+    "category": "Space & night",
+    "tags": "dark night space & night",
+    "file": "milky-way-horizon-24aba43ad66ef7bc.webp",
+    "sha256": "24aba43ad66ef7bc2c28a4da6d43a9f7e93eff93cd78f61f2a9987cbfabf9058",
+    "bytes": 1290298,
+    "width": 2560,
+    "height": 1707,
+    "light": 0.3672,
+    "colors": [
+      "#254162",
+      "#2c2b3c",
+      "#46658f"
+    ],
+    "credit": {
+      "author": "NASA",
+      "sourceUrl": "https://images.nasa.gov/details/iss073e0982823",
+      "license": "Public domain",
+      "licenseUrl": "https://www.nasa.gov/nasa-brand-center/images-and-media/"
+    },
+    "originalUrl": "https://images-assets.nasa.gov/image/iss073e0982823/iss073e0982823~orig.jpg"
+  }
+]

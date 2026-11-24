@@ -1,0 +1,37 @@
+{
+  "name": "linear",
+  "version": "1.0.0",
+  "description": "Pick up a Linear issue, work on it in this repository, and keep its status and comments current.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://linear.app/",
+  "keywords": [
+    "issues",
+    "project management",
+    "tickets"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Linear",
+    "shortDescription": "Issues, projects and cycles",
+    "longDescription": "Pick up a Linear issue, work on it in this repository, and keep its status and comments current.",
+    "developerName": "Linear",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://linear.app/",
+    "privacyPolicyURL": "https://linear.app/privacy",
+    "termsOfServiceURL": "https://linear.app/terms",
+    "defaultPrompt": [
+      "Start on my highest-priority Linear issue",
+      "File a Linear issue for the bug we just found"
+    ],
+    "brandColor": "#5E6AD2",
+    "logo": "./assets/logo.svg"
+  }
+}

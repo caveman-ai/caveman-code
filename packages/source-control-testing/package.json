@@ -1,0 +1,27 @@
+{
+  "name": "@caveman-app/source-control-testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./TestSourceControlHost": {
+      "types": "./src/TestSourceControlHost.ts",
+      "import": "./src/TestSourceControlHost.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@caveman-app/protocol": "workspace:*",
+    "@caveman-app/shared": "workspace:*",
+    "@caveman-app/source-control-core": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

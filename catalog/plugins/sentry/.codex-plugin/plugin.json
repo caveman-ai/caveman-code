@@ -1,0 +1,39 @@
+{
+  "name": "sentry",
+  "version": "1.0.0",
+  "description": "Open a Sentry issue, read its stack trace and events, reproduce it here and fix it with a test.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://sentry.io/",
+  "keywords": [
+    "errors",
+    "monitoring",
+    "crashes"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Sentry",
+    "shortDescription": "Errors, stack traces and releases",
+    "longDescription": "Open a Sentry issue, read its stack trace and events, reproduce it here and fix it with a test.",
+    "developerName": "Sentry",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://sentry.io/",
+    "privacyPolicyURL": "https://sentry.io/privacy/",
+    "termsOfServiceURL": "https://sentry.io/terms/",
+    "defaultPrompt": [
+      "Fix the top unresolved Sentry issue in this project",
+      "Did the last release introduce new errors?"
+    ],
+    "brandColor": "#362D59",
+    "brandColorDark": "#FFFFFF",
+    "logo": "./assets/logo.svg",
+    "logoDark": "./assets/logo-dark.svg"
+  }
+}

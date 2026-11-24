@@ -1,0 +1,14 @@
+{
+  "name": "asana",
+  "version": "1.0.0",
+  "description": "Turn a plan into Asana tasks and keep them current as the work in this repository moves.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://asana.com/",
+  "keywords": [
+    "tasks",
+    "projects"
+  ]
+}

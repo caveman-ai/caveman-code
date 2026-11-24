@@ -1,0 +1,10 @@
+/* The app reads in the system's own faces, using compact styling
+   "just look terrible" next to it): SF Pro and SF Mono on a Mac, Segoe UI and Cascadia on Windows, nothing to
+   download. JetBrains Mono stays bundled for Settings > Appearance > Code font. */
+@import "@fontsource-variable/jetbrains-mono";
+
+:root {
+  --font-inter: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  /* Concrete names before ui-monospace: an engine that does not know the keyword takes it for the UI font. */
+  --font-jetbrains: "SF Mono", SFMono-Regular, ui-monospace, "Cascadia Mono", Menlo, Consolas, monospace;
+}

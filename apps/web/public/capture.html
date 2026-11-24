@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Capture for the Chief</title>
+    <!--
+      The desktop's capture window (apps/desktop/src/capture.ts): static, so it
+      opens at once without the app bundle. Colours are the deck tokens
+      (packages/ui/src/styles/globals.css, data-surface="deck"), copied because
+      this page loads no app CSS.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --background: hsl(240 2.7% 7.3%);
+        --foreground: hsl(220 5.7% 89.6%);
+        --muted-foreground: hsl(240 1% 58.8%);
+        --subtle-foreground: hsl(222.86 3.32% 41.37%);
+        --border: hsl(220 4.1% 14.3%);
+        --destructive: hsl(357 70% 64%);
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          color-scheme: light;
+          --background: hsl(240 9.1% 97.8%);
+          --foreground: hsl(240 3.1% 12.5%);
+          --muted-foreground: hsl(240 1.1% 36.5%);
+          --subtle-foreground: hsl(222.86 3.32% 41.37%);
+          --border: hsl(240 1.8% 88.8%);
+          --destructive: hsl(358 65% 48%);
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; }
+      body {
+        display: flex;
+        flex-direction: column;
+        background: var(--background);
+        color: var(--foreground);
+        font: 13px/1.5 Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        overflow: hidden;
+        -webkit-user-select: none;
+        user-select: none;
+      }
+      .box { flex: 1; display: flex; gap: 12px; padding: 18px 18px 0; min-height: 0; -webkit-app-region: drag; }
+      .box svg { flex: none; width: 16px; height: 16px; margin-top: 4px; color: var(--muted-foreground); shape-rendering: crispEdges; }
+      textarea {
+        flex: 1;
+        min-width: 0;
+        height: 100%;
+        resize: none;
+        border: 0;
+        outline: 0;
+        padding: 0;
+        background: transparent;
+        color: var(--foreground);
+        font: inherit;
+        font-size: 16px;
+        line-height: 24px;
+        -webkit-app-region: no-drag;
+        -webkit-user-select: text;
+        user-select: text;
+      }
+      textarea::placeholder { color: var(--muted-foreground); opacity: 0.8; }
+      footer {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        height: 36px;
+        padding: 0 14px 0 46px;
+        border-top: 1px solid var(--border);
+        font-size: 12px;
+        color: var(--muted-foreground);
+        white-space: nowrap;
+      }
+      #note { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+      #note.error { color: var(--destructive); }
+      kbd {
+        display: inline-grid;
+        place-items: center;
+        min-width: 18px;
+        height: 18px;
+        margin-right: 5px;
+        padding: 0 4px;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        font: 11px ui-monospace, "JetBrains Mono", Menlo, monospace;
+        color: var(--muted-foreground);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="box">
+      <!-- The Chief nav icon (packages/ui/src/icons/glyphs.ts CHIEF), in currentColor. -->
+      <svg viewBox="0 0 16 16" aria-hidden="true">
+        <path fill="currentColor" d="M1 2h2v1h-2zM13 2h2v1h-2zM2 3h12v1h-12zM1 4h2v1h-2zM4 4h8v1h-8zM13 4h2v1h-2zM3 5h10v1h-10zM2 6h4v1h-4zM10 6h4v1h-4zM2 7h2v1h-2zM12 7h2v1h-2zM2 8h1v1h-1zM5 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM2 9h1v1h-1zM13 9h1v1h-1zM2 10h2v1h-2zM5 10h6v1h-6zM12 10h2v1h-2zM2 11h12v1h-12zM3 12h10v1h-10zM4 13h3v1h-3zM9 13h3v1h-3zM5 14h6v1h-6z" />
+        <path fill="currentColor" fill-opacity="0.4" d="M7 9h2v1h-2z" />
+      </svg>
+      <textarea id="text" rows="2" autofocus spellcheck="true" aria-label="Note for the Chief" placeholder="Note for the Chief…"></textarea>
+    </div>
+    <footer>
+      <span id="note" role="status">Lands on the Queue at once</span>
+      <span><kbd>↵</kbd>Chief decides</span>
+      <span><kbd>⌥↵</kbd>Queue</span>
+      <span><kbd>esc</kbd>Close</span>
+    </footer>
+    <script src="./capture.js"></script>
+  </body>
+</html>

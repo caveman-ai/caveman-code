@@ -1,0 +1,20 @@
+{
+  "name": "@caveman-ai/code",
+  "version": "1.0.0",
+  "description": "Caveman Code CLI: terminal client and local daemon wrapper sharing the Caveman Code Desktop runtime.",
+  "license": "Apache-2.0",
+  "type": "module",
+  "bin": {
+    "caveman-code": "./bin/caveman-code.mjs"
+  },
+  "files": [
+    "bin/",
+    "README.md",
+    "LICENSE",
+    "NOTICE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "scripts": {
+    "test": "node --test tests/*.test.mjs"
+  }
+}

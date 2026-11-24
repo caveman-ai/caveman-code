@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "atlassian": {
+      "auth": "oauth"
+    }
+  }
+}

@@ -1,0 +1,261 @@
+# Signed, notarized macOS builds and signed Windows builds for the updater's
+# public feeds, https://download.caveman.so/code/mac and /code/win (the R2
+# bucket caveman-downloads; apps/desktop/src/updates.ts reads them). By hand
+# only. It stages the builds in the bucket and stops at a DRAFT release here:
+# a person publishes the draft, and desktop-publish.yml then makes it the
+# version installed apps update to and the Download buttons serve. Nothing
+# builds until releases/<version>.md says what changed (releases/README.md);
+# it becomes the release body and the app's What's new.
+#
+# Needs these repository secrets (none live in the repo):
+#   MAC_CERTIFICATE_P12        base64 of the Developer ID Application .p12
+#   MAC_CERTIFICATE_PASSWORD   its password
+#   APPLE_API_KEY_P8           base64 of an App Store Connect API key (.p8)
+#   APPLE_API_KEY_ID, APPLE_API_ISSUER
+#   AZURE_TENANT_ID, AZURE_CLIENT_ID, AZURE_CLIENT_SECRET   the service principal
+#                              that may sign with the Azure Artifact Signing account
+#   AZURE_TRUSTED_SIGNING_ENDPOINT, AZURE_TRUSTED_SIGNING_ACCOUNT_NAME,
+#   AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME, AZURE_TRUSTED_SIGNING_PUBLISHER_NAME
+#   R2_ACCOUNT_ID              the Cloudflare account holding caveman-downloads
+#   R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY   an R2 token, Object Read & Write on that bucket
+# Without the Apple ones `package.mjs --release` fails before building; so does
+# the Windows one with only some of the Azure ones. With none of the Azure ones
+# the release has no Windows build (the notes job says so), and an unsigned one
+# never ships. Without the R2 ones the notes job fails.
+# Actions are pinned by commit: the build job later holds the signing secrets.
+name: Desktop release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version, for example 0.1.0 (tagged desktop-v<version>)
+        required: true
+
+# Read only, but for the job that drafts the release: the builds run the repo's code and the signing tools.
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-release
+  cancel-in-progress: false
+
+jobs:
+  notes:
+    name: Release notes
+    runs-on: ubuntu-24.04
+    outputs:
+      windows: ${{ steps.windows.outputs.build }}
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          # No pnpm in this job; setup-node v5 would otherwise look for its store.
+          package-manager-cache: false
+      - name: Check releases/<version>.md
+        env:
+          VERSION: ${{ inputs.version }}
+        run: node apps/desktop/scripts/release-notes.mjs check "$VERSION"
+      # Before an hour of macOS builds, not after.
+      - name: Check the bucket secrets
+        env:
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+        run: |
+          [[ -n "$R2_ACCOUNT_ID" && -n "$R2_ACCESS_KEY_ID" && -n "$R2_SECRET_ACCESS_KEY" ]] || { echo "::error::R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY must be repository secrets"; exit 1; }
+      # Any Azure secret set means Windows is signed and in the release: package.mjs --release then needs all of them.
+      - name: Is Windows signing set up
+        id: windows
+        env:
+          AZURE: ${{ secrets.AZURE_TENANT_ID }}${{ secrets.AZURE_CLIENT_ID }}${{ secrets.AZURE_CLIENT_SECRET }}${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}${{ secrets.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME }}${{ secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME }}
+        run: |
+          if [ -n "$AZURE" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::No Windows build in this release: the Azure Artifact Signing secrets (AZURE_*) are not set, and an unsigned build never ships"
+          fi
+
+  build:
+    name: Build ${{ matrix.arch }}
+    needs: notes
+    strategy:
+      matrix:
+        # Each arch builds under a Node of its own arch: the runtime bundle carries the natives that Node installed. Both on
+        # Apple silicon, x64 under Rosetta: the Intel runners took twice as long and queued longest.
+        arch: [arm64, x64]
+    runs-on: macos-15
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      # The x64 build's Node, and everything it starts (pnpm, the runtime bundle, electron-builder, the smoke), runs under
+      # Rosetta.
+      - name: Rosetta
+        if: matrix.arch == 'x64'
+        run: arch -x86_64 /usr/bin/true 2>/dev/null || sudo softwareupdate --install-rosetta --agree-to-license
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          architecture: ${{ matrix.arch }}
+          cache: pnpm
+      - run: test "$(node -p process.arch)" = "${{ matrix.arch }}" && pnpm install --frozen-lockfile
+      - name: Signing material
+        env:
+          MAC_CERTIFICATE_P12: ${{ secrets.MAC_CERTIFICATE_P12 }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY_P8 }}
+        run: |
+          umask 077
+          printf '%s' "$MAC_CERTIFICATE_P12" | base64 --decode > "$RUNNER_TEMP/developer-id.p12"
+          printf '%s' "$APPLE_API_KEY_P8" | base64 --decode > "$RUNNER_TEMP/notary.p8"
+      - name: Package, sign, notarize
+        env:
+          CAVEMAN_APP_VERSION: ${{ inputs.version }}
+          # Crash reports (docs/): the DSN, public, is baked into the app; the token uploads its
+          # source maps to that Sentry project. Unset, the build reports nothing.
+          CAVEMAN_CRASH_DSN: ${{ vars.CAVEMAN_CRASH_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          CSC_LINK: ${{ runner.temp }}/developer-id.p12
+          CSC_KEY_PASSWORD: ${{ secrets.MAC_CERTIFICATE_PASSWORD }}
+          APPLE_API_KEY: ${{ runner.temp }}/notary.p8
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: node apps/desktop/scripts/package.mjs --release
+      - name: Smoke the packaged app
+        run: node apps/desktop/scripts/smoke-test.mjs --packaged
+      - name: Remove signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/developer-id.p12" "$RUNNER_TEMP/notary.p8"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-${{ matrix.arch }}
+          path: |
+            apps/desktop/release/*.dmg
+            apps/desktop/release/*.zip
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest-mac.yml
+          if-no-files-found: error
+
+  build-windows:
+    name: Build Windows x64
+    needs: notes
+    if: needs.notes.outputs.windows == 'true'
+    runs-on: windows-2025
+    timeout-minutes: 60
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # electron-builder installs the TrustedSigning PowerShell module and signs every .exe, .dll and .node.
+      - name: Package and sign
+        env:
+          CAVEMAN_APP_VERSION: ${{ inputs.version }}
+          # Crash reports (docs/): the DSN, public, is baked into the app; the token uploads its
+          # source maps to that Sentry project. Unset, the build reports nothing.
+          CAVEMAN_CRASH_DSN: ${{ vars.CAVEMAN_CRASH_DSN }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ vars.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ vars.SENTRY_PROJECT }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+          AZURE_TRUSTED_SIGNING_ENDPOINT: ${{ secrets.AZURE_TRUSTED_SIGNING_ENDPOINT }}
+          AZURE_TRUSTED_SIGNING_ACCOUNT_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_ACCOUNT_NAME }}
+          AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_CERTIFICATE_PROFILE_NAME }}
+          AZURE_TRUSTED_SIGNING_PUBLISHER_NAME: ${{ secrets.AZURE_TRUSTED_SIGNING_PUBLISHER_NAME }}
+        run: node apps/desktop/scripts/package.mjs --release
+      - name: Smoke the packaged app
+        run: node apps/desktop/scripts/smoke-test.mjs --packaged
+      # As a person gets it: the installer, silently, for this user; then that copy.
+      - name: Install silently and smoke the installed app
+        shell: pwsh
+        run: |
+          $installer = Get-Item apps/desktop/release/Caveman-Code-Setup-*-x64.exe
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "the installer exited $($install.ExitCode)" }
+          node apps/desktop/scripts/smoke-test.mjs --app "$env:LOCALAPPDATA\Programs\caveman-code\Caveman Code.exe"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: desktop-win-x64
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/*.blockmap
+            apps/desktop/release/latest.yml
+          if-no-files-found: error
+
+  draft:
+    name: Draft release
+    needs: [notes, build, build-windows]
+    # Windows is skipped when its signing is not set up (the notes job); a failed build stops the release.
+    if: ${{ !cancelled() && needs.build.result == 'success' && (needs.build-windows.result == 'success' || (needs.build-windows.result == 'skipped' && needs.notes.outputs.windows == 'false')) }}
+    runs-on: ubuntu-24.04
+    # The one job that writes: the draft release and its tag. Its checkout keeps the token for git ls-remote.
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: artifacts
+      # Each arch wrote its own latest-mac.yml; the updater needs one listing both.
+      - name: Merge update manifests
+        run: node apps/desktop/scripts/merge-update-manifests.mjs artifacts/desktop-arm64/latest-mac.yml artifacts/desktop-x64/latest-mac.yml > latest-mac.yml
+      - name: Stage on download.caveman.so and draft the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ inputs.version }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          # Checksums only where S3 requires them, as before AWS CLI 2.23 made more the default.
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        run: |
+          # The same check as package.mjs; the input never reaches the script text.
+          VERSION="${VERSION#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::$VERSION is not a version"; exit 1; }
+          # A released version's files are served as immutable; a rebuild under its name would not match them.
+          if git ls-remote --exit-code --tags origin "refs/tags/desktop-v$VERSION" > /dev/null; then echo "::error::desktop-v$VERSION is released already: pick a new version"; exit 1; fi
+          node apps/desktop/scripts/release-notes.mjs body "$VERSION" > "$RUNNER_TEMP/notes.md"
+          s3() { aws s3 --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" "$@"; }
+          # Versioned names: nothing reads them until desktop-publish.yml points latest-mac.yml (and latest.yml) at them.
+          mac=(artifacts/desktop-{arm64,x64}/*.dmg artifacts/desktop-{arm64,x64}/*.zip artifacts/desktop-{arm64,x64}/*.blockmap)
+          for file in "${mac[@]}"; do
+            s3 cp "$file" "s3://caveman-downloads/code/mac/${file##*/}" --cache-control "public, max-age=31536000, immutable"
+          done
+          s3 cp latest-mac.yml "s3://caveman-downloads/code/mac/$VERSION/latest-mac.yml" --cache-control "no-cache"
+          # Windows: the installer, its blockmap, and latest.yml, the feed desktop-publish.yml points code/win at.
+          win=()
+          if [ -d artifacts/desktop-win-x64 ]; then
+            for file in artifacts/desktop-win-x64/*.exe artifacts/desktop-win-x64/*.blockmap; do
+              s3 cp "$file" "s3://caveman-downloads/code/win/${file##*/}" --cache-control "public, max-age=31536000, immutable"
+            done
+            s3 cp artifacts/desktop-win-x64/latest.yml "s3://caveman-downloads/code/win/$VERSION/latest.yml" --cache-control "no-cache"
+            win=(artifacts/desktop-win-x64/*.exe artifacts/desktop-win-x64/*.blockmap artifacts/desktop-win-x64/latest.yml)
+          fi
+          gh release create "desktop-v$VERSION" --draft --target "$GITHUB_SHA" \
+            --title "Caveman Code $VERSION" --notes-file "$RUNNER_TEMP/notes.md" \
+            "${mac[@]}" latest-mac.yml "${win[@]}"

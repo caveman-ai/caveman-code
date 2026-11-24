@@ -1,0 +1,6 @@
+# Windows checkouts default to core.autocrlf=true; keep every text file LF, as
+# on macOS and Linux (T3 Code's .gitattributes, MIT).
+* text=auto eol=lf
+# cmd.exe parses batch files reliably only with CRLF.
+*.cmd text eol=crlf
+*.bat text eol=crlf

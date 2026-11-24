@@ -1,0 +1,30 @@
+/* Board motion (STYLE.md section 8): the Chief's rail.
+   Walking the rows (J, K) never animates the highlight: a fade there reads
+   as lag. */
+
+/* A row that turns up while the inbox is open fades in where it stands. A new question also glows once. */
+.inbox-row-in { animation: inbox-row-in 150ms var(--ease-snap); }
+.inbox-arrive { animation: inbox-row-in 150ms var(--ease-snap), inbox-glow 1600ms ease-out; }
+@keyframes inbox-row-in { from { opacity: 0; } }
+@keyframes inbox-glow { from { background-color: hsl(var(--warning) / 0.16); } }
+
+/* A Suggested chat the Chief just proposed (chief-cards.tsx Suggested, and its Queue row).
+   While it is fresh (inbox-parts.tsx useFresh: a few seconds, or until you reach for it) it
+   wears a warning ring and tint (chief-fresh); with motion on it fades in where it stands,
+   no rise, no scale and no bloom (founder 2026-10-23: nothing bounces). Under reduced motion
+   (pixel.css stops every animation) the ring and tint are the whole arrival. */
+.chief-suggested-in { animation: chief-suggested-in 200ms var(--ease-snap); }
+@keyframes chief-suggested-in { from { opacity: 0; } }
+/* Started or dismissed, the card leaves the way it came: a fade where it stands (SUGGESTED_LEAVE_MS), then it is gone. */
+.chief-suggested-out { animation: chief-suggested-out 220ms var(--ease-snap) both; pointer-events: none; }
+@keyframes chief-suggested-out { to { opacity: 0; } }
+.chief-fresh { box-shadow: 0 0 0 2px hsl(var(--warning) / 0.45); background-color: hsl(var(--warning) / 0.06); }
+/* The Queue header's "n suggested" badge fades in when the count rises: no pop. */
+.chief-badge-in { animation: chief-badge-in 150ms var(--ease-snap); }
+@keyframes chief-badge-in { from { opacity: 0; } }
+/* A Chief's hello (chief-welcome.tsx): its parts fade in one after another, no rise. */
+.chief-welcome-in { animation: chief-badge-in 220ms var(--ease-snap) both; animation-delay: calc(var(--i, 0) * 45ms); }
+
+@media (prefers-reduced-motion: reduce) {
+  .inbox-row-in, .inbox-arrive, .chief-suggested-in, .chief-suggested-out, .chief-badge-in, .chief-welcome-in { animation: none; }
+}

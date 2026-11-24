@@ -1,0 +1,6 @@
+{
+  "title": "Issue to PR",
+  "category": "Issues and PRs",
+  "summary": "Label an issue caveman to get a reviewed draft PR or a question back. Runs on Cloud.",
+  "scope": "project"
+}

@@ -1,0 +1,39 @@
+{
+  "name": "vercel",
+  "version": "1.0.0",
+  "description": "Check Vercel deployments for this repository, read build and runtime logs, and fix what broke.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://vercel.com/",
+  "keywords": [
+    "deploy",
+    "hosting",
+    "next.js"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Vercel",
+    "shortDescription": "Deployments, builds and logs",
+    "longDescription": "Check Vercel deployments for this repository, read build and runtime logs, and fix what broke.",
+    "developerName": "Vercel",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://vercel.com/",
+    "privacyPolicyURL": "https://vercel.com/legal/privacy-policy",
+    "termsOfServiceURL": "https://vercel.com/legal/terms",
+    "defaultPrompt": [
+      "Why did the last Vercel deployment fail?",
+      "Check the preview deployment for this branch"
+    ],
+    "brandColor": "#000000",
+    "brandColorDark": "#FFFFFF",
+    "logo": "./assets/logo.svg",
+    "logoDark": "./assets/logo-dark.svg"
+  }
+}

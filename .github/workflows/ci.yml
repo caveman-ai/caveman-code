@@ -1,0 +1,346 @@
+# Every push to main and every pull request, laid out .yml: each check on a runner of its own, side by
+# side, each held to 10 minutes, and `Check` at the end passing only when every other job did. Linux and Windows run on
+# Blacksmith (installed for the organization; Caveman Cloud's CI runs there too), the macOS smoke on GitHub's macos-15.
+# A pull request runs the runtime's 24 shards only when it can affect them (`changes`), and never the macOS smoke, which
+# an Actions budget can stop: main pushes, workflow_dispatch and desktop-nightly.yml run both whatever changed.
+# Nothing here signs with a real identity, notarizes or publishes: desktop-release.yml does that, by hand.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Many sessions push to main: one run at a time per ref, the newest push
+# waiting, so the latest commit always gets a full run. Pull requests cancel.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  # Whether a pull request can affect the runtime's suite (scripts/runtime-affected.ts: any package but ui, a lockfile,
+  # a config, CI, or the app files the runtime's tests load). Every other event runs the shards.
+  changes:
+    name: What changed
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    outputs:
+      runtime: ${{ steps.runtime.outputs.runtime }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      # The scripts below use Node's built-ins only, so no pnpm: setup-node would otherwise read packageManager and
+      # look for pnpm's cache before pnpm exists.
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Does it reach the runtime's tests
+        id: runtime
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ format('origin/{0}', github.base_ref) }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "runtime=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          node --test scripts/runtime-affected.test.ts
+          node scripts/runtime-affected.ts "$BASE"
+
+  # oxlint's errors across the repo (.oxlintrc.json), unused files and dependencies (knip.jsonc), and the format check
+  # and lint of the files this change touches (scripts/check-changed.ts). A pull request is compared with the branch it
+  # targets, a push to main with the commit it replaced; check:changed needs the history for either merge base.
+  lint:
+    name: Lint, knip, changed files
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - uses: ./.github/actions/setup
+      - run: pnpm lint
+      - run: pnpm knip
+      - name: Format and lint of changed files
+        env:
+          BASE: ${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event_name == 'push' && github.event.before || 'origin/main' }}
+        run: pnpm check:changed "$BASE"
+
+  typecheck:
+    name: Typecheck
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm typecheck
+
+  # The web build and the runtime bundle (it carries the web client in dist/client), then the caveman-code npm package
+  # (published by hand from npm-release.yml) packed, installed into a temp prefix and started: it serves the web client
+  # and starts its own caveman-proxy.
+  build:
+    name: Build, npm package, proxy wires
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    # Read-only: the pinned Caveman binaries' download may ask GitHub's API for an asset a CDN edge keeps failing.
+    env:
+      GITHUB_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Web build and runtime bundle
+        run: pnpm --filter @caveman-app/runtime build
+      - name: npm package smoke
+        run: pnpm --filter @caveman-app/runtime pack:npm --smoke
+      # These suites normally skip when binaries are absent. Install the declared, checksum-verified release
+      # explicitly so OAuth refresh, compression and original retrieval are mandatory on every push/PR.
+      - name: Packaged proxy auth and compression wires
+        run: |
+          node packages/runtime/scripts/cavemanBinaries.ts "$RUNNER_TEMP/caveman-wire"
+          export CAVEMAN_PROXY_BIN="$RUNNER_TEMP/caveman-wire/bin/caveman-proxy"
+          export CAVEMAN_MCP_BIN="$RUNNER_TEMP/caveman-wire/bin/caveman-mcp"
+          test -x "$CAVEMAN_PROXY_BIN" && test -x "$CAVEMAN_MCP_BIN"
+          CAVEMAN_REQUIRE_PROXY=1 pnpm --filter @caveman-app/runtime exec vitest run src/router/claudeRefresh.wire.test.ts src/router/appProxy.wire.test.ts
+
+  # Every package's suite but the runtime's and the web app's, which have jobs of their own below. --no-sort drops the
+  # dependency order pnpm -r keeps by default: the test scripts resolve workspace packages from source, so the order
+ # only left the runner idle between layers (upstream ci.yml `test`). --no-bail: one package's failure must not hide
+  # another's.
+  test:
+    name: Test packages
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm -r --no-sort --workspace-concurrency 4 --no-bail --if-present --filter '!@caveman-app/runtime' --filter '!@caveman-app/web' test
+
+  # The largest suite outside the runtime's: in the shared job it started last and ran alone for minutes.
+  test-web:
+    name: Test web
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @caveman-app/web test
+
+  # The runtime sets `fileParallelism: false`, so its test files run strictly one at a time. Sharding spreads them over
+ # runners instead of workers, so no two runtime test files ever share a machine (upstream `test_server`). The shards split
+  # by measured time (packages/runtime/vitest.weights.json, vitest.config.ts's WeightedSequencer); add shards, never
+  # time, when the longest one nears the limit. Memory, disk and node processes go into the log every 30 s: a runner
+  # that dies of exhaustion (the runner "received a shutdown signal") leaves its last state here, where no failure
+  # step would run.
+  runtime:
+    name: Runtime tests ${{ matrix.shard }}
+    needs: changes
+    if: ${{ needs.changes.outputs.runtime == 'true' }}
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Runtime tests
+        run: |
+          ( while sleep 30; do
+              echo "[resources $(date -u +%T)] $(free -m | awk '/^Mem:/ {printf "mem used %s of %s MB, available %s;", $3, $2, $7} /^Swap:/ {printf " swap used %s MB;", $3}') disk $(df -h --output=used,avail / | tail -1 | xargs); node processes $(pgrep -c node || echo 0)"
+            done ) &
+          sampler=$!
+          status=0
+          pnpm --filter @caveman-app/runtime test --shard=${{ matrix.shard }}/${{ strategy.job-total }} || status=$?
+          kill "$sampler"
+          exit "$status"
+      - name: Resources after a failure
+        if: failure()
+        run: |
+          free -m
+          df -h /
+          ps -eo pid,ppid,rss,etime,args --sort=-rss | head -20 | cut -c1-200
+          sudo dmesg | grep -iE 'out of memory|oom|killed process' | tail -20 || true
+
+  # The chaos harness's S14 latency budgets (overhead over loopback on localhost), judged on a runner of their own:
+  # other work on the machine slows the Mac's sealed paths more than the loopback baseline, so they are only fair
+  # alone (chaos.integration.test.ts; the runtime shards skip this one test).
+  chaos-latency:
+    name: Chaos latency (own runner)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm --filter @caveman-app/runtime exec vitest run src/cloudLink/chaos/chaos.integration.test.ts -t "hop overhead"
+        env:
+          CHAOS_LATENCY: judge
+
+  # The token edge on ADEMark (zqkra/ademark tests B1 to B4): what a new Claude Agent chat sends the model for "hi" and
+  # for ADEMark's real prompt, through the runtime from source, the Claude Code the Agent SDK pins and a stand-in model
+  # API (apps/desktop/scripts/ademark/tokens-check.ts). Fails when a request grows past budgets.json `tokens`.
+  ademark-tokens:
+    name: ADEMark tokens
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: node apps/desktop/scripts/ademark/tokens-check.ts
+
+ # apps/web in a real browser (upstream browser project): its *.browser.test.tsx in Playwright's headless Chromium
+  # through Vitest's browser mode, the whole app against a scripted Session Protocol runtime (apps/web/test). The
+  # browser is cached per Playwright version; apt runs only when the runner lacks a library it needs.
+  web-browser:
+    name: Web browser tests (Chromium)
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - name: Resolve Playwright version
+        id: playwright_version
+        run: echo "version=$(node -p "require('./apps/web/node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
+      - name: Cache Chromium
+        id: chromium_cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-shell-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright_version.outputs.version }}
+      - name: Install Chromium
+        if: steps.chromium_cache.outputs.cache-hit != 'true'
+        run: node apps/web/node_modules/playwright/cli.js install --only-shell chromium
+      - name: Install missing Chromium system libraries
+        run: |
+          browser=$(find "$HOME/.cache/ms-playwright" -name chrome-headless-shell -type f -print -quit)
+          test -n "$browser"
+          if ldd "$browser" | grep '=> not found'; then
+            node apps/web/node_modules/playwright/cli.js install-deps chromium
+          fi
+      - name: Web browser tests
+        run: pnpm --filter @caveman-app/web test:browser
+
+  # Every package but the runtime, tested on Windows, with the runtime's lifecycle files. The runtime's suite and the
+  # Windows build, install and smokes run nightly in windows.yml: several of the runtime's end-to-end tests are
+  # timing-sensitive on a loaded Windows runner and would turn this job red at random.
+  windows:
+    name: Windows tests
+    runs-on: blacksmith-8vcpu-windows-2025
+    timeout-minutes: 10
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: ./.github/actions/setup
+      - run: pnpm -r --no-sort --workspace-concurrency 4 --no-bail --if-present --filter '!@caveman-app/runtime' test
+      # The runtime's lifecycle on Windows, which no other job here covers: `caveman code` and the desktop's runtime
+      # stopping on the end of their stdin with nothing left running (interface 1), the npm launcher, and the state
+      # dir's ACL. Steady files only; the rest of the runtime's suite stays nightly in windows.yml.
+      - name: Runtime lifecycle on Windows
+        if: ${{ !cancelled() }}
+        working-directory: packages/runtime
+        run: pnpm exec vitest run src/cli/code.test.ts src/cli/server.desktop.test.ts scripts/npm-launcher.test.ts src/stateDirAcl.test.ts
+
+  # GitHub-hosted macOS draws on the Actions budget, which stopped this job before its first step on every run from
+  # 18 Nov ("an Actions budget is preventing further use"), turning main red with no failure in the code. So it runs
+  # on main pushes and by hand, outside `Check`: a macOS-only break shows on main within the hour, and in
+  # desktop-nightly.yml.
+  desktop:
+    name: Desktop smoke (macOS)
+    if: ${{ github.event_name != 'pull_request' }}
+    runs-on: macos-15
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      # Electron's and electron-builder's downloads come from GitHub's release CDN, which answers a 504 now and then:
+      # kept between runs (keyed on the lockfile, which pins their versions), most runs never ask it.
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/Library/Caches/electron
+            ~/Library/Caches/electron-builder
+          key: electron-macos-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: electron-macos-
+      - uses: ./.github/actions/setup
+      # Frame conversion uses macOS's sips; Linux runtime shards cover the other computer-use cases.
+      - name: Mac computer-use protocol
+        run: pnpm --filter @caveman-app/runtime exec vitest run src/session-protocol/macDesktop/macDesktop.test.ts
+      # The login-shell probe against the real zsh and bash with a hung rc: on Blacksmith's Linux runners a login shell
+      # takes the runner's own HOME, so the scratch rc is never read there.
+      - name: Login shells
+        run: pnpm --filter @caveman-app/shared exec vitest run src/shell.test.ts
+      # Dev build: Electron starts packages/runtime from source and the page asks it for engine.list. Its first run
+      # downloads Electron: a failure is run again, three tries in all, and a real failure still fails.
+      - name: Dev smoke
+        run: |
+          for attempt in 1 2 3; do
+            pnpm --filter @caveman-app/desktop smoke-test && exit 0
+            echo "::warning::dev smoke failed (attempt $attempt of 3)"
+            sleep $((attempt * 20))
+          done
+          exit 1
+      # The .app as a user gets it, ad-hoc signed: fuses, codesign --verify, node-pty on the bundled Node.
+      # Packaging downloads from GitHub's release CDN (Electron's builder tools and the pinned Caveman binaries), which
+      # answers a 504 now and then: a failed packaging is run again, three tries in all, and a real failure still fails.
+      - name: Package (ad-hoc)
+        # Read-only: the pinned Caveman binaries' download may ask GitHub's API for an asset a CDN edge keeps failing.
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          for attempt in 1 2 3; do
+            node apps/desktop/scripts/package.mjs --dir && exit 0
+            echo "::warning::packaging failed (attempt $attempt of 3)"
+            sleep $((attempt * 20))
+          done
+          exit 1
+      # Its screenshot (the desktop-smoke artifact) is Settings > General: updates, command line, telemetry.
+      - name: Smoke the packaged app
+        run: node apps/desktop/scripts/smoke-test.mjs --packaged
+        env:
+          CAVEMAN_SMOKE_ROUTE: /settings/general
+      # A first run from empty folders through that .app's window (scripts/first-run-e2e.mjs): onboarding from the
+      # first paint, the device sign-in, a Claude Code from before Opus 5.5 listed and then updated, a Chief turn's
+      # answer outside the Worked fold, and no half line left by a steer.
+      - name: First run end to end (packaged app)
+        if: ${{ !cancelled() }}
+        run: node apps/desktop/scripts/first-run-e2e.mjs --packaged --out apps/desktop/dist-electron/first-run-e2e
+      # The same first run on a Mac without Apple's Command Line Tools: Your setup and the project step say git is
+      # missing and offer the installer, and adding a folder says why it can't.
+      - name: First run without git (packaged app)
+        if: ${{ !cancelled() }}
+        run: node apps/desktop/scripts/first-run-e2e.mjs --packaged --without-git --out apps/desktop/dist-electron/first-run-e2e/without-git
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: desktop-smoke
+          path: |
+            apps/desktop/dist-electron/*.png
+            apps/desktop/dist-electron/first-run-e2e/
+          if-no-files-found: ignore
+
+  # The one check to require on main: it fails when any other job fails, is cancelled or is skipped, so splitting or
+  # resharding a job never needs a ruleset change. Add every new job to `needs`, except one an Actions budget can stop
+  # (the macOS smoke). `always()` rather than `!cancelled()`: a skipped job reports success to branch protection, so a
+  # cancelled run must still produce a failing check. The runtime's shards alone may be skipped, and only when
+  # `changes` said the change cannot reach them.
+  check:
+    name: Check
+    if: ${{ always() }}
+    needs: [changes, lint, typecheck, build, test, test-web, runtime, chaos-latency, ademark-tokens, web-browser, windows]
+    runs-on: blacksmith-2vcpu-ubuntu-2404
+    timeout-minutes: 5
+    steps:
+      - name: Require every job to pass
+        env:
+          RESULTS: ${{ toJSON(needs) }}
+          RUNTIME: ${{ needs.changes.outputs.runtime }}
+        run: |
+          echo "$RESULTS" | jq -r 'to_entries[] | "\(.key): \(.value.result)"'
+          echo "$RESULTS" | jq -e --arg runtime "$RUNTIME"             'all(to_entries[]; .value.result == "success" or (.key == "runtime" and .value.result == "skipped" and $runtime == "false"))' > /dev/null

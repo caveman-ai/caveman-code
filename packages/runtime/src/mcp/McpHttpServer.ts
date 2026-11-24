@@ -1,0 +1,1135 @@
+// ), apps/server/src/mcp/McpHttpServer.ts @ ab3a3cd1.
+import * as Cause from "effect/Cause";
+import * as Clock from "effect/Clock";
+import * as Context from "effect/Context";
+import * as SecureRandom from "effect/crypto/SecureRandom";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
+import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
+import * as Sink from "effect/Sink";
+import * as Stream from "effect/Stream";
+import type * as Types from "effect/Types";
+import { AiError, McpProtocol, McpSchema, McpServer, Tool, Toolkit } from "effect/ai";
+import { HttpRouter, HttpServerRequest, HttpServerResponse } from "effect/http";
+import { OrchestratorMcpFailure, PreviewAutomationError } from "@caveman-app/protocol";
+import { truncateCodeUnits } from "@caveman-app/shared/threadMessageEnvelope";
+
+import { RUNTIME_VERSION } from "../runtimeVersion.ts";
+import { parseBearerToken } from "../auth/EnvironmentAuth.ts";
+import * as ServerConfig from "../config.ts";
+import * as HtmlRender from "../htmlRender/HtmlRender.ts";
+import * as ThreadCommandExecutor from "../orchestration-v2/ThreadCommandExecutor.ts";
+import * as ThreadManagementService from "../orchestration-v2/ThreadManagementService.ts";
+import { advertisedJsonSchema, withAdvertisedSchemas } from "./advertisedJsonSchema.ts";
+import * as McpInvocationContext from "./McpInvocationContext.ts";
+import * as McpToolAccess from "./McpToolAccess.ts";
+import * as OrchestratorMcpService from "./OrchestratorMcpService.ts";
+import { PreviewControlsToolkit } from "./toolkits/previewControls/tools.ts";
+import * as PreviewControlsHandlers from "./toolkits/previewControls/handlers.ts";
+import { EnvironmentToolkit } from "./toolkits/environment/tools.ts";
+import * as EnvironmentHandlers from "./toolkits/environment/handlers.ts";
+import { ProjectToolkit } from "./toolkits/project/tools.ts";
+import * as ProjectHandlers from "./toolkits/project/handlers.ts";
+import { AttachmentToolkit } from "./toolkits/attachment/tools.ts";
+import * as AttachmentHandlers from "./toolkits/attachment/handlers.ts";
+import { ThreadToolkit } from "./toolkits/thread/tools.ts";
+import * as ThreadHandlers from "./toolkits/thread/handlers.ts";
+import * as ThreadMetadataMcpService from "./ThreadMetadataMcpService.ts";
+import * as McpSessionRegistry from "./McpSessionRegistry.ts";
+import * as PreviewAutomationBroker from "./PreviewAutomationBroker.ts";
+import * as OrchestratorHandlers from "./toolkits/orchestrator/handlers.ts";
+import { OrchestratorToolkit } from "./toolkits/orchestrator/tools.ts";
+import * as PreviewHandlers from "./toolkits/preview/handlers.ts";
+import {
+  PreviewSnapshotTool,
+  PreviewSnapshotToolkit,
+  PreviewStandardToolkit,
+} from "./toolkits/preview/tools.ts";
+import * as WorktreeHandlers from "./toolkits/worktree/handlers.ts";
+import { WorktreeToolkit } from "./toolkits/worktree/tools.ts";
+import * as WorktreeMcpService from "./WorktreeMcpService.ts";
+import * as PullRequestsHandlers from "./toolkits/pullRequests/handlers.ts";
+import { PullRequestsToolkit } from "./toolkits/pullRequests/tools.ts";
+import * as HtmlHandlers from "./toolkits/html/handlers.ts";
+import * as GrillHandlers from "./toolkits/grill/handlers.ts";
+import * as SetupHandlers from "./toolkits/setup/handlers.ts";
+import { SETUP_MCP_PATH, SetupToolkit } from "./toolkits/setup/tools.ts";
+import * as ProposeSetupChange from "./toolkits/setup/propose.ts";
+import * as ChatPreview from "./toolkits/chatPreview/tools.ts";
+import { GrillToolkit } from "./toolkits/grill/tools.ts";
+import * as MemoryHandlers from "./toolkits/memory/handlers.ts";
+import { MemoryToolkit } from "./toolkits/memory/tools.ts";
+import { HtmlPreviewTool, HtmlPreviewToolkit, HtmlRenderToolkit } from "./toolkits/html/tools.ts";
+import * as ComputerHandlers from "./toolkits/computer/handlers.ts";
+import { ComputerTool, ComputerToolkit } from "./toolkits/computer/tools.ts";
+import * as DesktopHandlers from "./toolkits/desktop/handlers.ts";
+import { DesktopTool, DesktopToolkit } from "./toolkits/desktop/tools.ts";
+import * as WebHandlers from "./toolkits/web/handlers.ts";
+import { WEB_MCP_PATH, WebFetchTool, WebSearchTool, WebToolkit } from "./toolkits/web/tools.ts";
+import { WebTools } from "../web/WebTools.ts";
+import { toolsSocket } from "../cloudLink/tools.ts";
+import { Desktop } from "../session-protocol/desktop.ts";
+import { MacDesktop } from "../session-protocol/macDesktop/service.ts";
+import { requestUrl } from "../requestUrl.ts";
+
+/** Where an MCP client discovers how to sign in (RFC 9728), at this request's own origin. */
+const mcpResourceMetadataUrl = (request: HttpServerRequest.HttpServerRequest) =>
+  requestUrl(request).pipe(
+    Option.map((url) => `${url.origin}/.well-known/oauth-protected-resource/mcp`),
+  );
+
+/**
+ * Agents Caveman Code launched carry a registry token and must never be sent into
+ * an OAuth flow when it dies: they cannot open a browser, and a sign-in
+ * would mint a credential that outlives their session. Only a request that
+ * does not look like a provider token is pointed at the OAuth metadata.
+ */
+const unauthorized = (input: {
+  readonly request: HttpServerRequest.HttpServerRequest;
+  readonly presentedToken: boolean;
+  readonly offerOAuth: boolean;
+}) => {
+  const metadataUrl = input.offerOAuth
+    ? Option.getOrUndefined(mcpResourceMetadataUrl(input.request))
+    : undefined;
+  const challenge = [
+    "Bearer",
+    [
+      ...(metadataUrl === undefined ? [] : [`resource_metadata="${metadataUrl}"`]),
+      ...(input.presentedToken ? ['error="invalid_token"'] : []),
+    ].join(", "),
+  ]
+    .filter((part) => part.length > 0)
+    .join(" ");
+  return HttpServerResponse.jsonUnsafe(
+    {
+      error: "invalid_mcp_credential",
+      message: "A valid Caveman Code MCP credential is required.",
+    },
+    {
+      status: 401,
+      headers: {
+        "cache-control": "no-store",
+        "www-authenticate": challenge,
+      },
+    },
+  );
+};
+
+/**
+ * Resolves a bearer token that is not a provider-session token: an OAuth
+ * client signed in from outside T3. Undefined when the token is not one.
+ */
+export class McpClientAuthenticator extends Context.Service<
+  McpClientAuthenticator,
+  {
+    readonly authenticate: (
+      request: HttpServerRequest.HttpServerRequest,
+    ) => Effect.Effect<McpInvocationContext.McpInvocationScope | undefined>;
+  }
+>()("caveman-code/mcp/McpHttpServer/McpClientAuthenticator") {}
+
+type AuthenticatedHttpEffect = Effect.Effect<
+  HttpServerResponse.HttpServerResponse,
+  Types.unhandled,
+  McpInvocationContext.McpInvocationContext
+>;
+
+type McpAuthMiddleware = (
+  httpEffect: AuthenticatedHttpEffect,
+) => Effect.Effect<
+  HttpServerResponse.HttpServerResponse,
+  Types.unhandled,
+  HttpServerRequest.HttpServerRequest
+>;
+
+export const normalizeMcpHttpResponse = (
+  response: HttpServerResponse.HttpServerResponse,
+): HttpServerResponse.HttpServerResponse => {
+  const bodyIsEmpty =
+    response.body._tag === "Empty" ||
+    (response.body._tag === "Uint8Array" && response.body.contentLength === 0) ||
+    (response.body._tag === "Raw" && response.body.contentLength === 0);
+  return response.status === 200 && bodyIsEmpty
+    ? HttpServerResponse.setStatus(response, 202)
+    : response;
+};
+
+// Session tokens are `<payload>.<signature>`; registry tokens are a bare base64url secret.
+const looksLikeProviderToken = (token: string) => token.length > 0 && !token.includes(".");
+
+const makeMcpAuthMiddleware = Effect.gen(function* () {
+  const registry = yield* McpSessionRegistry.McpSessionRegistry;
+  const clients = yield* Effect.serviceOption(McpClientAuthenticator);
+  return Effect.fn("McpHttpServer.authenticateRequest")(function* (httpEffect) {
+    const request = yield* HttpServerRequest.HttpServerRequest;
+    const authorization = request.headers.authorization;
+    const token = parseBearerToken(request) ?? "";
+    const invocation =
+      (yield* registry.resolve(token)) ??
+      (Option.isSome(clients) && token.length > 0
+        ? yield* clients.value.authenticate(request)
+        : undefined);
+    if (!invocation) {
+      // Without this the only symptom of a dead credential is the agent
+      // quietly losing the whole `caveman-code` toolkit for the rest of its
+      // session, with nothing on the server to explain why.
+      yield* Effect.logWarning("rejected MCP request with an unusable credential", {
+        reason:
+          authorization === undefined
+            ? "missing_authorization_header"
+            : authorization.split(" ", 1)[0]?.toLowerCase() !== "bearer"
+              ? "unsupported_scheme"
+              : token.length === 0
+                ? "missing_bearer_token"
+                : "unknown_or_expired_token",
+      });
+      return unauthorized({
+        request,
+        presentedToken: token.length > 0,
+        offerOAuth: Option.isSome(clients) && !looksLikeProviderToken(token),
+      });
+    }
+    return yield* httpEffect.pipe(
+      Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
+      Effect.map(normalizeMcpHttpResponse),
+    );
+  }) satisfies McpAuthMiddleware;
+}).pipe(Effect.withSpan("McpHttpServer.makeAuthMiddleware"));
+
+const layerMcpAuthMiddleware = HttpRouter.middleware<{
+  provides: McpInvocationContext.McpInvocationContext;
+}>()(makeMcpAuthMiddleware).layer;
+
+/**
+ * Claude Code moves an MCP result above its output limit to a file and hands
+ * the agent a notice instead, so a snapshot that carries the full
+ * accessibility tree and page text loses its locators too. Claude Code also
+ * shows the model `structuredContent` in place of the text blocks when a
+ * result has both, so both carry the same bounded snapshot. Keep it near
+ * 20 KB and tell the agent what was cut. The short `omitted` notes may go a
+ * little over; the provider limit is far above this.
+ */
+export const MAX_SNAPSHOT_TEXT_BYTES = 20_000;
+const MAX_SNAPSHOT_VISIBLE_TEXT_CHARS = 8_000;
+const MAX_SNAPSHOT_ELEMENT_NAME_CHARS = 200;
+const MAX_SNAPSHOT_LOG_ENTRIES = 40;
+const MAX_SNAPSHOT_LOG_TEXT_CHARS = 500;
+const MAX_SNAPSHOT_IDENTIFIER_CHARS = 2_048;
+
+const encodeJsonText = Schema.encodeSync(Schema.fromJsonString(Schema.Unknown));
+const utf8Length = (text: string) => Buffer.byteLength(text, "utf8");
+const cutText = (text: string, max: number) =>
+  text.length > max ? `${truncateCodeUnits(text, max)}…` : text;
+
+/** Shortens every string field of a log entry; other fields pass through. */
+const cutEntryStrings = <A>(entry: A): A =>
+  typeof entry === "object" && entry !== null
+    ? (Object.fromEntries(
+        Object.entries(entry).map(([key, value]) => [
+          key,
+          typeof value === "string" ? cutText(value, MAX_SNAPSHOT_LOG_TEXT_CHARS) : value,
+        ]),
+      ) as A)
+    : entry;
+
+const hasLongString = (entry: unknown, max: number) =>
+  typeof entry === "object" &&
+  entry !== null &&
+  Object.values(entry).some((value) => typeof value === "string" && value.length > max);
+
+type SnapshotMetadata = {
+  readonly url: string;
+  readonly title: string;
+  readonly visibleText: string;
+  readonly interactiveElements: ReadonlyArray<{
+    readonly name: string;
+    readonly [key: string]: unknown;
+  }>;
+  readonly consoleEntries: ReadonlyArray<unknown>;
+  readonly networkEntries: ReadonlyArray<unknown>;
+  readonly actionTimeline: ReadonlyArray<unknown>;
+  readonly [key: string]: unknown;
+};
+
+/**
+ * Keeps server ARIA refs, drops legacy object trees, shortens page text, names, identifiers,
+ * and log strings, keeps only the newest log entries, and finally sheds
+ * interactive elements until the JSON fits. Returns the bounded value, its
+ * text, and notes on what is missing so the agent can reach for
+ * preview_evaluate.
+ */
+const boundSnapshotMetadata = (metadata: SnapshotMetadata) => {
+  const omitted: Array<string> = [];
+  const { accessibilityTree, ...withoutTree } = metadata;
+  const ariaTree = typeof accessibilityTree === "string" ? accessibilityTree : undefined;
+  if (accessibilityTree !== undefined && ariaTree === undefined) {
+    omitted.push("accessibilityTree (use interactiveElements locators or preview_evaluate)");
+  }
+  const tail = <A>(entries: ReadonlyArray<A>, label: string) => {
+    if (entries.length > MAX_SNAPSHOT_LOG_ENTRIES) {
+      omitted.push(`${entries.length - MAX_SNAPSHOT_LOG_ENTRIES} older ${label}`);
+    }
+    const kept = entries.slice(-MAX_SNAPSHOT_LOG_ENTRIES);
+    if (kept.some((entry) => hasLongString(entry, MAX_SNAPSHOT_LOG_TEXT_CHARS))) {
+      omitted.push(`${label} text after ${MAX_SNAPSHOT_LOG_TEXT_CHARS} characters`);
+    }
+    return kept.map(cutEntryStrings);
+  };
+  if (
+    metadata.url.length > MAX_SNAPSHOT_IDENTIFIER_CHARS ||
+    metadata.title.length > MAX_SNAPSHOT_IDENTIFIER_CHARS
+  ) {
+    omitted.push(`url or title after ${MAX_SNAPSHOT_IDENTIFIER_CHARS} characters`);
+  }
+  if (
+    metadata.interactiveElements.some(
+      (element) => element.name.length > MAX_SNAPSHOT_ELEMENT_NAME_CHARS,
+    )
+  ) {
+    omitted.push(`element names longer than ${MAX_SNAPSHOT_ELEMENT_NAME_CHARS} characters`);
+  }
+  const bounded = {
+    ...withoutTree,
+    url: cutText(metadata.url, MAX_SNAPSHOT_IDENTIFIER_CHARS),
+    title: cutText(metadata.title, MAX_SNAPSHOT_IDENTIFIER_CHARS),
+    interactiveElements: metadata.interactiveElements.map((element) => ({
+      ...element,
+      name: cutText(element.name, MAX_SNAPSHOT_ELEMENT_NAME_CHARS),
+    })),
+    consoleEntries: tail(metadata.consoleEntries, "console entries"),
+    networkEntries: tail(metadata.networkEntries, "network entries"),
+    actionTimeline: tail(metadata.actionTimeline, "action timeline entries"),
+  };
+
+  // Per-field caps do not sum below the ceiling: three log arrays of 40 capped
+  // entries alone can pass 60 KB, and the caps count characters, not bytes.
+  // Halve one thing per round until the JSON fits: logs first, then page
+  // text, then the locators. The identifier caps bound the rest, so this
+  // terminates.
+  const shedOrder = [
+    "actionTimeline",
+    "networkEntries",
+    "consoleEntries",
+    "interactiveElements",
+  ] as const;
+  const lists: Record<(typeof shedOrder)[number], ReadonlyArray<unknown>> = {
+    interactiveElements: bounded.interactiveElements,
+    consoleEntries: bounded.consoleEntries,
+    networkEntries: bounded.networkEntries,
+    actionTimeline: bounded.actionTimeline,
+  };
+  const dropped: Record<(typeof shedOrder)[number], number> = {
+    interactiveElements: 0,
+    consoleEntries: 0,
+    networkEntries: 0,
+    actionTimeline: 0,
+  };
+  let visibleTextChars = Math.min(metadata.visibleText.length, MAX_SNAPSHOT_VISIBLE_TEXT_CHARS);
+  let ariaTreeChars = Math.min(ariaTree?.length ?? 0, 20_000);
+  const value = () => ({
+    ...bounded,
+    ...(ariaTree === undefined ? {} : { accessibilityTree: cutText(ariaTree, ariaTreeChars) }),
+    visibleText: cutText(metadata.visibleText, visibleTextChars),
+    ...lists,
+  });
+  let text = encodeJsonText(value());
+  while (utf8Length(text) > MAX_SNAPSHOT_TEXT_BYTES) {
+    // Elements carry the locators, so they go last; logs shed newest-last.
+    const key =
+      shedOrder.find(
+        (candidate) => candidate !== "interactiveElements" && lists[candidate].length > 0,
+      ) ??
+      (visibleTextChars > 0
+        ? "visibleText"
+        : lists.interactiveElements.length > 0
+          ? "interactiveElements"
+          : ariaTreeChars > 0
+            ? "accessibilityTree"
+            : undefined);
+    if (key === undefined) break;
+    if (key === "visibleText") {
+      visibleTextChars = Math.floor(visibleTextChars / 2);
+    } else if (key === "accessibilityTree") {
+      ariaTreeChars = Math.floor(ariaTreeChars / 2);
+    } else {
+      const keep = Math.floor(lists[key].length / 2);
+      dropped[key] += lists[key].length - keep;
+      // slice(-0) keeps everything, so spell out the empty case.
+      lists[key] =
+        keep === 0
+          ? []
+          : key === "interactiveElements"
+            ? lists[key].slice(0, keep)
+            : lists[key].slice(-keep);
+    }
+    text = encodeJsonText(value());
+  }
+  if (visibleTextChars < metadata.visibleText.length) {
+    omitted.push(
+      `visibleText after ${visibleTextChars} characters (use preview_evaluate for more)`,
+    );
+  }
+  if (ariaTree !== undefined && ariaTreeChars < ariaTree.length) {
+    omitted.push(`accessibilityTree after ${ariaTreeChars} characters`);
+  }
+  for (const key of shedOrder) {
+    if (dropped[key] > 0) {
+      omitted.push(`${dropped[key]} of ${bounded[key].length} ${key}`);
+    }
+  }
+  return { value: value(), text, omitted };
+};
+
+export class PreviewScreenshotSaveError extends Schema.TaggedError<PreviewScreenshotSaveError>()(
+  "PreviewScreenshotSaveError",
+  { screenshotPath: Schema.String, cause: Schema.Defect() },
+) {
+  override get message(): string {
+    return `Could not save preview screenshot to ${this.screenshotPath}.`;
+  }
+}
+
+const MAX_SCREENSHOT_SITE_SLUG_LENGTH = 40;
+
+/** Hostname reduced to a filename-safe slug, matching the desktop's own screenshot names. */
+const screenshotSiteSlug = (rawUrl: string): string => {
+  try {
+    const slug = new URL(rawUrl).hostname
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, MAX_SCREENSHOT_SITE_SLUG_LENGTH)
+      .replace(/-+$/g, "");
+    return slug || "site";
+  } catch {
+    return "site";
+  }
+};
+
+/** Writes the snapshot PNG under the browser artifacts directory and returns its path. */
+const saveScreenshot = Effect.fn("McpHttpServer.saveScreenshot")(function* (
+  pageUrl: string,
+  data: Uint8Array,
+) {
+  const config = yield* ServerConfig.ServerConfig;
+  const fileSystem = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+  const millis = yield* Clock.currentTimeMillis;
+  const random = yield* SecureRandom.SecureRandom;
+  // Two saves in the same millisecond must not overwrite each other.
+  const unique = (yield* random.uuidV4()).slice(0, 8);
+  const fileName = `browser-screenshot-${screenshotSiteSlug(pageUrl)}-${millis.toString(36)}-${unique}.png`;
+  const screenshotPath = path.join(config.browserArtifactsDir, fileName);
+  yield* fileSystem.makeDirectory(config.browserArtifactsDir, { recursive: true }).pipe(
+    Effect.andThen(fileSystem.writeFile(screenshotPath, data)),
+    Effect.mapError((cause) => new PreviewScreenshotSaveError({ screenshotPath, cause })),
+  );
+  return screenshotPath;
+});
+
+/**
+ * Tool input schemas are advertised through each schema's JSON codec, which
+ * offers `null` for every `Schema.optional` field, but Toolkit decodes with the
+ * schema itself and rejects that `null`. Decoding through the same codec makes
+ * a tool accept what it advertises.
+ */
+const decodeAsAdvertised = <Tools extends Record<string, Tool.Any>>(
+  toolkit: Toolkit.Toolkit<Tools>,
+): Toolkit.Toolkit<Tools> =>
+  // The clones keep each tool's id, name and decoded parameter type, so handlers still match.
+  Toolkit.make(
+    ...Object.values(toolkit.tools).map((tool) =>
+      tool.setParameters(Schema.toCodecJson(tool.parametersSchema)),
+    ),
+  ) as unknown as Toolkit.Toolkit<Tools>;
+
+const isPreviewAutomationError = Schema.is(PreviewAutomationError);
+
+const previewSnapshotFailure = <E>(cause: Cause.Cause<E>) => {
+  if (Cause.hasInterrupts(cause) || cause.reasons.some(Cause.isDieReason)) {
+    return Effect.failCause(cause).pipe(Effect.orDie);
+  }
+  const failures = cause.reasons.filter(Cause.isFailReason);
+  const firstFailure = failures[0]?.error;
+  const errorTag =
+    typeof firstFailure === "object" &&
+    firstFailure !== null &&
+    "_tag" in firstFailure &&
+    typeof firstFailure._tag === "string"
+      ? firstFailure._tag
+      : "PreviewSnapshotError";
+  // Preview errors build their message on the server, never from page output,
+  // and it tells the agent what to do next, such as falling back to a shell browser.
+  const message = isPreviewAutomationError(firstFailure) ? firstFailure.message : undefined;
+  const result = new McpSchema.CallToolResult({
+    isError: true,
+    structuredContent: {
+      error: {
+        _tag: errorTag,
+        operation: "snapshot",
+        failureCount: failures.length,
+        ...(message === undefined ? {} : { message }),
+      },
+    },
+    // Some clients show only the text content and others only structuredContent, so both carry it.
+    content: [{ type: "text", text: `Preview snapshot failed: ${message ?? `${errorTag}.`}` }],
+  });
+  return Effect.logWarning("preview snapshot failed", {
+    operation: "snapshot",
+    errorTag,
+    failureCount: failures.length,
+  }).pipe(Effect.as(result));
+};
+
+const registerPreviewSnapshot = Effect.fn("McpHttpServer.registerPreviewSnapshot")(function* () {
+  const server = yield* McpServer.McpServer;
+  const broker = yield* PreviewAutomationBroker.PreviewAutomationBroker;
+  const threads = yield* ThreadManagementService.ThreadManagementService;
+  // The MCP tool runner only supplies the client, so hand the save path its services here.
+  const saveServices = yield* Effect.context<
+    ServerConfig.ServerConfig | FileSystem.FileSystem | Path.Path | SecureRandom.SecureRandom
+  >();
+  const built = yield* decodeAsAdvertised(PreviewSnapshotToolkit);
+  const tool = PreviewSnapshotTool;
+  yield* server.addTool({
+    tool: new McpSchema.Tool({
+      name: tool.name,
+      description: Tool.getDescription(tool),
+      inputSchema: advertisedJsonSchema(tool),
+      annotations: {
+        ...Context.getOption(tool.annotations, Tool.Title).pipe(
+          Option.map((title) => ({ title })),
+          Option.getOrUndefined,
+        ),
+        readOnlyHint: Context.get(tool.annotations, Tool.Readonly),
+        destructiveHint: Context.get(tool.annotations, Tool.Destructive),
+        idempotentHint: Context.get(tool.annotations, Tool.Idempotent),
+        openWorldHint: Context.get(tool.annotations, Tool.OpenWorld),
+      },
+    }),
+    annotations: tool.annotations,
+    handle: (payload) =>
+      Effect.withFiber((fiber) => {
+        const invocation = Context.getUnsafe(
+          fiber.context,
+          McpInvocationContext.McpInvocationContext,
+        );
+        return built.handle("preview_snapshot", payload).pipe(
+          Stream.unwrap,
+          Stream.run(Sink.last()),
+          Effect.flatMap(Effect.fromOption),
+          Effect.provideService(PreviewAutomationBroker.PreviewAutomationBroker, broker),
+          Effect.provideService(ThreadManagementService.ThreadManagementService, threads),
+          Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
+          Effect.flatMap(({ encodedResult }) =>
+            Effect.gen(function* () {
+              const snapshot = encodedResult as SnapshotMetadata & {
+                readonly url: string;
+                readonly screenshot: {
+                  readonly mimeType: "image/png";
+                  readonly data: string;
+                  readonly width: number;
+                  readonly height: number;
+                };
+              };
+              const { screenshot, ...page } = snapshot;
+              const png = new Uint8Array(Buffer.from(screenshot.data, "base64"));
+              const screenshotPath =
+                payload?.save === true ? yield* saveScreenshot(snapshot.url, png) : undefined;
+              // Images stay out of tool history unless asked for: providers replay them on every
+              // later request, and some reject inline images outright.
+              const includeImage = payload?.includeImage === true;
+              if (screenshotPath !== undefined && !includeImage) {
+                // The agent only wants a file to show the user. The url keeps the site icon on the tool row.
+                const saved = {
+                  url: cutText(snapshot.url, MAX_SNAPSHOT_IDENTIFIER_CHARS),
+                  screenshotPath,
+                };
+                return new McpSchema.CallToolResult({
+                  isError: false,
+                  structuredContent: saved,
+                  content: [{ type: "text", text: encodeJsonText(saved) }],
+                });
+              }
+              const metadata = {
+                ...page,
+                screenshot: {
+                  mimeType: screenshot.mimeType,
+                  width: screenshot.width,
+                  height: screenshot.height,
+                },
+                ...(screenshotPath === undefined ? {} : { screenshotPath }),
+              };
+              const bounded = boundSnapshotMetadata(metadata);
+              return new McpSchema.CallToolResult({
+                isError: false,
+                structuredContent:
+                  bounded.omitted.length === 0
+                    ? bounded.value
+                    : { ...bounded.value, omitted: bounded.omitted },
+                content: [
+                  // Keep the page identity readable even if a provider truncates the snapshot.
+                  {
+                    type: "text",
+                    text: encodeJsonText({
+                      url: cutText(snapshot.url, MAX_SNAPSHOT_IDENTIFIER_CHARS),
+                    }),
+                  },
+                  { type: "text", text: bounded.text },
+                  ...(bounded.omitted.length === 0
+                    ? []
+                    : [
+                        {
+                          type: "text" as const,
+                          text: `Snapshot text was bounded. Omitted: ${bounded.omitted.join("; ")}.`,
+                        },
+                      ]),
+                  ...(includeImage
+                    ? [{ type: "image" as const, data: png, mimeType: screenshot.mimeType }]
+                    : []),
+                ],
+              });
+            }),
+          ),
+          Effect.provide(saveServices),
+          Effect.matchCauseEffect({
+            onFailure: previewSnapshotFailure,
+            onSuccess: Effect.succeed,
+          }),
+        );
+      }),
+  });
+});
+
+interface ImageToolResult {
+  /** Absent for a call that has nothing to show (the computer tool's cursor_position). */
+  readonly screenshot?: {
+    readonly mimeType: "image/png";
+    readonly data: string;
+    readonly width: number;
+    readonly height: number;
+  };
+  readonly [key: string]: unknown;
+}
+
+/**
+ * Failures surface only their tag unless the tool describes them: the remote
+ * message may carry renderer or device output the agent should not see, and
+ * the tag is what it can act on. A describer returns a server-built message.
+ */
+const imageToolFailure =
+  <E>(toolName: string, operation: string, failureText: string | ((error: E) => string)) =>
+  (cause: Cause.Cause<E>) => {
+    if (Cause.hasInterrupts(cause) || cause.reasons.some(Cause.isDieReason)) {
+      return Effect.failCause(cause).pipe(Effect.orDie);
+    }
+    const failures = cause.reasons.filter(Cause.isFailReason);
+    const firstFailure = failures[0]?.error;
+    const errorTag =
+      typeof firstFailure === "object" &&
+      firstFailure !== null &&
+      "_tag" in firstFailure &&
+      typeof firstFailure._tag === "string"
+        ? firstFailure._tag
+        : `${toolName}Error`;
+    const message =
+      typeof failureText === "string" || failures[0] === undefined
+        ? undefined
+        : failureText(failures[0].error);
+    const result = new McpSchema.CallToolResult({
+      isError: true,
+      structuredContent: {
+        error: {
+          _tag: errorTag,
+          operation,
+          failureCount: failures.length,
+          ...(message === undefined ? {} : { message }),
+        },
+      },
+      // Some clients show only the text content and others only structuredContent, so both carry it.
+      content: [
+        {
+          type: "text",
+          text: typeof failureText === "string" ? failureText : (message ?? `${toolName} failed.`),
+        },
+      ],
+    });
+    return Effect.logWarning(`${toolName} failed`, {
+      operation,
+      errorTag,
+      failureCount: failures.length,
+    }).pipe(Effect.as(result));
+  };
+
+/**
+ * `McpServer.toolkit` serializes every result as JSON text, which is the
+ * wrong shape for a screenshot: the model needs image content. Tools whose
+ * result carries a `screenshot` field are registered by hand so the PNG goes
+ * out as an image block and the rest of the payload as JSON metadata.
+ */
+const registerImageTool = <T extends Tool.Any, E, R>(
+  tool: T,
+  handle: (payload: Tool.Parameters<T>) => Effect.Effect<{ readonly encodedResult: unknown }, E, R>,
+  provide: (
+    effect: Effect.Effect<{ readonly encodedResult: unknown }, E, R>,
+  ) => Effect.Effect<
+    { readonly encodedResult: unknown },
+    E,
+    McpInvocationContext.McpInvocationContext
+  >,
+  operation: string,
+  failureText: string | ((error: E) => string),
+) =>
+  Effect.gen(function* () {
+    const server = yield* McpServer.McpServer;
+    yield* server.addTool({
+      tool: new McpSchema.Tool({
+        name: tool.name,
+        description: Tool.getDescription(tool),
+        inputSchema: advertisedJsonSchema(tool),
+        annotations: {
+          ...Context.getOption(tool.annotations, Tool.Title).pipe(
+            Option.map((title) => ({ title })),
+            Option.getOrUndefined,
+          ),
+          readOnlyHint: Context.get(tool.annotations, Tool.Readonly),
+          destructiveHint: Context.get(tool.annotations, Tool.Destructive),
+          idempotentHint: Context.get(tool.annotations, Tool.Idempotent),
+          openWorldHint: Context.get(tool.annotations, Tool.OpenWorld),
+        },
+      }),
+      annotations: tool.annotations,
+      handle: (payload) =>
+        Effect.withFiber((fiber) => {
+          const invocation = Context.getUnsafe(
+            fiber.context,
+            McpInvocationContext.McpInvocationContext,
+          );
+          return provide(handle(payload as Tool.Parameters<T>)).pipe(
+            Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
+            Effect.matchCauseEffect({
+              onFailure: imageToolFailure(tool.name, operation, failureText),
+              onSuccess: ({ encodedResult }) => {
+                const { screenshot, ...rest } = encodedResult as ImageToolResult;
+                const includeImage =
+                  screenshot !== undefined &&
+                  (payload as { readonly includeImage?: boolean } | undefined)?.includeImage !==
+                    false;
+                const metadata = screenshot === undefined
+                  ? rest
+                  : {
+                      ...rest,
+                      screenshot: {
+                        mimeType: screenshot.mimeType,
+                        width: screenshot.width,
+                        height: screenshot.height,
+                      },
+                    };
+                return Effect.succeed(
+                  new McpSchema.CallToolResult({
+                    isError: false,
+                    structuredContent: metadata,
+                    content: [
+                      { type: "text", text: JSON.stringify(metadata) },
+                      ...(includeImage
+                        ? [
+                            {
+                              type: "image" as const,
+                              data: new Uint8Array(Buffer.from(screenshot!.data, "base64")),
+                              mimeType: screenshot!.mimeType,
+                            },
+                          ]
+                        : []),
+                    ],
+                  }),
+                );
+              },
+            }),
+          );
+        }),
+    });
+  });
+
+const isOrchestratorMcpFailure = Schema.is(OrchestratorMcpFailure);
+
+const registerHtmlPreview = Effect.fn("McpHttpServer.registerHtmlPreview")(function* () {
+  const htmlRender = yield* HtmlRender.HtmlRender;
+  const threads = yield* ThreadManagementService.ThreadManagementService;
+  const built = yield* decodeAsAdvertised(HtmlPreviewToolkit);
+  yield* registerImageTool(
+    HtmlPreviewTool,
+    (payload) =>
+      built
+        .handle("html_preview", payload)
+        .pipe(Stream.unwrap, Stream.run(Sink.last()), Effect.flatMap(Effect.fromOption)),
+    (effect) =>
+      effect.pipe(
+        Effect.provideService(HtmlRender.HtmlRender, htmlRender),
+        Effect.provideService(ThreadManagementService.ThreadManagementService, threads),
+      ),
+    "preview",
+    // Parameter errors and HTML render errors are both written by the server for the agent.
+    (error) =>
+      isOrchestratorMcpFailure(error) || AiError.isAiError(error)
+        ? error.message
+        : "HTML preview failed.",
+  );
+});
+
+const registerComputer = Effect.fn("McpHttpServer.registerComputer")(function* () {
+  const desktop = yield* Desktop;
+  const threads = yield* ThreadManagementService.ThreadManagementService;
+  const built = yield* decodeAsAdvertised(ComputerToolkit);
+  yield* registerImageTool(
+    ComputerTool,
+    (payload) =>
+      built
+        .handle("computer", payload)
+        .pipe(Stream.unwrap, Stream.run(Sink.last()), Effect.flatMap(Effect.fromOption)),
+    (effect) =>
+      effect.pipe(
+        Effect.provideService(Desktop, desktop),
+        Effect.provideService(ThreadManagementService.ThreadManagementService, threads),
+      ),
+    "computer",
+    // Desktop failures are written by the server for the agent.
+    (error) =>
+      isOrchestratorMcpFailure(error) || AiError.isAiError(error)
+        ? error.message
+        : "The computer action failed.",
+  );
+});
+
+/**
+ * The desktop tool (computer use on this Mac) answers with its text as the one content block, as web_search does: a
+ * snapshot is an outline the agent reads, which JSON would escape and `McpServer.toolkit` would send twice. A
+ * screenshot adds its image.
+ */
+const registerDesktop = Effect.fn("McpHttpServer.registerDesktop")(function* () {
+  // Offered only where the runtime has computer use on this Mac (macDesktop/service.ts layer).
+  const found = yield* Effect.serviceOption(MacDesktop);
+  if (Option.isNone(found)) return;
+  const desktop = found.value;
+  const server = yield* McpServer.McpServer;
+  const threads = yield* ThreadManagementService.ThreadManagementService;
+  const built = yield* decodeAsAdvertised(DesktopToolkit);
+  const tool = DesktopTool;
+  yield* server.addTool({
+    tool: new McpSchema.Tool({
+      name: tool.name,
+      description: Tool.getDescription(tool),
+      inputSchema: advertisedJsonSchema(tool),
+      annotations: {
+        ...Context.getOption(tool.annotations, Tool.Title).pipe(
+          Option.map((title) => ({ title })),
+          Option.getOrUndefined,
+        ),
+        readOnlyHint: Context.get(tool.annotations, Tool.Readonly),
+        destructiveHint: Context.get(tool.annotations, Tool.Destructive),
+        idempotentHint: Context.get(tool.annotations, Tool.Idempotent),
+        openWorldHint: Context.get(tool.annotations, Tool.OpenWorld),
+      },
+    }),
+    annotations: tool.annotations,
+    handle: (payload) =>
+      Effect.withFiber((fiber) => {
+        const invocation = Context.getUnsafe(fiber.context, McpInvocationContext.McpInvocationContext);
+        return built.handle(tool.name, payload as never).pipe(
+          Stream.unwrap,
+          Stream.run(Sink.last()),
+          Effect.flatMap(Effect.fromOption),
+          Effect.provideService(MacDesktop, desktop),
+          Effect.provideService(ThreadManagementService.ThreadManagementService, threads),
+          Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
+          Effect.matchCauseEffect({
+            // Refusals and agent-desktop's errors are written for the agent by the runtime.
+            onFailure: imageToolFailure(tool.name, tool.name, (error) =>
+              isOrchestratorMcpFailure(error) || AiError.isAiError(error) ? error.message : "The desktop call failed.",
+            ),
+            onSuccess: ({ encodedResult }) => {
+              const answer = encodedResult as { readonly text: string; readonly screenshot?: { readonly mimeType: string; readonly data: string } };
+              return Effect.succeed(
+                new McpSchema.CallToolResult({
+                  isError: false,
+                  content: [
+                    { type: "text", text: answer.text },
+                    ...(answer.screenshot ? [{ type: "image" as const, data: new Uint8Array(Buffer.from(answer.screenshot.data, "base64")), mimeType: answer.screenshot.mimeType }] : []),
+                  ],
+                }),
+              );
+            },
+          }),
+        );
+      }),
+  });
+});
+
+/**
+ * web_search and web_fetch answer with their text as the one content block: `McpServer.toolkit` would send the
+ * result twice (structuredContent and its JSON as text), and the engine reads, and caps, every byte of it.
+ */
+const registerWebTools = Effect.fn("McpHttpServer.registerWebTools")(function* () {
+  const server = yield* McpServer.McpServer;
+  const web = yield* WebTools;
+  const built = yield* decodeAsAdvertised(WebToolkit);
+  for (const tool of [WebSearchTool, WebFetchTool]) {
+    yield* server.addTool({
+      tool: new McpSchema.Tool({
+        name: tool.name,
+        description: Tool.getDescription(tool),
+        inputSchema: advertisedJsonSchema(tool),
+        annotations: {
+          ...Context.getOption(tool.annotations, Tool.Title).pipe(
+            Option.map((title) => ({ title })),
+            Option.getOrUndefined,
+          ),
+          readOnlyHint: Context.get(tool.annotations, Tool.Readonly),
+          destructiveHint: Context.get(tool.annotations, Tool.Destructive),
+          idempotentHint: Context.get(tool.annotations, Tool.Idempotent),
+          openWorldHint: Context.get(tool.annotations, Tool.OpenWorld),
+        },
+      }),
+      annotations: tool.annotations,
+      handle: (payload) =>
+        Effect.withFiber((fiber) => {
+          const invocation = Context.getUnsafe(fiber.context, McpInvocationContext.McpInvocationContext);
+          return built.handle(tool.name, payload as never).pipe(
+            Stream.unwrap,
+            Stream.run(Sink.last()),
+            Effect.flatMap(Effect.fromOption),
+            Effect.provideService(WebTools, web),
+            Effect.provideService(McpInvocationContext.McpInvocationContext, invocation),
+            Effect.matchCauseEffect({
+              // Refusals are written by the server for the model: provenance, secrets, caps, keys.
+              onFailure: imageToolFailure(tool.name, tool.name, (error) =>
+                isOrchestratorMcpFailure(error) || AiError.isAiError(error) ? error.message : `${tool.name} failed.`,
+              ),
+              onSuccess: ({ encodedResult }) =>
+                Effect.succeed(
+                  new McpSchema.CallToolResult({
+                    isError: false,
+                    content: [{ type: "text", text: (encodedResult as { readonly text: string }).text }],
+                  }),
+                ),
+            }),
+          );
+        }),
+    });
+  }
+});
+
+/** Hands each call the services its registration was built with; the request's own still win. */
+const provideRegistrationServices = <Services>() =>
+  McpServer.middleware<{ provides: Services }>()(
+    Effect.map(
+      Effect.context<Services>(),
+      (services) => (effect) =>
+        Effect.updateContext(effect, (request: Context.Context<never>) =>
+          Context.merge(services, request),
+        ),
+    ),
+  );
+
+/**
+ * `McpServer.toolkit` for handlers that declared their access (see
+ * `McpToolAccess`). Every toolkit on `/mcp` registers through this.
+ *
+ * Tools declare their handler services as request-level dependencies. Those
+ * built with the server are provided here; `McpInvocationContext` is left to
+ * the transport, whose auth middleware resolves it per request.
+ */
+export const toolkitRegistration = <Tools extends Record<string, Tool.Any>, EX, RX>(
+  toolkit: Toolkit.Toolkit<Tools>,
+  handlers: McpToolAccess.HandlersLayer<Tools, EX, RX>,
+) =>
+  Layer.effectDiscard(
+    withAdvertisedSchemas(toolkit, McpServer.registerToolkit(decodeAsAdvertised(toolkit))),
+  ).pipe(
+    Layer.provide(
+      provideRegistrationServices<
+        Exclude<Tool.Requirements<Tools[keyof Tools]>, McpInvocationContext.McpInvocationContext>
+      >().layer,
+    ),
+    Layer.provide(McpServer.McpServer.layer),
+    Layer.provide(McpToolAccess.HandlersLayer.layer(handlers)),
+  );
+
+/** A hand-registered tool, also only with handlers that declared their access. */
+const imageToolRegistration = <Tools extends Record<string, Tool.Any>, A, E, R, EX, RX>(
+  register: Effect.Effect<A, E, R>,
+  handlers: McpToolAccess.HandlersLayer<Tools, EX, RX>,
+) => Layer.effectDiscard(register).pipe(Layer.provide(McpToolAccess.HandlersLayer.layer(handlers)));
+
+export const layerHtmlToolkit = Layer.mergeAll(
+  toolkitRegistration(HtmlRenderToolkit, HtmlHandlers.layerRender),
+  imageToolRegistration(registerHtmlPreview(), HtmlHandlers.layerPreview),
+).pipe(Layer.provide(HtmlRender.layer));
+
+const layerPreviewStandardToolkitRegistration = toolkitRegistration(
+  PreviewStandardToolkit,
+  PreviewHandlers.layerStandard,
+);
+
+const layerPreviewSnapshotRegistration = imageToolRegistration(
+  registerPreviewSnapshot(),
+  PreviewHandlers.layerSnapshot,
+);
+
+/** The desktop tool, on a Cloud computer only: a Mac's computer use is `desktop` below. */
+export const layerComputerToolkit = imageToolRegistration(registerComputer(), ComputerHandlers.layer);
+
+/** Computer use on this Mac (the `desktop` tool): registered only where the runtime has it. */
+export const layerDesktopToolkit = imageToolRegistration(registerDesktop(), DesktopHandlers.layer);
+
+export const layerPreviewToolkit = Layer.mergeAll(
+  layerPreviewStandardToolkitRegistration,
+  layerPreviewSnapshotRegistration,
+);
+
+export const layerOrchestratorToolkit = toolkitRegistration(
+  OrchestratorToolkit,
+  OrchestratorHandlers.layer,
+).pipe(Layer.provide(OrchestratorMcpService.layer), Layer.provide(ThreadMetadataMcpService.layer));
+
+export const layerThreadToolkit = toolkitRegistration(ThreadToolkit, ThreadHandlers.layer);
+
+const layerWorktreeToolkitRegistration = toolkitRegistration(
+  WorktreeToolkit,
+  WorktreeHandlers.layer,
+).pipe(Layer.provide(WorktreeMcpService.layer));
+
+const layerPreviewControlsRegistration = toolkitRegistration(
+  PreviewControlsToolkit,
+  PreviewControlsHandlers.layer,
+);
+
+export const layerEnvironmentToolkit = toolkitRegistration(
+  EnvironmentToolkit,
+  EnvironmentHandlers.layer,
+).pipe(Layer.provide(ThreadCommandExecutor.layer));
+
+const layerProjectRegistration = toolkitRegistration(ProjectToolkit, ProjectHandlers.layer);
+
+export const layerAttachmentToolkit = toolkitRegistration(
+  AttachmentToolkit,
+  AttachmentHandlers.layer,
+);
+
+const layerMemoryRegistration = toolkitRegistration(MemoryToolkit, MemoryHandlers.layer);
+
+/** propose_setup_change on the shared /mcp: every engine's chat can propose a Cloud setup change (environments.ts D9). */
+const layerProposeSetupChangeRegistration = toolkitRegistration(ProposeSetupChange.ProposeToolkit, ProposeSetupChange.layer);
+
+/** register_preview on the shared /mcp: every engine's chat says how to serve what it built (session-protocol/previewHandlers.ts). */
+const layerChatPreviewRegistration = toolkitRegistration(ChatPreview.ChatPreviewToolkit, ChatPreview.layer);
+
+export const layerPullRequestsToolkit = toolkitRegistration(
+  PullRequestsToolkit,
+  PullRequestsHandlers.layer,
+);
+
+/**
+ * `McpServer` for in-process calls, which provide `McpInvocationContext`
+ * around `callTool` as the auth middleware does for each /mcp request.
+ */
+export const layerInProcessMcpServer = McpServer.middleware<{
+  provides: McpInvocationContext.McpInvocationContext;
+}>()(
+  (effect) =>
+    Effect.flatMap(
+      Effect.serviceOption(McpInvocationContext.McpInvocationContext),
+      Option.match({
+        onNone: () => Effect.die("Provide McpInvocationContext around the in-process MCP call."),
+        onSome: (scope) =>
+          Effect.provideService(effect, McpInvocationContext.McpInvocationContext, scope),
+      }),
+    ),
+  { global: true },
+).pipe(Layer.provideMerge(McpServer.McpServer.layer));
+
+/** An MCP endpoint at `path` with the `/mcp` credentials, serving `registrations`. */
+const layerHttpEndpoint = <RA, RE, RR>(
+  name: string,
+  path: HttpRouter.PathInput,
+  registrations: Layer.Layer<RA, RE, RR>,
+) =>
+  McpServer.layerHttp({
+    name,
+    version: RUNTIME_VERSION,
+    path,
+    protocols: [McpProtocol.v2025_06_18],
+    allowSessionTermination: true,
+    registrations,
+  }).pipe(Layer.provide(layerMcpAuthMiddleware));
+
+export const layerMcpTransport = <RA, RE, RR>(registrations: Layer.Layer<RA, RE, RR>) =>
+  layerHttpEndpoint("Caveman Code", "/mcp", registrations);
+
+/**
+ * Grill mode's tools on their own endpoint, with the same credentials as
+ * `/mcp`. Adapters attach it only while a session is in grill mode: tool
+ * lists are fetched once per MCP connection, so a separate server is how the
+ * tools come and go without any engine seeing them in default mode.
+ */
+export const GRILL_MCP_PATH = "/mcp/grill";
+// `toolkitRegistration` and `layerHttp` both build on the shared `McpServer.layer`,
+// which would put these tools on `/mcp` too, so each extra endpoint is a fresh
+// instance its toolkit registers into. Requirements (router, registry) stay shared.
+export const layerGrillToolkit = Layer.fresh(
+  layerHttpEndpoint(
+    "Caveman Code grill",
+    GRILL_MCP_PATH,
+    toolkitRegistration(GrillToolkit, GrillHandlers.layer),
+  ),
+);
+
+/** A setup chat's environment_build on its own endpoint, as grill mode's tools are (the Caveman adapter attaches it to setup chats only). */
+export const layerSetupToolkit = Layer.fresh(
+  layerHttpEndpoint(
+    "Caveman Code setup",
+    SETUP_MCP_PATH,
+    toolkitRegistration(SetupToolkit, SetupHandlers.layer),
+  ),
+);
+
+/**
+ * web_search and web_fetch on their own endpoint, as grill mode's tools are: the Caveman adapter attaches it to
+ * sessions whose credential carries the `web` capability, so no other engine sees their schemas.
+ */
+export const layerWebToolkit = Layer.fresh(
+  layerHttpEndpoint(
+    "Caveman Code web",
+    WEB_MCP_PATH,
+    imageToolRegistration(registerWebTools(), WebHandlers.layer),
+  ),
+);
+
+/** Every tool `/mcp` advertises. */
+export const layerTools = Layer.mergeAll(
+  layerPreviewToolkit,
+  layerOrchestratorToolkit,
+  layerThreadToolkit,
+  layerAttachmentToolkit,
+  layerProjectRegistration,
+  layerEnvironmentToolkit,
+  layerPreviewControlsRegistration,
+  layerWorktreeToolkitRegistration,
+  layerPullRequestsToolkit,
+  layerHtmlToolkit,
+  layerMemoryRegistration,
+  layerProposeSetupChangeRegistration,
+  layerChatPreviewRegistration,
+  toolsSocket() === undefined ? Layer.empty : layerComputerToolkit,
+  layerDesktopToolkit,
+);
+
+export const layer = Layer.mergeAll(
+  layerMcpTransport(layerTools),
+  layerGrillToolkit,
+  layerSetupToolkit,
+  layerWebToolkit,
+);

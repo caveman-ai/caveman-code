@@ -1,0 +1,32 @@
+{
+  "name": "caveman-code",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "packageManager": "pnpm@10.14.0",
+  "engines": {
+    "node": ">=24.15.0"
+  },
+  "scripts": {
+    "typecheck": "pnpm -r --if-present --filter '!@caveman-app/runtime' typecheck && pnpm --filter @caveman-app/runtime typecheck",
+    "test": "pnpm -r --if-present test",
+    "test:changed": "node scripts/test-changed.ts",
+    "lint": "oxlint --quiet",
+    "check:changed": "node scripts/check-changed.ts",
+    "fmt": "node scripts/check-changed.ts --write",
+    "knip": "knip",
+    "dev:runtime": "pnpm --filter @caveman-app/runtime dev",
+    "dev:web": "pnpm --filter @caveman-app/web dev",
+    "preview:app": "node scripts/preview-app.mjs",
+    "profile:startup": "node apps/desktop/scripts/profile-startup.mjs",
+    "app": "bash scripts/install-app.sh"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "knip": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

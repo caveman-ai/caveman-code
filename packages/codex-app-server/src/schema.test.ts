@@ -1,0 +1,394 @@
+// ), packages/effect-codex-app-server/src/schema.test.ts @ ab3a3cd1.
+import { assert, it } from "@effect/vitest";
+import * as Schema from "effect/Schema";
+
+import * as CodexRpc from "./rpc.ts";
+import * as CodexSchema from "./schema.ts";
+
+const isGetAccountResponse = Schema.is(CodexSchema.V2GetAccountResponse);
+const isThreadReadResponse = Schema.is(CodexSchema.V2ThreadReadResponse);
+const isThreadResumeResponse = Schema.is(CodexSchema.V2ThreadResumeResponse);
+const isThreadForkResponse = Schema.is(CodexSchema.V2ThreadForkResponse);
+const isTurnCompletedNotification = Schema.is(CodexSchema.V2TurnCompletedNotification);
+const decodeThreadResumeResponse = Schema.decodeUnknownSync(CodexSchema.V2ThreadResumeResponse);
+
+it("keeps async questions in live notifications and thread history", () => {
+  const item = {
+    type: "agentMessage",
+    id: "question-1",
+    text: "Which package?\n- pnpm\n- npm\n\nWhat should it be named?",
+    phase: "final_answer",
+    delivery: "async",
+    questions: [
+      { title: "Which package manager?", options: ["pnpm", "npm"] },
+      { title: "What should it be named?" },
+    ],
+  } as const;
+  for (const schema of [
+    CodexSchema.ServerNotification__ThreadItem,
+    CodexSchema.V2ItemStartedNotification__ThreadItem,
+    CodexSchema.V2ItemCompletedNotification__ThreadItem,
+    CodexSchema.V2ThreadReadResponse__ThreadItem,
+    CodexSchema.V2ThreadResumeResponse__ThreadItem,
+  ]) {
+    assert.deepEqual(Schema.decodeSync(schema)(item), item);
+  }
+});
+
+it("keeps partial answers in notifications and persisted thread histories", () => {
+  const item = {
+    type: "agentMessage",
+    id: "partial-1",
+    text: "A stable answer before more tool work.",
+    phase: "partial_answer",
+  } as const;
+  for (const schema of [
+    CodexSchema.ServerNotification__ThreadItem,
+    CodexSchema.V2ItemStartedNotification__ThreadItem,
+    CodexSchema.V2ItemCompletedNotification__ThreadItem,
+    CodexSchema.V2ThreadReadResponse__ThreadItem,
+    CodexSchema.V2ThreadResumeResponse__ThreadItem,
+    CodexSchema.V2ThreadForkResponse__ThreadItem,
+    CodexSchema.V2TurnCompletedNotification__ThreadItem,
+  ]) {
+    assert.deepEqual(Schema.decodeSync(schema)(item), item);
+  }
+  const response = {
+    approvalPolicy: "never",
+    approvalsReviewer: "user",
+    cwd: "/tmp/project",
+    model: "gpt-5.6-sol",
+    modelProvider: "openai",
+    sandbox: { type: "dangerFullAccess" },
+    thread: {
+      cliVersion: "0.162.0",
+      createdAt: 0,
+      updatedAt: 0,
+      cwd: "/tmp/project",
+      ephemeral: false,
+      id: "thread-1",
+      modelProvider: "openai",
+      preview: "",
+      projectId: null,
+      sessionId: "session-1",
+      source: "cli",
+      status: { type: "idle" },
+      turns: [{ id: "turn-1", status: "completed", items: [item] }],
+    },
+  };
+  assert.equal(isThreadForkResponse(response), true);
+  assert.equal(isThreadResumeResponse(response), true);
+  assert.equal(isThreadReadResponse({ thread: response.thread }), true);
+});
+
+it("accepts Codex 0.150 multi-agent values", () => {
+  const schemas = [
+    CodexSchema.ServerNotification__SubAgentActivityKind,
+    CodexSchema.V2ItemStartedNotification__SubAgentActivityKind,
+    CodexSchema.V2ItemCompletedNotification__SubAgentActivityKind,
+    CodexSchema.V2ThreadReadResponse__SubAgentActivityKind,
+    CodexSchema.V2ThreadResumeResponse__SubAgentActivityKind,
+  ];
+
+  for (const schema of schemas) {
+    assert.equal(Schema.is(schema)("completed"), true);
+  }
+
+  for (const tool of ["sendMessage", "followupTask", "interruptAgent", "listAgents"]) {
+    assert.equal(Schema.is(CodexSchema.ServerNotification__CollabAgentTool)(tool), true);
+    assert.equal(Schema.is(CodexSchema.V2ThreadResumeResponse__CollabAgentTool)(tool), true);
+  }
+
+  assert.equal(
+    Schema.is(CodexSchema.ServerNotification__CollabAgentToolCallStatus)("interrupted"),
+    true,
+  );
+  assert.equal(
+    Schema.is(CodexSchema.V2ThreadResumeResponse__CollabAgentToolCallStatus)("interrupted"),
+    true,
+  );
+
+  const resumeResponse = {
+    approvalPolicy: "never",
+    approvalsReviewer: "user",
+    cwd: "/tmp/project",
+    model: "gpt-5.6-sol",
+    modelProvider: "openai",
+    sandbox: { type: "dangerFullAccess" },
+    thread: {
+      cliVersion: "0.150.0",
+      createdAt: 0,
+      cwd: "/tmp/project",
+      ephemeral: false,
+      id: "root-thread",
+      modelProvider: "openai",
+      preview: "",
+      projectId: null,
+      sessionId: "session-1",
+      source: "cli",
+      status: { type: "idle" },
+      turns: [
+        {
+          id: "turn-1",
+          status: "completed",
+          items: [
+            {
+              agentsStates: {},
+              id: "item-1",
+              receiverThreadIds: ["child-thread"],
+              senderThreadId: "root-thread",
+              status: "interrupted",
+              tool: "followupTask",
+              type: "collabAgentToolCall",
+            },
+          ],
+        },
+      ],
+      updatedAt: 0,
+    },
+  };
+
+  assert.equal(Schema.is(CodexSchema.V2ThreadResumeResponse)(resumeResponse), true);
+});
+
+it("accepts Codex rate limit errors for thread responses", () => {
+  const failedThread = {
+    cliVersion: "0.150.0",
+    createdAt: 0,
+    cwd: "/tmp/project",
+    ephemeral: false,
+    id: "thread-1",
+    modelProvider: "openai",
+    preview: "",
+    projectId: null,
+    sessionId: "session-1",
+    source: "cli",
+    status: { type: "idle" },
+    turns: [
+      {
+        error: {
+          codexErrorInfo: "rateLimitExceeded",
+          message: "Rate limit exceeded",
+        },
+        id: "turn-1",
+        items: [],
+        status: "failed",
+      },
+    ],
+    updatedAt: 0,
+  };
+  assert.equal(isThreadReadResponse({ thread: failedThread }), true);
+  assert.equal(
+    isThreadResumeResponse({
+      approvalPolicy: "never",
+      approvalsReviewer: "user",
+      cwd: "/tmp/project",
+      model: "gpt-5.6-sol",
+      modelProvider: "openai",
+      sandbox: { type: "dangerFullAccess" },
+      thread: failedThread,
+    }),
+    true,
+  );
+});
+
+it("accepts Codex misalignment policy errors for thread responses", () => {
+  const failedThread = {
+    cliVersion: "0.150.0",
+    createdAt: 0,
+    cwd: "/tmp/project",
+    ephemeral: false,
+    id: "thread-1",
+    modelProvider: "openai",
+    preview: "",
+    projectId: null,
+    sessionId: "session-1",
+    source: "cli",
+    status: { type: "idle" },
+    turns: [
+      {
+        error: {
+          codexErrorInfo: "misalignmentPolicyViolation",
+          message: "Misalignment policy violation",
+        },
+        id: "turn-1",
+        items: [],
+        status: "failed",
+      },
+    ],
+    updatedAt: 0,
+  };
+  const resumeLikeResponse = {
+    approvalPolicy: "never",
+    approvalsReviewer: "user",
+    cwd: "/tmp/project",
+    model: "gpt-5.6-sol",
+    modelProvider: "openai",
+    sandbox: { type: "dangerFullAccess" },
+    thread: failedThread,
+  };
+  assert.equal(isThreadReadResponse({ thread: failedThread }), true);
+  assert.equal(isThreadResumeResponse(resumeLikeResponse), true);
+  assert.equal(isThreadForkResponse(resumeLikeResponse), true);
+  const decodedResume = decodeThreadResumeResponse(resumeLikeResponse);
+  assert.equal(decodedResume.thread.turns[0]?.error?.codexErrorInfo, "misalignmentPolicyViolation");
+  assert.equal(
+    isTurnCompletedNotification({
+      threadId: "thread-1",
+      turn: {
+        error: {
+          codexErrorInfo: "misalignmentPolicyViolation",
+          message: "Misalignment policy violation",
+        },
+        id: "turn-1",
+        items: [],
+        status: "failed",
+      },
+    }),
+    true,
+  );
+});
+
+it("accepts account plan slugs newer than the pinned protocol", () => {
+  const planTypes = [
+    "self_serve_business_prolite",
+    "ent26",
+    "enterprise_cbp_automation",
+    "edu_plus",
+    "edu_pro",
+    "promax",
+    "some_future_plan",
+  ];
+
+  for (const planType of planTypes) {
+    const accountResponse = {
+      account: {
+        email: "user@example.com",
+        planType,
+        type: "chatgpt",
+      },
+      requiresOpenaiAuth: true,
+    };
+
+    assert.equal(isGetAccountResponse(accountResponse), true);
+  }
+});
+
+it("accepts Codex 0.161 additions", () => {
+  const decode = (schema: Schema.Decoder<unknown>, value: unknown) =>
+    assert.deepEqual(Schema.decodeUnknownSync(schema)(value), value);
+
+  decode(CodexRpc.SERVER_NOTIFICATION_PARAMS["thread/prediction/updated"], {
+    threadId: "thread-1",
+    sourceTurnId: "turn-1",
+    result: { type: "completed", text: "run the tests next" },
+  });
+  decode(CodexRpc.CLIENT_REQUEST_PARAMS["thread/goal/set"], {
+    threadId: "thread-1",
+    objective: "ship it",
+    origin: "automatic",
+  });
+  decode(CodexRpc.CLIENT_REQUEST_PARAMS["thread/goal/clear"], { threadId: "thread-1", origin: "user" });
+  decode(CodexRpc.CLIENT_REQUEST_RESPONSES["mcpServer/oauth/login"], {
+    authorizationUrl: "https://example.com/authorize",
+    loginId: "login-1",
+  });
+  decode(CodexRpc.SERVER_NOTIFICATION_PARAMS.error, {
+    threadId: "thread-1",
+    turnId: "turn-1",
+    willRetry: false,
+    error: { message: "new failure", codexErrorInfo: "someFutureCode" },
+  });
+});
+
+// Codex 0.165 sends values the 0.161 protocol did not have. A notification
+// that fails to decode is dropped, so each of these used to vanish.
+it("decodes agent messages Codex marks as a partial answer", () => {
+  const message = {
+    type: "agentMessage",
+    id: "msg-1",
+    text: "Stable answer text, more may follow.",
+    phase: "partial_answer",
+    memoryCitation: null,
+  } as const;
+  const turn = {
+    id: "turn-1",
+    items: [message],
+    itemsView: "summary",
+    status: "failed",
+    error: { message: "stream disconnected", codexErrorInfo: null, additionalDetails: null },
+    startedAt: 1782622440,
+    completedAt: 1782622450,
+    durationMs: 10_000,
+  } as const;
+  const decode = (schema: Schema.Decoder<unknown>, value: unknown) =>
+    assert.deepEqual(Schema.decodeUnknownSync(schema)(value), value);
+
+  decode(CodexRpc.SERVER_NOTIFICATION_PARAMS["item/started"], {
+    threadId: "thread-1",
+    turnId: "turn-1",
+    startedAtMs: 1782622440500,
+    item: { ...message, text: "" },
+  });
+  decode(CodexRpc.SERVER_NOTIFICATION_PARAMS["item/completed"], {
+    threadId: "thread-1",
+    turnId: "turn-1",
+    completedAtMs: 1782622441000,
+    item: message,
+  });
+  decode(CodexRpc.SERVER_NOTIFICATION_PARAMS["turn/completed"], { threadId: "thread-1", turn });
+  decode(CodexRpc.CLIENT_REQUEST_RESPONSES["thread/read"], {
+    thread: {
+      cliVersion: "0.165.0",
+      createdAt: 0,
+      cwd: "/tmp/project",
+      ephemeral: false,
+      id: "thread-1",
+      modelProvider: "openai",
+      preview: "",
+      projectId: null,
+      sessionId: "session-1",
+      source: "cli",
+      status: { type: "idle" },
+      turns: [turn],
+      updatedAt: 0,
+    },
+  });
+});
+
+it("decodes a generated image in each form Codex sends it", () => {
+  const image = {
+    type: "imageGeneration",
+    id: "ig-1",
+    status: "completed",
+    revisedPrompt: "a red square",
+    savedPath: "/tmp/codex-home/generated_images/ig-1.png",
+  } as const;
+  const completed = (item: unknown) => ({
+    threadId: "thread-1",
+    turnId: "turn-1",
+    completedAtMs: 1,
+    item,
+  });
+  const decode = Schema.decodeUnknownSync(CodexRpc.SERVER_NOTIFICATION_PARAMS["item/completed"]);
+
+  // Stored in Codex's attachment store, with and without a local copy.
+  for (const item of [
+    { ...image, fileId: "file_abc123" },
+    { type: "imageGeneration", id: "ig-2", status: "completed", fileId: "file_def456" },
+  ]) {
+    assert.deepEqual(decode(completed(item)), completed(item));
+  }
+  // Inline, as Codex 0.161 sent it.
+  const inline = { ...image, savedPath: null, result: "iVBORw0KGgo=" };
+  assert.deepEqual(decode(completed(inline)), completed(inline));
+});
+
+it("decodes a Codex account signed in through Vertex AI", () => {
+  // Captured from codex 0.165 with model_provider = "gcp"; workspaceRouting is experimental.
+  const answer = { account: { type: "gcp" }, requiresOpenaiAuth: false, workspaceRouting: null };
+  assert.deepEqual(
+    Schema.decodeUnknownSync(CodexRpc.CLIENT_REQUEST_RESPONSES["account/read"])(answer),
+    { account: { type: "gcp" }, requiresOpenaiAuth: false },
+  );
+});

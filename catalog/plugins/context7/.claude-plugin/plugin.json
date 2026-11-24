@@ -1,0 +1,15 @@
+{
+  "name": "context7",
+  "version": "1.0.0",
+  "description": "Pull current, version-specific documentation and examples for the libraries this repository uses, instead of relying on what the model remembers.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://context7.com/",
+  "keywords": [
+    "docs",
+    "libraries",
+    "api reference"
+  ]
+}

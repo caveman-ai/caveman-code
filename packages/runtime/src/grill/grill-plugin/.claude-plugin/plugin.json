@@ -1,0 +1,5 @@
+{
+  "name": "caveman-grill",
+  "version": "1.0.0",
+  "description": "Caveman Code grill mode. Loaded only when a session enters grill mode."
+}

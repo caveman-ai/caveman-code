@@ -1,0 +1,15 @@
+{
+  "name": "monday",
+  "version": "1.0.0",
+  "description": "Read monday.com boards and items, and post updates on the item you are working on.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://monday.com/",
+  "keywords": [
+    "boards",
+    "work management",
+    "tasks"
+  ]
+}

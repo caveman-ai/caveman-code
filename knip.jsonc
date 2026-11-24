@@ -1,0 +1,101 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+ // Unused files, dependencies and binaries, .jsonc (origin/main 67eebaca23) checks them.
+  // Unused exports are off for now: 859 exports and 219 types fired on 2026-11-09, most of them protocol
+ // schemas and their types, and 8 duplicate exports (aliases kept ).
+  "rules": { "exports": "off", "types": "off", "nsExports": "off", "nsTypes": "off", "duplicates": "off" },
+  // Supplied by the OS or installed apart from npm (tests that need `codex` or `cc` skip without them).
+  "ignoreBinaries": ["bwrap", "cc", "codex", "ditto", "ffmpeg", "hdiutil", "mkfifo", "pre-commit", "psql", "reg", "scutil", "spctl", "tasklist", "uptime"],
+  "workspaces": {
+    ".": {
+      // Design proofs under docs/ are run by hand while a design is open, then deleted with it.
+      "ignore": ["docs/**"],
+      // A showcase's render.mjs films its page into a video; it is run by hand.
+      "entry": ["scripts/*.{mjs,ts}", "showcase/*/render.mjs"],
+      // scripts/check-changed.ts (pnpm fmt, check:changed) resolves oxfmt's bin by path.
+      "ignoreDependencies": ["oxfmt"]
+    },
+    "apps/desktop": {
+      "entry": [
+        // scripts/build.mjs bundles these by path for Electron, and the runtime's compile-cache preload for its Node.
+        "src/main.ts!",
+        "src/preload.ts!",
+        "src/capture-preload.ts!",
+        "src/computer-guide-preload.ts!",
+        "src/notch-preload.ts!",
+        "src/serverCompileCache.ts!",
+        // Its own bundle, which main.ts requires by path where crash reports start.
+        "src/crashReports.ts!"
+      ],
+      // scripts/package.mjs and the Windows workflow run it by path in a built runtime, whose natives it loads.
+      "ignore": ["scripts/check-natives.mjs"],
+      // electron-builder flips the fuses with it (electronFuses in scripts/package.mjs); scripts/package.mjs runs
+      // sentry-cli by path to upload a release's source maps. scripts/ademark/harness.ts drives the packaged app with
+      // the runtime's playwright-core, as scripts/first-run-e2e.mjs does.
+      "ignoreDependencies": ["@electron/fuses", "@sentry/cli", "playwright-core"]
+    },
+    "apps/mobile": {
+      // Expo's entries (package.json main, and the web one). Knip's expo plugin also infers expo-updates and
+      // expo-system-ui from app.json, which the prototype does not install yet.
+      "entry": ["index.ts!", "index.web.ts!"],
+      "ignoreDependencies": ["expo-updates", "expo-system-ui"]
+    },
+    "apps/web": {
+      // Pages Vite serves by path: public/capture.html loads capture.js, and the FileView browser check runs from
+      // its own .html.
+      "entry": ["public/*.js!", "src/**/*.browser.tsx"]
+    },
+    "oxlint-plugin-caveman": {
+      // test/lint.ts runs oxlint's bin by path.
+      "ignoreDependencies": ["oxlint"]
+    },
+    "packages/agent-sdk": {
+      "entry": ["examples/*.ts"]
+    },
+    "packages/codex-app-server": {
+      "entry": ["test/fixtures/*.ts"]
+    },
+    "packages/effect-acp": {
+      "entry": ["test/fixtures/*.ts"],
+ // Kept .ts follows its JsonSchemaGenerator.
+      "ignoreDependencies": ["@effect/openapi-generator"]
+    },
+    "packages/provider-caveman": {
+      "entry": ["bench/*.ts"],
+      // Pinned so pi-ai loads one patched undici (src/lockfile.test.ts); nothing imports it directly.
+      "ignoreDependencies": ["undici"]
+    },
+    "packages/runtime": {
+      "entry": [
+        // Smokes, evals, recorders and fakes run by hand or spawned by path.
+        "scripts/**/*.{mjs,ts}",
+        // Workers and child processes started by path (dist/*.mjs in the bundle).
+        "src/claude-history-worker.ts!",
+        "src/search/embedder-worker.ts!",
+        "src/web/page-worker.ts!",
+        "src/provider/codexLiveSpaceMcp.mjs!",
+        "src/provider/testFixtures/*.mjs"
+      ],
+      "ignoreDependencies": [
+ // Kept .
+        "@effect/platform-node-shared",
+        // src/terminal/HistorySanitizer.test.ts loads it with createRequire, which knip does not follow.
+        "@xterm/xterm",
+ // selfCheck.ts loads the native module by name (requireNative) to prove it loads; provider-native
+ // CursorKeychain.ts reads native token with it.
+        "@napi-rs/keyring"
+      ]
+    },
+    "packages/source-control-testing": {
+      "ignoreDependencies": ["vitest"]
+    },
+    "packages/ui": {
+      "ignoreDependencies": [
+        // tailwind-preset.cjs is read by the consumer's Tailwind, which brings its own.
+        "tailwindcss",
+        // src/styles/fonts.css imports it; knip reads no CSS.
+        "@fontsource-variable/jetbrains-mono"
+      ]
+    }
+  }
+}

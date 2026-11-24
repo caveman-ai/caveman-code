@@ -1,0 +1,38 @@
+{
+  "grounding": {
+    "generic": [
+      {
+        "url": "https://nodejs.org/api/fs.html",
+        "title": "File system | Node.js v24 Documentation",
+        "snippets": [
+          "fs.readFile(path[, options], callback) asynchronously reads the entire contents of a file.",
+          "{\"method\":\"fs.promises.readFile\",\"returns\":\"Promise<Buffer|string>\"}"
+        ]
+      },
+      {
+        "url": "https://stackoverflow.com/questions/10049557/reading-all-files-in-a-directory",
+        "title": "Reading all files in a directory, store them in objects",
+        "snippets": ["Use fs.readdir to list the directory, then fs.readFile on each entry."]
+      },
+      {
+        "url": "https://nodejs.org/api/fs.html",
+        "title": "Duplicate of the first",
+        "snippets": ["dropped"]
+      }
+    ],
+    "poi": null,
+    "map": []
+  },
+  "sources": {
+    "https://nodejs.org/api/fs.html": {
+      "title": "File system | Node.js v24 Documentation",
+      "hostname": "nodejs.org",
+      "age": ["Monday, September 8, 2026", "2026-09-08", "1 month ago", "2026-09-08T10:00:00Z"]
+    },
+    "https://stackoverflow.com/questions/10049557/reading-all-files-in-a-directory": {
+      "title": "Reading all files in a directory, store them in objects",
+      "hostname": "stackoverflow.com",
+      "age": []
+    }
+  }
+}

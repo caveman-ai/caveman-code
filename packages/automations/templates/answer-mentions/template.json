@@ -1,0 +1,6 @@
+{
+  "title": "Answer @caveman mentions",
+  "category": "Issues and PRs",
+  "summary": "Mention @caveman in an issue or pull request comment and get an answer that cites the code.",
+  "scope": "project"
+}

@@ -1,0 +1,483 @@
+/* ══════════════════════════════════════════════════════════
+ * COMPONENT-SPECIFIC — SidebarNav
+ * The 52↔224px collapsible sidebar tree.
+ * Copy this block only alongside SidebarNav; it is not part of the
+ * generic foundation above.
+ * ══════════════════════════════════════════════════════════ */
+.sidebar-row {
+  width: 208px;
+  transition-duration: var(--sidebar-copy-duration);
+  transition-timing-function: var(--sidebar-easing);
+}
+
+.sidebar-copy {
+  opacity: 1;
+  transform: translateX(0);
+  transition:
+    opacity var(--sidebar-copy-duration) ease-out,
+    transform var(--sidebar-copy-duration) var(--sidebar-easing);
+}
+
+.sidebar-logo,
+.sidebar-collapse-control,
+.sidebar-expand-control {
+  transition-duration: var(--sidebar-copy-duration);
+  transition-timing-function: ease-out;
+}
+
+.sidebar-expand-control {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.sidebar-glide-highlight {
+  right: 8px;
+  left: 8px;
+}
+
+[data-sidebar-collapsed="true"] .sidebar-row {
+  width: 36px;
+}
+
+[data-sidebar-collapsed="true"] .sidebar-copy {
+  pointer-events: none;
+  opacity: 0;
+  transform: translateX(calc(var(--sidebar-copy-offset) * -1));
+}
+
+[data-sidebar-collapsed="true"] .sidebar-workspace-control {
+  pointer-events: none;
+}
+
+[data-sidebar-collapsed="true"] .sidebar-logo,
+[data-sidebar-collapsed="true"] .sidebar-collapse-control {
+  pointer-events: none;
+  opacity: 0;
+}
+
+[data-sidebar-collapsed="true"] .sidebar-expand-control {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+[data-sidebar-collapsed="true"] .sidebar-glide-highlight {
+  right: auto;
+  width: 36px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-reveal {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* ── records table ────────────────────────────────────────
+ * The grid is deliberately more architectural than card-like:
+ * one quiet surface, precise rules, and color reserved for
+ * meaning. The first column remains an anchor while both axes
+ * can move independently inside the table viewport.
+ */
+
+/* The sidebar, in minimal anatomy (DESIGN.md "Sidebar"), reading the
+   --sidebar tokens in both themes: rows sit straight on the shell, the
+   selected row is one flat fill, hover is that fill at 60%, counts are plain
+   numbers. Desktop and the portaled mobile drawer share these tokens. */
+:root {
+  --nav-surface: hsl(var(--sidebar));
+  --nav-ink: hsl(var(--sidebar-foreground));
+  --nav-icon: hsl(var(--sidebar-foreground));
+  --nav-heading: hsl(var(--sidebar-foreground));
+  --nav-dim: hsl(var(--sidebar-foreground) / 0.65);
+  --nav-divider: hsl(var(--sidebar-border));
+  --nav-hover: hsl(var(--sidebar-accent) / 0.6);
+  --nav-press: hsl(var(--sidebar-accent));
+  --nav-selected: hsl(var(--sidebar-accent));
+  --nav-selected-ink: hsl(var(--sidebar-accent-foreground));
+  --nav-selected-icon: hsl(var(--sidebar-accent-foreground));
+  --nav-count-ink: hsl(var(--sidebar-foreground));
+  /* Controls on the rail (search, plan pill) and the space picker's track. */
+  --nav-control: hsl(var(--card));
+  --nav-control-edge: hsl(var(--border));
+  --nav-track: hsl(var(--sidebar-accent) / 0.55);
+  --nav-thumb: hsl(var(--card));
+  --nav-thumb-edge: hsl(var(--border));
+}
+/* Dark: the picker's thumb is the selected-row step, not a card. */
+html.dark[data-surface="deck"],
+.dark {
+  --nav-thumb: hsl(var(--sidebar-accent));
+  --nav-thumb-edge: hsl(var(--input));
+}
+.sidebar-surface { background: var(--nav-surface); border-color: var(--nav-divider); }
+
+/* ── header: workspace menu · search · create ───────────── */
+.sidebar-header {
+  display: flex;
+  height: 56px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+  /* The mark sits on the rows' icon column; Create on their right edge. */
+  padding: 0 12px;
+}
+.sidebar-header[data-collapsed] {
+  height: auto;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 0 6px;
+}
+.sidebar-workspace {
+  display: flex;
+  min-width: 0;
+  height: 36px;
+  flex: 1 1 0%;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px 0 4px;
+  border-radius: 8px;
+  color: var(--nav-selected-ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 16px;
+  text-align: left;
+  outline: none;
+  transition: background-color 150ms ease;
+}
+.sidebar-workspace[data-collapsed] { width: 32px; height: 32px; flex: none; justify-content: center; padding: 0; }
+/* Sized by the pixel mark itself (23px): a smaller box let it overflow to one
+   side. With the trigger's 4px padding it centres on the rows' icon column. */
+.sidebar-workspace-mark { display: grid; flex-shrink: 0; place-items: center; }
+.sidebar-workspace-project {
+  overflow: hidden;
+  color: var(--nav-heading);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-icon-button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 6px;
+  color: var(--nav-icon);
+  outline: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sidebar-icon-button > svg { width: 15px; height: 15px; }
+.sidebar-header .sidebar-icon-button > svg { width: 14px; height: 14px; }
+.sidebar-compose {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  place-items: center;
+  margin-left: 2px;
+  border: 1px solid var(--nav-control-edge);
+  border-radius: 9999px;
+  background: var(--nav-control);
+  color: var(--nav-selected-ink);
+  outline: none;
+  transition: background-color 150ms ease, transform 160ms var(--ease-snap);
+}
+.sidebar-compose > svg { width: 14px; height: 14px; }
+.sidebar-compose:active { transform: scale(0.94); }
+.sidebar-header[data-collapsed] .sidebar-compose { margin-left: 0; }
+
+/* ── product switcher, then Ask and Inbox ───────────────── */
+.sidebar-top {
+  display: flex;
+  flex-shrink: 0;
+  flex-direction: column;
+  gap: 2px;
+  margin: 6px 12px 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--nav-divider);
+}
+.sidebar-top[data-collapsed] { margin-inline: 12px; }
+.sidebar-product {
+  display: flex;
+  min-width: 0;
+  height: 52px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--nav-divider);
+  border-radius: 10px;
+  background: var(--nav-track);
+  color: var(--nav-selected-ink);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 16px;
+  text-align: left;
+  outline: none;
+  transition: background-color 150ms ease;
+}
+.sidebar-product[data-collapsed] { width: 32px; height: 32px; justify-content: center; padding: 0; border: 0; background: none; }
+.sidebar-product-blurb {
+  margin-top: 2px;
+  overflow: hidden;
+  color: var(--nav-heading);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sidebar-product-caret { width: 14px; height: 14px; flex-shrink: 0; color: var(--nav-icon); }
+/* A product's pixel glyph (components/icons/pixel-icons) on the selected-row fill. */
+.sidebar-product-tile {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--nav-thumb);
+  color: var(--nav-selected-ink);
+  box-shadow: inset 0 0 0 1px var(--nav-thumb-edge);
+}
+.sidebar-product-tile > svg.pixel-icon { width: 14px; height: 14px; }
+/* 2px a pixel: crisp at 1x and 2x. */
+.sidebar-item > svg.pixel-icon { width: 14px; height: 14px; margin: 0; }
+
+/* ── the tree ───────────────────────────────────────────── */
+.sidebar-navigation {
+  display: flex;
+  min-height: 0;
+  flex: 1 1 0%;
+  flex-direction: column;
+  overflow-y: auto;
+  padding: 12px 12px 16px;
+  /* The list fades under the header and footer instead of being cut. */
+  mask-image: linear-gradient(to bottom, transparent, #000 6px, #000 calc(100% - 16px), transparent);
+  scrollbar-color: transparent transparent;
+  scrollbar-width: thin;
+}
+.sidebar-navigation:hover { scrollbar-color: var(--nav-divider) transparent; }
+.sidebar-group { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-group + .sidebar-group { margin-top: 20px; }
+.sidebar-group-label {
+  display: flex;
+  flex-shrink: 0;
+  height: 28px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: var(--nav-heading);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 16px;
+  text-align: left;
+  outline: none;
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sidebar-caret {
+  width: 8px;
+  height: 8px;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: transform 200ms var(--ease-snap), opacity 150ms ease;
+}
+.sidebar-group-label[aria-expanded="false"] .sidebar-caret { transform: rotate(-90deg); }
+.sidebar-group-rule { height: 1px; margin: 3px 0 4px; border: 0; background: var(--nav-divider); }
+/* A fold opens on grid rows (0fr → 1fr): no height is measured in JS. The
+   rows slide 4px while they fade, so they read as unfolding, not appearing. */
+.sidebar-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease-drawer);
+}
+.sidebar-fold[data-open] { grid-template-rows: 1fr; }
+.sidebar-fold-body {
+  display: flex;
+  min-height: 0;
+  flex-direction: column;
+  gap: 1px;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 120ms ease-out, transform 220ms var(--ease-drawer);
+}
+.sidebar-fold[data-open] > .sidebar-fold-body { opacity: 1; transform: none; transition-duration: 180ms, 220ms; }
+.sidebar-navigation:not([data-settled]) :is(.sidebar-fold, .sidebar-fold-body, .sidebar-caret) { transition: none; }
+/* Static headings inside a panel (Ask's "Your chats"). */
+.sidebar-section-label { margin: 0; color: var(--nav-heading); font-size: 12px; font-weight: 500; line-height: 20px; }
+
+/* ── rows ───────────────────────────────────────────────── */
+.sidebar-item {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-width: 0;
+  min-height: 32px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 9px;
+  /* 12px inset + 9px + half the 14px slot = 28px: every row icon sits on the
+     56px rail's centre line, the same line as the picker, header and footer. */
+  padding: 0 8px 0 9px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--nav-ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-align: left;
+  text-decoration: none;
+  outline: none;
+  /* Hover arrives at once and leaves slowly: the fill follows the pointer
+     without trailing it. */
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.sidebar-item > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--nav-icon); transition: color 150ms ease; }
+/* Two icon sets share the column: lucide inks 20 of 24 units, the nav glyphs
+   about 14 of 20. Drawn at 17px inside the same 14px slot, a glyph inks the
+   same ~12px as a lucide icon, so the column reads as one set (Linear: 12px). */
+.sidebar-item > svg:not(.lucide) { width: 17px; height: 17px; margin: -1.5px; }
+/* Collapsing keeps every icon where it was (the rail is the rows' inset plus
+   one icon column) and fades the label out of the clipped row. */
+.sidebar-label { transition: opacity 150ms ease; }
+.sidebar-item:is([aria-current="page"], [aria-selected="true"]),
+.sidebar-item[data-state="open"] {
+  background: var(--nav-selected);
+  color: var(--nav-selected-ink);
+  /* Selection lands at once; only the row losing it fades. */
+  transition: none;
+}
+.sidebar-item:is([aria-current="page"], [aria-selected="true"]) > svg,
+.sidebar-item[data-state="open"] > svg { color: var(--nav-selected-icon); }
+.sidebar-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.sidebar-item-collapsed { overflow: hidden; }
+.sidebar-item-collapsed .sidebar-label { opacity: 0; transition-duration: 80ms; }
+.sidebar-count {
+  margin-left: 6px;
+  flex-shrink: 0;
+  color: var(--nav-count-ink);
+  font-size: 12px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+.sidebar-item[aria-current="page"] .sidebar-count { color: var(--nav-ink); }
+/* A page hosted Free leaves to Team: said quietly, on the row. */
+.sidebar-plan-tag {
+  margin-left: auto;
+  flex-shrink: 0;
+  height: 18px;
+  padding: 0 6px;
+  border: 1px solid var(--nav-control-edge);
+  border-radius: 999px;
+  color: var(--nav-dim);
+  font-size: 10.5px;
+  font-weight: 500;
+  line-height: 16px;
+}
+.sidebar-dot {
+  position: absolute;
+  top: 6px;
+  right: 5px;
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: hsl(var(--destructive));
+}
+
+/* ── panels: the tree and Ask's history trade places ────── */
+.sidebar-panel {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  transition: opacity 200ms var(--ease-snap), transform 200ms var(--ease-snap);
+}
+.sidebar-panel-before,
+.sidebar-panel-after { opacity: 0; transition-duration: 120ms; }
+.sidebar-panel-before { transform: translateX(-16px); }
+.sidebar-panel-after { transform: translateX(16px); }
+
+/* ── footer: help · plan · collapse ─────────────────────── */
+.sidebar-footer {
+  display: flex;
+  min-width: 0;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px 12px 10px;
+}
+/* Desktop: level with the shell's bottom strip (the mini chat), centred 17px up. */
+@media (min-width: 1024px) { .sidebar-footer { padding-bottom: 4px; } }
+.sidebar-footer[data-collapsed] { flex-direction: column; justify-content: center; gap: 6px; padding-inline: 0; }
+.sidebar-footer[data-collapsed] .sidebar-icon-button { margin-left: 0; }
+.sidebar-round,
+.sidebar-pill {
+  display: inline-flex;
+  height: 26px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--nav-divider);
+  border-radius: 9999px;
+  color: var(--nav-ink);
+  outline: none;
+  transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease;
+}
+.sidebar-round { width: 26px; font-size: 13px; font-weight: 500; }
+.sidebar-round > svg { width: 14px; height: 14px; color: var(--nav-icon); }
+.sidebar-round[data-tone="warning"] > svg { color: hsl(var(--warning)); }
+.sidebar-pill {
+  min-width: 0;
+  flex-shrink: 1;
+  gap: 6px;
+  padding: 0 10px 0 8px;
+  color: var(--nav-selected-ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+.sidebar-pill > svg { width: 14px; height: 14px; flex-shrink: 0; color: var(--nav-icon); }
+.sidebar-pill[data-tone="warning"] > svg { color: hsl(var(--warning)); }
+.sidebar-pill-detail { overflow: hidden; color: var(--nav-dim); font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+span.sidebar-pill { border-color: transparent; background: var(--nav-hover); }
+
+/* ── shared states ──────────────────────────────────────── */
+@media (hover: hover) {
+  .sidebar-item:not([aria-current="page"]):not([aria-selected="true"]):not([data-state="open"]):not(:disabled):hover,
+  .sidebar-group-label:hover,
+  .sidebar-workspace:hover,
+  .sidebar-icon-button:hover,
+  .sidebar-product:hover,
+  .sidebar-round:hover,
+  .sidebar-pill:hover {
+    background: var(--nav-hover);
+    color: var(--nav-selected-ink);
+    transition-duration: 40ms;
+  }
+  .sidebar-item:not([aria-current="page"]):hover > svg { color: var(--nav-selected-ink); transition-duration: 40ms; }
+  .sidebar-group-label:hover .sidebar-caret { opacity: 1; }
+  .sidebar-compose:hover { background: var(--nav-press); }
+}
+.sidebar-item:not([aria-current="page"]):not(:disabled):active { background: var(--nav-press); }
+.sidebar-workspace[data-state="open"],
+.sidebar-product[data-state="open"],
+.sidebar-round[data-state="open"],
+.sidebar-pill[data-state="open"] { background: var(--nav-hover); color: var(--nav-selected-ink); }
+/* Inset rings: a fold clips overflow, and an outset ring would be cut. */
+:is(.sidebar-item, .sidebar-group-label, .sidebar-workspace, .sidebar-icon-button, .sidebar-compose, .sidebar-product, .sidebar-round, .sidebar-pill):focus-visible {
+  box-shadow: inset 0 0 0 2px hsl(var(--ring));
+}
+@media (pointer: coarse) { .sidebar-item { min-height: 44px; } }
+@media (prefers-reduced-motion: reduce) {
+  :is(.sidebar-item, .sidebar-item > svg, .sidebar-group-label, .sidebar-caret, .sidebar-fold, .sidebar-fold-body, .sidebar-panel, .sidebar-compose, .sidebar-workspace, .sidebar-icon-button, .sidebar-product, .sidebar-round, .sidebar-pill) {
+    transition: none;
+  }
+}

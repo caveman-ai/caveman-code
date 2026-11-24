@@ -1,0 +1,7 @@
+.expo/
+.expo-export/
+ios/
+android/
+dist/
+# Skia on the web: `pnpm web` copies CanvasKit here from node_modules.
+public/canvaskit.wasm

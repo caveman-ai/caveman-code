@@ -1,0 +1,15 @@
+{
+  "name": "posthog",
+  "version": "1.0.0",
+  "description": "Check how a feature is used, read errors and insights, and manage the feature flags this code depends on.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://posthog.com/",
+  "keywords": [
+    "analytics",
+    "feature flags",
+    "experiments"
+  ]
+}

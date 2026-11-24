@@ -1,0 +1,16 @@
+{
+  "name": "caveman-cloud",
+  "version": "1.0.0",
+  "description": "Read traces, evals and LLM spend for the agents and apps you build from Caveman Cloud, and find what to fix. Needs a Caveman Cloud sign-in on this computer (cvm setup).",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://caveman.so/",
+  "keywords": [
+    "observability",
+    "evals",
+    "traces",
+    "llm cost"
+  ]
+}

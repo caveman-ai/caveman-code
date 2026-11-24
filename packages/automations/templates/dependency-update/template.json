@@ -1,0 +1,6 @@
+{
+  "title": "Weekly dependency update",
+  "category": "Chores and reports",
+  "summary": "Every Monday, updates dependencies within their ranges, fixes small breaks and opens a reviewed draft PR.",
+  "scope": "project"
+}

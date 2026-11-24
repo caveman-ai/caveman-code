@@ -1,0 +1,205 @@
+{
+  "name": "caveman-curated",
+  "owner": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "metadata": {
+    "description": "Plugins picked by Caveman: the services coding agents work with most."
+  },
+  "interface": {
+    "displayName": "Caveman"
+  },
+  "plugins": [
+    {
+      "name": "github",
+      "source": "./plugins/github",
+      "description": "Pull requests, issues and Actions",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "linear",
+      "source": "./plugins/linear",
+      "description": "Issues, projects and cycles",
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "slack",
+      "source": "./plugins/slack",
+      "description": "Read channels and post updates",
+      "category": "Communication",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "notion",
+      "source": "./plugins/notion",
+      "description": "Specs, docs and databases",
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "caveman-cloud",
+      "source": "./plugins/caveman-cloud",
+      "description": "Traces, evals and LLM spend",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "sentry",
+      "source": "./plugins/sentry",
+      "description": "Errors, stack traces and releases",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "figma",
+      "source": "./plugins/figma",
+      "description": "Build UI from Figma frames",
+      "category": "Design",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "vercel",
+      "source": "./plugins/vercel",
+      "description": "Deployments, builds and logs",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "supabase",
+      "source": "./plugins/supabase",
+      "description": "Postgres, auth and edge functions",
+      "category": "Data",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "context7",
+      "source": "./plugins/context7",
+      "description": "Current docs for any library",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "playwright",
+      "source": "./plugins/playwright",
+      "description": "Drive a browser to check your UI",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "stripe",
+      "source": "./plugins/stripe",
+      "description": "Payments, billing and Stripe docs",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "cloudflare",
+      "source": "./plugins/cloudflare",
+      "description": "Workers, DNS and the Cloudflare API",
+      "category": "Developer tools",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "neon",
+      "source": "./plugins/neon",
+      "description": "Serverless Postgres with branches",
+      "category": "Data",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "posthog",
+      "source": "./plugins/posthog",
+      "description": "Product analytics and feature flags",
+      "category": "Data",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "atlassian",
+      "source": "./plugins/atlassian",
+      "description": "Jira issues and Confluence pages",
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "asana",
+      "source": "./plugins/asana",
+      "description": "Tasks and projects",
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "monday",
+      "source": "./plugins/monday",
+      "description": "Boards, items and updates",
+      "category": "Productivity",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    },
+    {
+      "name": "hugging-face",
+      "source": "./plugins/hugging-face",
+      "description": "Models, datasets and papers",
+      "category": "Data",
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      }
+    }
+  ]
+}

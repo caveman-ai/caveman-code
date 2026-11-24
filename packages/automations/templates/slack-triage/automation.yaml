@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+host: cloud
+description: Answer @caveman in Slack from the repository, in the thread it was asked in
+
+on:
+  slack: { mention: true }        # add channels: ["#eng"] to listen in some channels only
+
+budget: $1
+
+steps:
+  answer:
+    agent: slack-answerer
+    model: base
+    outcome:
+      rubric: >-
+        Answers the question that was asked, names the files it relied on by path,
+        and says plainly what it could not find instead of guessing.
+      max_iterations: 2
+
+outputs:
+  slack.message: answer.summary   # a reply in the thread

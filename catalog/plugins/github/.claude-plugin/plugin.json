@@ -1,0 +1,17 @@
+{
+  "name": "github",
+  "version": "1.0.0",
+  "description": "Read and review pull requests, triage issues, and read GitHub Actions logs through GitHub's MCP server. Signs in with this computer's GitHub login.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://github.com/",
+  "keywords": [
+    "git",
+    "pull requests",
+    "issues",
+    "code review",
+    "actions"
+  ]
+}

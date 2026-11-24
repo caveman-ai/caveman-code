@@ -1,0 +1,15 @@
+{
+  "name": "sentry",
+  "version": "1.0.0",
+  "description": "Open a Sentry issue, read its stack trace and events, reproduce it here and fix it with a test.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://sentry.io/",
+  "keywords": [
+    "errors",
+    "monitoring",
+    "crashes"
+  ]
+}

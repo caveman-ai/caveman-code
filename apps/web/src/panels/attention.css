@@ -1,0 +1,12 @@
+/* AttentionDot's pulse: slower and softer than the agent's live ring (.live-ring), so "look here" never reads as
+ * "working". Transform and opacity only; reduced motion keeps the dot. */
+.attention-ring {
+  animation: attention-ring 2.4s var(--ease-snap) infinite;
+}
+@keyframes attention-ring {
+  from { transform: scale(1); opacity: 0.55; }
+  70%, to { transform: scale(2.6); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .attention-ring { animation: none; opacity: 0; }
+}

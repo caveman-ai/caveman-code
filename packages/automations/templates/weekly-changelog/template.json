@@ -1,0 +1,6 @@
+{
+  "title": "Weekly changelog",
+  "category": "Chores and reports",
+  "summary": "Every Friday, drafts this week's changelog entry from merged pull requests and opens it as a draft PR.",
+  "scope": "project"
+}

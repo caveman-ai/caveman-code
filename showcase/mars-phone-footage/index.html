@@ -1,0 +1,1632 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>IMG_0913.MOV</title>
+<!--
+  Twenty seconds of phone footage from Mars. One file, three.js from a CDN, no assets: the picture, the sound and
+  the caveman (the app's own Chief sprite, packages/ui/src/mascot) are all made here.
+
+  How a frame is made:
+    1. The scene (terrain, rocks, sun, dusty sky) is ray-marched once, at load, into two HDR panoramas: a wide one
+       for everything the phone looks at, and a fine one for the rock it zooms in on. The phone only ever turns
+       about the hand holding it, so the panoramas hold every frame of the take. Play is offered once they are
+       baked, with as many samples to the pixel as the GPU affords in a few seconds.
+    2. Sixty times a second the panoramas are filmed by a handheld phone: a path with a shaking hand on top, a
+       rolling shutter and motion blur, the caveman standing in the world as a flat picture that casts a shadow,
+       sun glare, auto-exposure, the phone's sharpening, tone curve and noise, then 8x8 DCT compression that
+       breaks up when the picture moves fast.
+    3. The sound is synthesised to the same clock: breath, wind, the hand on the phone, the club.
+
+  ?t=14 holds the frame at that second of the take, silent.
+-->
+<style>
+  html, body { height: 100%; margin: 0; background: #000; }
+  body {
+    display: grid; place-items: center;
+    color: #777; font: 11px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  figure { margin: 0; width: min(100vw, calc((100vh - 36px) * 9 / 16)); width: min(100vw, calc((100dvh - 36px) * 9 / 16)); }
+  .video { position: relative; }
+  canvas { display: block; width: 100%; aspect-ratio: 9 / 16; background: #000; }
+  button {
+    position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: none; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  button[hidden] { display: none; }
+  button svg { width: 68px; height: 68px; }
+  button:focus-visible { outline: 2px solid #fff; outline-offset: -8px; }
+  figcaption { padding: 8px 2px 0; white-space: pre-wrap; font-variant-numeric: tabular-nums; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.187.0/build/three.module.min.js" } }
+</script>
+</head>
+<body>
+<figure>
+  <div class="video">
+    <canvas id="frame" width="720" height="1280" role="img"
+      aria-label="Shaky phone footage on Mars. The person filming breathes hard, finds a small painted figure on a rock and bare footprints leading away from it, hears something, and turns around. A pixel-art caveman pops up and bonks them with his club."></canvas>
+    <button id="play" type="button" aria-label="Play, with sound" hidden>
+      <svg viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="34" fill="#000" fill-opacity=".45"/><path d="M27 20v28l22-14z" fill="#fff"/></svg>
+    </button>
+  </div>
+  <figcaption id="meta">LOADING</figcaption>
+</figure>
+
+<script type="module">
+import * as THREE from 'three';
+
+// ───────────────────────────────────────────────────────────── the phone and the take
+
+const W = 720, H = 1280;                 // the video: a phone held upright
+const DEG = Math.PI / 180;
+const FOCAL = (H / 2) / Math.tan(31.5 * DEG);   // focal length in pixels at 1x: 63 degrees from top to bottom
+const K1 = 0.03;                         // what is left of the lens's barrel distortion
+const EYE = 1.45;                        // the phone, metres above the ground
+const SHUTTER = 1 / 110;                 // seconds each row is exposed
+const READOUT = 0.010;                   // seconds from the top row's readout to the bottom row's
+
+const params = new URLSearchParams(location.search);
+// For people who asked for less motion the hand is steadier and the turn is a cut.
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const SHAKE = calm ? 0.3 : 1;
+
+const POP = 17.42;                       // the caveman pops up
+const BONK = 18.62;                      // the club lands
+const CUT = BONK + 0.2;                  // the phone is face down in the dust
+const LENGTH = CUT + 1.6;
+// ?t=14 holds the frame at that second of the take, silent. Anything that is not a time plays as usual.
+const asked = Number.parseFloat(params.get('t'));
+const heldAt = Number.isFinite(asked) ? Math.min(Math.max(asked, 0), LENGTH) : null;
+const BEHIND = -104;                     // azimuth the person ends up facing, degrees
+const PAINT = [57.6, -25.2];             // where the painted figure is, seen from here
+
+// Where the phone is pointed: time (s), azimuth, elevation (degrees), zoom. Each stretch eases in and out.
+const PATH = [
+  [0.0, -6, -9, 1],
+  [2.5, 12, -8, 1],                      // along the horizon
+  [2.95, -3, -9, 1],                     // a glance back
+  [4.4, 20, -9, 1],
+  [5.9, 56, -22, 1],                     // something on that rock
+  [6.9, 57, -23.5, 1],
+  [8.1, ...PAINT, 2.6],                  // closer
+  [10.4, ...PAINT, 2.6],
+  [11.5, 59, -35, 1.25],                 // down, to the footprints in front of it
+  [12.4, 62, -36, 1.25],
+  [14.3, 72, -13, 1.3],                  // and along them, away
+  [15.5, 72, -12, 1.3],                  // a noise behind
+  [calm ? 15.84 : 16.2, BEHIND, -8, 1],  // round
+  [POP, BEHIND, -7, 1],                  // nothing
+  [POP + 0.33, BEHIND, -13, 1],          // down, to him
+  [BONK, BEHIND, -12.5, 1],
+];
+if (calm) PATH.splice(12, 0, [15.83, 72, -12, 1.3]);
+
+// The person's breath: when (s), in or out, how long (s), how hard. It drives the sound and lifts the phone.
+const BREATHS = [
+  [0.15, 'in', 0.95, 0.75], [1.25, 'out', 1.15, 0.85], [2.75, 'in', 0.9, 0.8], [3.75, 'out', 1.05, 0.9],
+  [5.0, 'in', 0.7, 0.8], [5.75, 'out', 0.55, 0.8],
+  [6.35, 'in', 0.32, 1.5],                                             // the painting: a gasp, and held
+  [7.5, 'out', 1.2, 0.95],
+  [8.85, 'in', 0.5, 0.9], [9.4, 'out', 0.6, 0.9], [10.1, 'in', 0.5, 0.95], [10.65, 'out', 0.6, 0.95],
+  [11.35, 'in', 0.45, 1.0], [11.85, 'out', 0.55, 1.0], [12.5, 'in', 0.45, 1.05], [13.0, 'out', 0.5, 1.05],
+  [13.6, 'in', 0.4, 1.1], [14.05, 'out', 0.42, 1.0],
+  // the noise behind: nothing, for a second
+  [15.5, 'in', 0.35, 1.2],                                             // turning
+  [16.35, 'out', 0.95, 1.0],                                           // nothing there
+  [POP + 0.04, 'in', 0.28, 1.7],                                       // him
+  [POP + 0.5, 'out', 0.25, 0.9], [POP + 0.82, 'in', 0.22, 1.2],
+];
+const SCUFF = 14.5;                      // the noise behind
+
+const ease = (u) => u * u * u * (u * (6 * u - 15) + 10);
+function aim(t) {
+  t = Math.min(Math.max(t, 0), PATH[PATH.length - 1][0] - 1e-6);
+  const i = PATH.findLastIndex((key) => t >= key[0]), a = PATH[i], b = PATH[i + 1];
+  const e = ease((t - a[0]) / (b[0] - a[0]));
+  return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] * (b[3] / a[3]) ** e];
+}
+// How full the lungs are, 0..1.
+function chest(t) {
+  let v = 0.3;
+  for (const [at, kind, dur] of BREATHS) {
+    if (t < at) break;
+    const u = Math.min((t - at) / dur, 1), e = u * u * (3 - 2 * u);
+    v = kind === 'in' ? v + (1 - v) * e : v * (1 - e);
+  }
+  return v;
+}
+// How frightened the person is, 0..1: it shakes the hand.
+const FEAR = [[0, 0.35], [5.9, 0.5], [6.4, 0.75], [10.4, 0.85], [SCUFF, 0.9], [SCUFF + 0.1, 1], [LENGTH, 1]];
+function fear(t) {
+  const i = Math.max(FEAR.findLastIndex((key) => t >= key[0]), 0), a = FEAR[i], b = FEAR[Math.min(i + 1, FEAR.length - 1)];
+  return b === a ? a[1] : a[1] + (b[1] - a[1]) * Math.min((t - a[0]) / (b[0] - a[0]), 1);
+}
+// A hand never holds still: slow drift, and a shiver that grows with fear.
+const sway = (t, k) => 0.5 * Math.sin(1.13 * t + k) + 0.3 * Math.sin(2.71 * t + 1.7 * k) + 0.14 * Math.sin(5.3 * t + 2.3 * k) + 0.06 * Math.sin(9.7 * t + 3.1 * k);
+
+// The phone's attitude at time t: degrees, and its zoom.
+function pose(t) {
+  const [az, el, zoom] = aim(t);
+  const f = fear(t), hand = SHAKE * (0.5 + 0.7 * f) / Math.sqrt(zoom), shiver = SHAKE * (0.015 + 0.075 * f);
+  let yaw = az + hand * sway(t, 1) + shiver * Math.sin(58.4 * t);
+  let pitch = el + 0.8 * hand * sway(t, 2) + shiver * Math.sin(69.7 * t + 1) + 0.5 * SHAKE * (chest(t) - 0.5);
+  let roll = 1.5 + 1.8 * hand * sway(0.8 * t, 3);
+  if (t > POP + 0.08) {                                             // the flinch
+    const s = t - POP - 0.08, k = SHAKE * 2.2 * Math.exp(-s / 0.14);
+    pitch += k * Math.sin(41 * s); yaw += 0.6 * k * Math.sin(33 * s + 1);
+  }
+  if (t > BONK) {                                                   // the blow knocks the phone down and round
+    const k = 1 - Math.exp(-(t - BONK) / 0.06);
+    pitch -= 24 * k; roll += 34 * SHAKE * k; yaw += 7 * k;
+  }
+  return { yaw, pitch, roll, zoom };
+}
+
+// Camera axes in the world (right, up, forward). Azimuth turns from +Z towards +X.
+function axes({ yaw, pitch, roll }) {
+  const sa = Math.sin(yaw * DEG), ca = Math.cos(yaw * DEG), se = Math.sin(pitch * DEG), ce = Math.cos(pitch * DEG);
+  const r = [ca, 0, -sa], u = [-sa * se, ce, -ca * se], f = [sa * ce, se, ca * ce];
+  const cr = Math.cos(roll * DEG), sr = Math.sin(roll * DEG);
+  return { r: r.map((v, i) => v * cr + u[i] * sr), u: u.map((v, i) => v * cr - r[i] * sr), f };
+}
+
+// ───────────────────────────────────────────────────────────── the caveman
+
+// The app's Chief, from packages/ui/src/mascot/sprites.ts (body cut): standing, breathing, then the three frames
+// of his club swing. One character is one of his pixels.
+const GUY_INK = { k: '#0d0914', d: '#2c1912', n: '#58341e', h: '#f1b582', j: '#d07c4f', s: '#8b4530', o: '#eb9e3d', q: '#aa6128', g: '#4add80', w: '#8b4530', r: '#d07c4f' };
+const GUY_COLS = 26, GUY_ROWS = 24;
+const GUY_FRAMES = [
+  // standing
+  `
+....kkkk..................
+...krrwwk...kkkkk.........
+..krrwwnnk.knnnddkk.......
+..krwwnwnkknnddddddk......
+..kwwnnnkknnddddddddkk....
+..kwnwnnknndddddddddddk...
+...knnnknnddddddddddndk...
+....kwnknddhhhhhhhdddddk..
+....kwnkddhhhhhhhhhhdndk..
+....kwnkddhhkhhjhhkhdddk..
+....kwnkddhhhhjsjhhhhddk..
+....kwnkdddhdddddddhdddk..
+...khhhkddddddssdddddddk..
+..khhhhhkddddddddddddhhhk.
+..khshhhhdddddgdddddhhhhhk
+...khhhoooddodddoddookhhhk
+....knkonoodoooodoookshhk.
+....kkkooooooooonooqkshhk.
+......koonooooooooqkkhhhk.
+......koooooonoooqqk.kkk..
+......kkoqkkkoookkqkk.....
+.......khhsk..khhhsk......
+......khhhsk.khhhhsk......
+......kkkkkk.kkkkkkk......
+`,
+  // breathing in
+  `
+..........................
+....kkkk..................
+...krrwwk...kkkkk.........
+..krrwwnnk.knnnddkk.......
+..krwwnwnkknnddddddk......
+..kwwnnnkknnddddddddkk....
+..kwnwnnknndddddddddddk...
+...knnnknnddddddddddndk...
+....kwnknddhhhhhhhdddddk..
+....kwnkddhhhhhhhhhhdndk..
+....kwnkddhhkhhjhhkhdddk..
+....kwnkddhhhhjsjhhhhddk..
+....kwnkdddhdddddddhdddk..
+...khhhkddddddssdddddddkk.
+..khhhhhkddddddddddddhhhhk
+..khshhhhdddddgdddddokhhhk
+...khhhonoddodddoddokshhk.
+....knkoooodoooodooqkshhk.
+....kkkoonooooooooqkkhhhk.
+......koooooonoooqqk.kkk..
+......kkoqkkkoookkqkk.....
+.......khhsk..khhhsk......
+......khhhsk.khhhhsk......
+......kkkkkk.kkkkkkk......
+`,
+  // club up
+  `
+....kkkk..................
+...krrwwk...kkkkk.........
+..krrwwnnk.knnnddkk.......
+..krwwnwnkknnddddddk......
+..kwwnnnkknnddddddddkk....
+..kwnwnnknndddddddddddk...
+...knnnknnddddddddddndk...
+....kwnknddhhhhhhhdddddk..
+....kwnkddhhhhhhhhhhdndk..
+....kwnkddhhkhhjhhkhdddk..
+....kwnkddhhhhjsjhhhhddk..
+....kwnkdddhdddddddhdddk..
+...khhhkddddddssdddddddk..
+..khhhhhkddddddddddddhhhk.
+..khshhhhdddddgdddddhhhhk.
+...khhhoooddodddoddokhhk..
+....knkonoodoooodookshhk..
+....kkkooooooooonkhhhsk...
+......koonoooooookkkkk....
+......koooooonoooqqk......
+......kkoqkkkoookkqkk.....
+.......khhsk..khhhsk......
+......khhhsk.khhhhsk......
+......kkkkkk.kkkkkkk......
+`,
+  // club halfway down
+  `
+..........................
+............kkkkk.........
+...........knnnddkk.......
+..........knnddddddk......
+.kkkk....knnddddddddkk....
+krrwwk..knndddddddddddk...
+krwwnnkknnddddddddddndk...
+kwwnnnkknddhhhhhhhdddddk..
+kwnnnk.kddhhhhhhhhhhdndk..
+.kknnk.kddhhkhhjhhkhdddk..
+...kwnkkddhhhhjsjhhhhddk..
+....kwnkdddhdddddddhdddk..
+...khhhkddddddkkdddddddk..
+..khhhhhkddddddddddddhhhk.
+..khshhhhdddddgdddddhhhhk.
+...khhhoooddodddoddokhhk..
+......konoodoooodookshhk..
+......kooooooooonkhhhsk...
+......koonoooooookkkkk....
+......koooooonoooqqk......
+......kkoqkkkoookkqkk.....
+.......khhsk..khhhsk......
+......khhhsk.khhhhsk......
+......kkkkkk.kkkkkkk......
+`,
+  // club down
+  `
+..........................
+............kkkkk.........
+...........knnnddkk.......
+..........knnddddddk......
+.........knnddddddddkk....
+........knndddddddddddk...
+.......knnddddddddddndk...
+.......knddhhhhhhhdddddk..
+.......kddhhhhhhhhhhdndk..
+.......kddhhkhhjhhkhdddk..
+.......kddhhhhjsjhhhhddk..
+.......kdddhdddddddhdddk..
+...khhhkdddddkkkkddddddk..
+..khhhhhkdddddssdddddhhhk.
+..khshhhhdddddgdddddhhhhk.
+...knwnkooddodddoddokhhk..
+..knnwwnkoodoooodookshhk..
+.knwwrrwkooooooonkhhhsk...
+.kwwrrrwknoooooookkkkk....
+..kkkkkkooooonoooqqk......
+......kkoqkkkoookkqkk.....
+.......khhsk..khhhsk......
+......khhhsk.khhhhsk......
+......kkkkkk.kkkkkkk......
+`,
+];
+const [STANDING, BREATHING, CLUB_UP, CLUB_HALF, CLUB_DOWN] = [0, 1, 2, 3, 4];
+const GUY_TALL = 1.1;                    // metres
+
+// Where he is at time t, or null: which frame, how far away (m), how high his feet are (m), how far to the side (m).
+// Pixel things move in held frames, so he does not glide: he is here, then there.
+function guyAt(t) {
+  if (t < POP || t >= CUT) return null;
+  const s = t - POP;
+  if (s < 0.07) return { frame: STANDING, far: 1.7, up: -0.62, side: 0 };
+  if (s < 0.14) return { frame: STANDING, far: 1.7, up: 0.07, side: 0 };
+  if (t < BONK - 0.36) return { frame: Math.floor(s * 4) % 2 ? BREATHING : STANDING, far: 1.7, up: 0, side: 0 };
+  if (t < BONK - 0.17) return { frame: CLUB_UP, far: 1.7, up: -0.05, side: 0 };       // down a little, to jump
+  if (t < BONK - 0.07) return { frame: CLUB_HALF, far: 1.22, up: 0.52, side: 0.2 };
+  return { frame: CLUB_DOWN, far: 0.85, up: 0.94, side: 0.39 };            // the club's head, at the lens
+}
+
+// ───────────────────────────────────────────────────────────── the ground truth
+
+const SUN_AZ = 285 * DEG, SUN_EL = 30 * DEG;
+const SUN = [Math.sin(SUN_AZ) * Math.cos(SUN_EL), Math.sin(SUN_EL), Math.cos(SUN_AZ) * Math.cos(SUN_EL)];
+
+// The rock: 2.45 m out. Its flat face looks back towards the camera.
+const ROCK_AZ = 58 * DEG, ROCK_DIST = 2.45, FACE_AZ = 230 * DEG;
+const ROCK = [Math.sin(ROCK_AZ) * ROCK_DIST, Math.cos(ROCK_AZ) * ROCK_DIST];
+const FACE_X = [-Math.cos(FACE_AZ), Math.sin(FACE_AZ)];   // along the face, to the camera's right
+const FACE_Z = [Math.sin(FACE_AZ), Math.cos(FACE_AZ)];    // out of the face
+const onRock = (z, x) => [ROCK[0] + FACE_Z[0] * z + FACE_X[0] * x, ROCK[1] + FACE_Z[1] * z + FACE_X[1] * x];
+
+// Whoever painted it stood facing the face, then stepped off to the right and walked away.
+const FACING = FACE_AZ + Math.PI;
+const STAND = [
+  [...onRock(0.56, -0.10), FACING - 9 * DEG, -1],    // left foot
+  [...onRock(0.52, 0.11), FACING + 11 * DEG, 1],     // right foot
+];
+const TRAIL_AZ = 70 * DEG;
+const TRAIL_DIR = [Math.sin(TRAIL_AZ), Math.cos(TRAIL_AZ)];
+const TRAIL_START = (() => { const p = onRock(0.0, 0.82); return [p[0] - TRAIL_DIR[0] * 0.62, p[1] - TRAIL_DIR[1] * 0.62]; })();
+
+// ───────────────────────────────────────────────────────────── shaders
+
+const VERT = /* glsl */`
+in vec3 position;
+void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+
+const HEAD = /* glsl */`
+precision highp float;
+precision highp int;
+precision highp sampler2D;
+out vec4 fragColor;
+uniform int uZero;            // always 0: keeps compilers from unrolling the long loops
+`;
+
+const NOISE = /* glsl */`
+uniform sampler2D uNoise;
+float hash12(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
+vec2 hash22(vec2 p) { vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973)); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.xx + p3.yz) * p3.zy); }
+vec4 hash42(vec2 p) { vec4 p4 = fract(vec4(p.xyxy) * vec4(.1031, .1030, .0973, .1099)); p4 += dot(p4, p4.wzxy + 33.33); return fract((p4.xxyz + p4.yzzw) * p4.zywx); }
+float hash13(vec3 p3) { p3 = fract(p3 * .1031); p3 += dot(p3, p3.zyx + 31.32); return fract((p3.x + p3.y) * p3.z); }
+// Gradient noise, about -0.7..0.7, smooth enough to take normals from.
+float gnoise(vec2 x) {
+  vec2 i = floor(x), f = fract(x);
+  vec2 u = f * f * f * (f * (f * 6.0 - 15.0) + 10.0);
+  float a = dot(hash22(i) * 2.0 - 1.0, f);
+  float b = dot(hash22(i + vec2(1, 0)) * 2.0 - 1.0, f - vec2(1, 0));
+  float c = dot(hash22(i + vec2(0, 1)) * 2.0 - 1.0, f - vec2(0, 1));
+  float d = dot(hash22(i + vec2(1, 1)) * 2.0 - 1.0, f - vec2(1, 1));
+  return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+float vnoise3(vec3 x) {
+  vec3 i = floor(x), f = fract(x);
+  vec3 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(hash13(i), hash13(i + vec3(1, 0, 0)), u.x), mix(hash13(i + vec3(0, 1, 0)), hash13(i + vec3(1, 1, 0)), u.x), u.y),
+             mix(mix(hash13(i + vec3(0, 0, 1)), hash13(i + vec3(1, 0, 1)), u.x), mix(hash13(i + vec3(0, 1, 1)), hash13(i + vec3(1, 1, 1)), u.x), u.y), u.z);
+}
+// Cheap texture noise (four channels, 0..1) for colour, where 8-bit steps do not show.
+vec4 tnoise(vec2 x) { vec2 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f); return textureLod(uNoise, (i + f + 0.5) / 256.0, 0.0); }
+`;
+
+// The world, ray-marched into a panorama: radiance, and in the fourth channel the distance.
+const SCENE = HEAD + NOISE + /* glsl */`
+uniform vec2 uPanoSize;
+uniform vec4 uRegion;         // az0, el0, az span, el span (radians)
+uniform float uPix;           // one panorama pixel, in radians
+uniform int uSpp;
+uniform float uEye;           // height of the lens above the ground
+uniform vec3 uSun;
+uniform vec4 uRock;           // rock centre xz
+uniform vec4 uFace;           // face-right xz, face-out xz
+uniform vec4 uStand[2];       // footprint: centre xz, heading, side
+uniform vec4 uTrail;          // first walking print xz, walking direction xz
+uniform sampler2D uMasks;     // slow fields, 64 m to a tile: r stones, g loose sand, b tone, a mottle
+
+const float PI = 3.14159265;
+const float RMARS = 3389500.0;
+const float TMAX = 42000.0;
+const float BETA = 0.00014;            // dust extinction per metre
+const float A_DET = 0.03;              // the fine ground stays within this of the smooth ground
+const float FINE_TOP = 0.10;           // below this the fine ground is evaluated
+const float NEAR_RANGE = 80.0;         // fine ground exists out to here
+const vec2 EDGE_N = vec2(0.42, 0.9075);  // the bench falls away in this direction
+const float HS = 1.15;                 // size of the painted rock
+
+const vec3 SUN_E = vec3(1.25, 1.17, 1.02);            // sun and its aureole, on a surface facing it
+const vec3 SKY_HORIZON = vec3(0.178, 0.140, 0.079);
+const vec3 SKY_UPPER = vec3(0.208, 0.172, 0.102);
+const vec3 DUST = vec3(0.292, 0.226, 0.152);
+
+// set by callers
+float gDirK;       // turns height above a slab into a safe step along the current ray
+float gFineK;      // turns height above the fine ground into a step along the current ray (may overshoot; the marcher comes back)
+vec3 gRay;         // the ray being marched, or zero when map() is only being probed
+// set by map()
+float gLim;        // how far the ray may step before anything unvisited (a slab of stones, the next cell) could be met
+float gRock;       // 0 soil .. 1 rock
+float gHero;       // 1 when the rock is the painted one
+float gPrint;      // inside a footprint
+vec4 gRockHash;
+vec4 gRockHash2;
+vec3 gRockLocal;   // position in the stone's own frame, in units of its radius
+vec3 gHeroLocal;
+
+float smax(float a, float b, float k) { float h = max(k - abs(a - b), 0.0) / k; return max(a, b) + h * h * k * 0.25; }
+float smin(float a, float b, float k) { float h = max(k - abs(a - b), 0.0) / k; return min(a, b) - h * h * k * 0.25; }
+float sdSeg(vec2 p, vec2 a, vec2 b, float ra, float rb) {
+  vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+  return length(pa - ba * h) - mix(ra, rb, h);
+}
+float sdEll(vec2 p, vec2 c, vec2 r) { return (length((p - c) / r) - 1.0) * min(r.x, r.y); }
+vec4 masks(vec2 p) { return textureLod(uMasks, p * (1.0 / 64.0), 0.0); }
+
+// ── sky
+vec3 skyRadiance(vec3 rd) {
+  float y = max(rd.y, 0.0);
+  vec3 c = mix(SKY_HORIZON, SKY_UPPER, 1.0 - exp(-y * 9.0));
+  float mu = dot(rd, uSun);
+  c *= 1.0 + 0.9 * pow(max(mu, 0.0), 3.0) + 2.5 * pow(max(mu, 0.0), 24.0);
+  c *= 1.0 - 0.10 * max(-mu, 0.0);
+  return c;
+}
+
+// ── smooth ground: the bench the rover stands on, the valley below it, mesas, the far rim
+float Hs(vec2 p, float lt) {
+  float r2 = dot(p, p);
+  float en = dot(p, EDGE_N) - 17.0;
+  float h = gnoise(p * 0.02 + 5.0) * 0.9 + gnoise(p * 0.071 + 2.0) * 0.26 + dot(p, vec2(0.010, -0.004));
+  if (lt < 160.0) h += (1.0 - smoothstep(110.0, 160.0, lt)) * (gnoise(p * 0.21 + 11.0) * 0.07 + gnoise(p * 0.63 + 3.0) * 0.035);
+  if (en > -14.5) {
+    float s = en + gnoise(p * 0.031 + 3.7) * 10.0 + gnoise(p * 0.11 + 1.3) * 2.5 + gnoise(p * 0.37 + 6.1) * 1.3;
+    h = mix(h, -64.0, smoothstep(0.0, 170.0, s));
+    if (s > 100.0) {
+      vec2 q = p * 0.0011;
+      float fl = smoothstep(100.0, 420.0, s);
+      h += fl * (gnoise(q + 2.0) * 20.0 + gnoise(q * 2.7 + 5.2) * 8.0 + gnoise(q * 7.3 + 9.4) * 2.6 + gnoise(q * 19.0 + 1.0) * 0.9);
+      if (lt > 250.0) h += fl * (gnoise(p * 0.058 + 3.3) * 0.55 + gnoise(p * 0.17 + 8.1) * 0.22);      // small relief, for texture at distance
+      h += min(0.045 * max(s - 2400.0, 0.0), 520.0);
+      // mesas: an apron of talus, a cliff of caprock, a nearly flat top
+      float band = smoothstep(1300.0, 2300.0, s) * (1.0 - smoothstep(7500.0, 10500.0, s));
+      if (band > 0.0) {
+        float m = gnoise(p * 0.00040 + vec2(1.7, 4.2)) + 0.4 * gnoise(p * 0.0012 + 8.0) + 0.10 * gnoise(p * 0.0041 + 3.0) + 0.035 * gnoise(p * 0.013);
+        float apron = smoothstep(0.02, 0.27, m), cliff = smoothstep(0.25, 0.275, m), top = smoothstep(0.29, 0.75, m);
+        float tall = 105.0 + 70.0 * gnoise(p * 0.00021 + 9.0);
+        float gul = 1.0 - abs(gnoise(p * 0.014 + 3.0)) * 2.0;                                           // gullies down the apron
+        h += band * tall * (0.50 * apron * apron * (1.0 - 0.16 * gul * gul * (1.0 - cliff)) + 0.40 * cliff + 0.10 * top);
+      }
+      if (r2 > 8.1e7) {
+        float ang = atan(p.x, p.y);
+        h += smoothstep(9000.0, 21000.0, sqrt(r2)) * (1050.0 + 520.0 * gnoise(vec2(ang * 2.6, 1.3)) + 240.0 * gnoise(vec2(ang * 9.0, 7.7))
+           + 150.0 * (0.5 - abs(gnoise(vec2(ang * 29.0, 3.1)))) + 110.0 * gnoise(p * 0.0016 + 4.0) + 40.0 * gnoise(p * 0.006));
+      }
+    }
+  }
+  return h - r2 * (0.5 / RMARS);
+}
+
+// ── a bare human foot, pressed into dust. q: x towards the outside of a right foot, y from heel to toes (metres).
+float foot(vec2 q, out float edge) {
+  float dh = sdEll(q, vec2(0.002, 0.036), vec2(0.031, 0.037));
+  float dm = sdSeg(q, vec2(0.009, 0.055), vec2(0.017, 0.150), 0.022, 0.026);
+  float db1 = length(q - vec2(-0.020, 0.176)) - 0.029;
+  float db2 = length(q - vec2(0.018, 0.160)) - 0.028;
+  float t1 = sdEll(q, vec2(-0.031, 0.227), vec2(0.0155, 0.0200));
+  float t2 = sdEll(q, vec2(-0.009, 0.236), vec2(0.0105, 0.0135));
+  float t3 = sdEll(q, vec2(0.008, 0.231), vec2(0.0100, 0.0125));
+  float t4 = sdEll(q, vec2(0.0235, 0.221), vec2(0.0095, 0.0115));
+  float t5 = sdEll(q, vec2(0.0375, 0.207), vec2(0.0090, 0.0105));
+  float sole = smin(smin(dh, dm, 0.012), smin(db1, db2, 0.012), 0.012);
+  edge = min(sole, min(min(t1, t2), min(t3, min(t4, t5))));
+  // the whole sole leaves a shallow, crisp-edged tread; heel and ball sink further, as bowls; each toe its own pad
+  float press = 0.0028 * smoothstep(0.0025, -0.0035, sole);
+  press += 0.0062 * smoothstep(0.002, -0.022, dh) + 0.0050 * smoothstep(0.002, -0.020, min(db1, db2)) + 0.0012 * smoothstep(0.002, -0.014, dm);
+  press = max(press, 0.0068 * smoothstep(0.0025, -0.0075, t1));
+  press = max(press, 0.0054 * smoothstep(0.0020, -0.0055, t2));
+  press = max(press, 0.0050 * smoothstep(0.0020, -0.0055, t3));
+  press = max(press, 0.0046 * smoothstep(0.0020, -0.0050, t4));
+  press = max(press, 0.0042 * smoothstep(0.0020, -0.0050, t5));
+  return press;
+}
+// height change, how far inside the print, step scale
+vec3 onePrint(vec2 p, vec2 c, float heading, float side, float depth) {
+  vec2 fwd = vec2(sin(heading), cos(heading)), rgt = vec2(fwd.y, -fwd.x);
+  vec2 q = vec2(dot(p - c, rgt) * side, dot(p - c, fwd) + 0.1225);
+  float edge;
+  float press = foot(q, edge) * depth;
+  float rim = 0.0022 * smoothstep(0.024, 0.004, edge) * smoothstep(-0.001, 0.004, edge) * (0.5 + 1.2 * masks(p * 97.0).a);
+  return vec3(rim - press, smoothstep(0.004, -0.003, edge), mix(0.55, 1.0, smoothstep(0.010, 0.040, edge)));
+}
+const float STEP_L = 0.66;
+const float NSTEP = 36.0;
+// centre xz, side, a random number
+vec4 trailPrint(float i) {
+  vec2 dir = uTrail.zw, per = vec2(dir.y, -dir.x);
+  float side = mod(i, 2.0) < 0.5 ? 1.0 : -1.0;
+  vec2 j = hash22(vec2(i, 3.0)) - 0.5;
+  float s = i * STEP_L + j.x * 0.07;
+  return vec4(uTrail.xy + dir * s + per * (side * 0.058 + j.y * 0.03 + 0.09 * sin(s * 0.33 + 0.8)), side, j.x);
+}
+vec3 prints(vec2 p) {
+  vec3 res = vec3(0.0, 0.0, 1.0);
+  vec2 t = p - uTrail.xy, dir = uTrail.zw;
+  float s = dot(t, dir), l = dot(t, vec2(dir.y, -dir.x));
+  if (abs(l) < 0.34 && s > -0.3 && s < NSTEP * STEP_L) {
+    float i = clamp(floor(s / STEP_L + 0.5), 0.0, NSTEP - 1.0);
+    vec4 pr = trailPrint(i);
+    res = onePrint(p, pr.xy, atan(dir.x, dir.y) + pr.z * 0.12 + pr.w * 0.10, pr.z, 0.92 + 0.3 * pr.w);
+  }
+  vec2 d0 = p - uStand[0].xy, d1 = p - uStand[1].xy;
+  float m0 = dot(d0, d0), m1 = dot(d1, d1);
+  if (min(m0, m1) < 0.05) {
+    vec4 st = m0 < m1 ? uStand[0] : uStand[1];
+    res = onePrint(p, st.xy, st.z, st.w, 1.08);
+  }
+  return res;
+}
+// the painted rock's place on the ground: 0 at its foot, growing outwards (metres, roughly)
+float heroFoot(vec2 p) {
+  vec2 q = p - uRock.xy;
+  vec2 l = vec2(dot(q, uFace.xy), dot(q, uFace.zw)) / (HS * vec2(0.27, 0.19));
+  return (length(l) - 1.0) * HS * 0.19;
+}
+// no stone sits in a footprint or inside the painted rock
+bool keepOut(vec2 c, float r) {
+  if (heroFoot(c) < 0.0) return true;
+  vec2 t = c - uTrail.xy, dir = uTrail.zw;
+  float s = dot(t, dir), lat = dot(t, vec2(dir.y, -dir.x));
+  if (abs(lat) < 0.4 + r && s > -0.4 && s < NSTEP * STEP_L) {
+    vec4 pr = trailPrint(clamp(floor(s / STEP_L + 0.5), 0.0, NSTEP - 1.0));
+    if (distance(c, pr.xy) < 0.150 + r) return true;
+  }
+  return distance(c, uStand[0].xy) < 0.150 + r || distance(c, uStand[1].xy) < 0.150 + r;
+}
+
+// ── fine ground the rays are marched against: lumps, clods, wind ripples, sand banked on the rock, footprints.
+//    x height, y print mask, z step scale
+vec3 Hd(vec2 p, float lt) {
+  float fp = lt * uPix;
+  float h = gnoise(p * 1.9 + 17.0) * 0.014;
+  float f0 = 1.0 - smoothstep(0.012, 0.03, fp), f1 = 1.0 - smoothstep(0.004, 0.009, fp);
+  if (f0 > 0.0) {
+    h += f0 * 0.0045 * gnoise(p * 9.0 + 4.1);
+    float rm = smoothstep(0.76, 0.88, masks(p).g) * (1.0 - smoothstep(0.003, 0.008, fp));
+    if (rm > 0.0) {
+      float ph = dot(p, vec2(0.94, 0.34)) * (6.2832 / 0.092) * (1.0 + 0.15 * gnoise(p * 0.35)) + 3.5 * gnoise(p * 0.8) + 1.4 * gnoise(p * 2.9 + 5.0);
+      float rp = 0.5 + 0.5 * sin(ph);
+      h += rm * 0.0028 * (rp * rp * (3.0 - 2.0 * rp) - 0.5);
+    }
+  }
+  if (f1 > 0.0) h += f1 * 0.0024 * gnoise(p * 37.0 + 1.7);
+  float hf = heroFoot(p);
+  if (hf < 0.5) {                                                // wind has banked sand against the rock, deeper downwind
+    vec2 q = p - uRock.xy;
+    float lee = 0.5 + 0.5 * dot(normalize(q + 1e-4), vec2(0.82, -0.57));
+    h += 0.016 * exp(-max(hf, 0.0) / mix(0.05, 0.16, lee)) * (0.45 + 0.55 * lee);
+  }
+  vec3 pr = prints(p);
+  return vec3(h * (1.0 - 0.9 * pr.y) + pr.x, pr.y, pr.z);
+}
+
+// ── grains too small to march; they are shaded instead. one grain to a cell: height (metres), a random number
+vec2 gravel(vec2 p, float cells, float stony) {
+  vec2 q = p * cells, i = floor(q), f = fract(q) - 0.5;
+  vec4 h = hash42(i + cells);
+  if (h.w > 0.22 + 0.70 * smoothstep(0.30, 0.80, stony)) return vec2(0.0, h.z);
+  float rad = mix(0.12, 0.42, h.z * h.z);
+  float d = length((f - (h.xy - 0.5) * (1.0 - 2.0 * rad)) * vec2(1.0, 0.7 + 0.6 * h.x)) / rad;
+  float b = max(1.0 - d * d, 0.0);
+  return vec2(b * b * rad / cells * 0.9, h.z);
+}
+float micro(vec2 p, float stony, float fine) {
+  return gravel(p, 58.0, stony).x + gravel(p * mat2(0.8, 0.6, -0.6, 0.8) + 3.7, 104.0, stony).x
+       + fine * (gravel(p * mat2(0.28, 0.96, -0.96, 0.28) + 9.1, 190.0, stony).x + 0.0011 * gnoise(p * 93.0 + 8.3) + 0.0005 * gnoise(p * 260.0));
+}
+// relief too small or too far to resolve, as a speckle a few pixels across whatever the distance
+float speckle(vec2 p, float size) {
+  float l = log2(max(size, 1e-5)), fl = floor(l), c = exp2(fl);
+  return mix(hash12(floor(p / c) + fl * 7.0), hash12(floor(p / (2.0 * c)) + (fl + 1.0) * 7.0), l - fl) - 0.5;
+}
+
+// ── stones: a convex block cut by ten planes, squashed to a plate, tilted, fractured, some of them bedded
+const vec3 RN[30] = vec3[30](
+  vec3(0.434, 0.900, 0.033), vec3(-0.588, 0.680, 0.438), vec3(-0.012, 0.465, -0.885),
+  vec3(0.625, 0.236, 0.744), vec3(-0.958, 0.159, -0.239), vec3(0.867, -0.082, -0.491),
+  vec3(-0.213, -0.294, 0.932), vec3(-0.471, -0.412, -0.780), vec3(0.598, -0.774, 0.206),
+  vec3(-0.327, -0.928, 0.176), vec3(0.183, 0.871, 0.455), vec3(-0.744, 0.472, -0.473),
+  vec3(0.871, 0.438, -0.224), vec3(-0.593, 0.309, 0.744), vec3(0.031, 0.168, -0.985),
+  vec3(0.678, -0.078, 0.730), vec3(-0.884, -0.408, 0.227), vec3(0.544, -0.627, -0.558),
+  vec3(-0.234, -0.788, 0.569), vec3(-0.224, -0.906, -0.360), vec3(-0.333, 0.925, 0.184),
+  vec3(0.410, 0.699, -0.586), vec3(0.222, 0.589, 0.777), vec3(-0.780, 0.180, -0.599),
+  vec3(0.970, 0.240, 0.034), vec3(-0.694, -0.125, 0.709), vec3(-0.119, -0.281, -0.952),
+  vec3(0.418, -0.597, 0.685), vec3(-0.724, -0.682, -0.098), vec3(0.402, -0.885, -0.235));
+float rockSDF(vec3 v, float r, vec4 h, vec4 h2, float lt, out vec3 w) {
+  vec2 yaw = normalize(h.xy - 0.5 + 1e-4);
+  v.xz = vec2(yaw.x * v.x - yaw.y * v.z, yaw.y * v.x + yaw.x * v.z);
+  vec2 tl = normalize(vec2(1.0, (h2.w - 0.5) * 0.9));
+  v.xy = vec2(tl.x * v.x - tl.y * v.y, tl.y * v.x + tl.x * v.y);
+  vec3 s = vec3(1.0, mix(0.22, 0.85, h2.x * h2.x), mix(0.55, 1.0, h2.y));       // most stones are plates
+  vec3 is = 1.0 / (s * r), q = v * is, is2 = is * is;
+  w = v / r;
+  int set = int(h.w * 2.999) * 10;
+  float d = -1e9, edge = r * mix(0.02, 0.09, h.y * h.y);
+  for (int i = uZero; i < 10; i++) {
+    vec3 m = RN[set + i];
+    float o = 0.70 + 0.32 * fract(h.z * 13.7 * float(i + 1) + h.w * 5.3);
+    d = smax(d, (dot(q, m) - o) * inversesqrt(dot(m * m, is2)), edge);
+  }
+  d = smax(d, v.y - r * s.y * mix(0.25, 1.1, h2.z * h.y * 2.0), edge);          // a bedding plane for a top
+  float px = lt * uPix;
+  if (d < 0.2 * r && r > 5.0 * px) {
+    // creased noise breaks the faces into flake scars; finer octaves roughen them down to the pixel
+    float n = abs(vnoise3(w * 2.6 + h.xyz * 9.0) - 0.5) * 2.0 - 0.5, n2 = abs(vnoise3(w * 6.5 + 3.1) - 0.5) * 2.0 - 0.5;
+    float rough = 0.0;
+    if (r > 40.0 * px) rough = (vnoise3(w * 19.0 + 1.7) - 0.5) + 0.5 * (vnoise3(w * 47.0 + 8.2) - 0.5) * step(110.0 * px, r);
+    float bed = 0.0;
+    if (h2.z > 0.70) {                                         // beds along the plate, of uneven thickness, each standing proud or shy
+      float g = w.y / s.y * mix(2.5, 6.0, h.y), gw = g + 0.8 * sin(g * 2.3 + h.x * 6.0) + n * 0.5, gi = floor(gw), gf = gw - gi;
+      bed = mix(hash12(vec2(gi, h.x * 91.0)), hash12(vec2(gi + 1.0, h.x * 91.0)), smoothstep(0.86, 1.0, gf)) - 0.5
+          + 0.5 * smoothstep(0.84, 0.98, abs(gf - 0.5) * 2.0);
+    }
+    float pit = h2.z < 0.16 && r > 60.0 * px ? smoothstep(0.66, 0.78, vnoise3(w * 15.0 + 5.0)) : 0.0;      // gas bubbles in lava
+    d = (d + r * (0.085 * n + 0.035 * n2 + 0.016 * rough + 0.055 * bed + 0.018 * pit)) * 0.7;
+  }
+  return d;
+}
+// stones come in five sizes, each scattered on two lattices so that no grid shows; pebbles first
+const float OC_CELL[10] = float[10](8.5, 9.7, 1.75, 2.05, 0.60, 0.69, 0.215, 0.250, 0.078, 0.090);
+const float OC_RMAX[10] = float[10](1.50, 1.50, 0.32, 0.32, 0.110, 0.110, 0.040, 0.040, 0.0142, 0.0142);
+const float OC_DENS[10] = float[10](0.16, 0.16, 0.50, 0.50, 0.70, 0.70, 0.76, 0.76, 0.82, 0.82);
+const float OC_RANGE[10] = float[10](2600.0, 2600.0, 600.0, 600.0, 200.0, 200.0, 70.0, 70.0, 25.0, 25.0);
+const mat2 OC_ROT[10] = mat2[10](
+  mat2(0.921, 0.390, -0.390, 0.921), mat2(-0.323, 0.946, -0.946, -0.323), mat2(0.598, 0.802, -0.802, 0.598), mat2(-0.904, 0.427, -0.427, -0.904),
+  mat2(-0.286, 0.958, -0.958, -0.286), mat2(0.969, 0.247, -0.247, 0.969), mat2(0.831, 0.556, -0.556, 0.831), mat2(-0.589, 0.808, -0.808, -0.589),
+  mat2(0.140, 0.990, -0.990, 0.140), mat2(-0.990, 0.141, -0.141, -0.990));
+
+// ── the painted rock: a boulder of massive sandstone, fractured and wind-worn, with one flattish face
+const vec3 HN[9] = vec3[9](
+  vec3(0.0, 0.309, 0.951), vec3(0.100, 0.449, -0.888), vec3(-0.954, 0.221, 0.201), vec3(0.936, 0.181, 0.302), vec3(0.100, 0.988, -0.120),
+  vec3(-0.623, 0.773, 0.120), vec3(0.704, 0.704, -0.100), vec3(0.619, 0.200, 0.759), vec3(-0.340, 0.560, 0.756));
+const float HO[9] = float[9](0.150, 0.190, 0.265, 0.285, 0.400, 0.365, 0.380, 0.235, 0.345);
+// a few thick beds, dipping; how far each stands proud (-0.5..0.5), and where they part
+float heroBed(vec3 lq, out float seam) {
+  float y = lq.y + 0.14 * lq.x - 0.06 * lq.z + 0.020 * (vnoise3(lq * 4.0) - 0.5) + 0.006 * (vnoise3(lq * 15.0) - 0.5);
+  float c = y * 11.0 + 0.9 * sin(y * 7.0 + 2.0), ci = floor(c), cf = c - ci;
+  seam = smoothstep(0.86, 0.99, abs(cf - 0.5) * 2.0) * smoothstep(0.25, 0.60, vnoise3(vec3(lq.x * 7.0, ci * 3.7, lq.z * 7.0)));
+  return mix(hash12(vec2(ci, 6.0)), hash12(vec2(ci + 1.0, 6.0)), smoothstep(0.90, 1.0, cf)) - 0.5;
+}
+float heroSDF(vec3 p, float hs, out vec3 lq) {
+  vec2 q = p.xz - uRock.xy;
+  lq = vec3(dot(q, uFace.xy), p.y - hs + 0.035, dot(q, uFace.zw)) / HS;
+  float bs = length(lq - vec3(0.0, 0.15, 0.0)) - 0.50;
+  if (bs > 0.2) return bs * HS;
+  float d = -1e9;
+  for (int i = uZero; i < 9; i++) d = smax(d, dot(lq, HN[i]) - HO[i], 0.004);
+  if (d < 0.08) {
+    float n1 = vnoise3(lq * 3.6 + 2.0) - 0.5;
+    float c1 = abs(vnoise3(lq * 5.5 + 7.0) - 0.5) * 2.0 - 0.5, c2 = abs(vnoise3(lq * 13.0 + 5.0) - 0.5) * 2.0 - 0.5;
+    float n3 = vnoise3(lq * 44.0 + 9.0) - 0.5 + 0.7 * (vnoise3(lq * 120.0 + 4.0) - 0.5) + 0.45 * (vnoise3(lq * 270.0 + 1.0) - 0.5);
+    // corners knocked off
+    d = smax(d, 0.070 - length(lq - vec3(0.230, 0.400, 0.050)) + 0.04 * n1 + 0.02 * c2, 0.010);
+    d = smax(d, 0.060 - length(lq - vec3(-0.240, 0.150, 0.140)) + 0.03 * c1, 0.010);
+    d = smax(d, 0.080 - length(lq - vec3(-0.060, 0.420, -0.090)) + 0.03 * c1, 0.010);
+    float front = 1.0 - smoothstep(0.0, 0.05, abs(dot(lq, HN[0]) - HO[0]));
+    float seam;
+    float bed = heroBed(lq, seam);
+    d += mix(0.060, 0.026, front) * n1 + mix(0.050, 0.018, front) * c1 + mix(0.020, 0.008, front) * c2 + 0.0040 * n3
+       + mix(0.024, 0.004, front) * bed + mix(0.006, 0.0015, front) * seam;
+    d *= 0.62;
+  }
+  return d * HS;
+}
+
+// ── everything: signed distance (or step) to the nearest surface looked at; gLim bounds the step past what was not
+float map(vec3 p, float lt) {
+  float hs = Hs(p.xz, lt);
+  float above = p.y - hs;
+  gRock = 0.0; gHero = 0.0; gPrint = 0.0;
+  bool near = lt < NEAR_RANGE;
+  bool fine = near && above < FINE_TOP;
+  float gy = hs, d;
+  if (fine) {
+    vec3 hd = Hd(p.xz, lt);
+    gy += hd.x; gPrint = hd.y;
+    d = (p.y - gy) * gFineK * hd.z;
+  } else {
+    d = (above - (near ? A_DET : 0.0)) * gDirK;
+  }
+  float dr = 1e9, dlim = 1e9, kb = 0.01;
+  for (int o = uZero; o < 10; o++) {
+    if (lt > OC_RANGE[o]) continue;
+    bool small = o >= 6;
+    float rmax = OC_RMAX[o], top = rmax * 1.6;
+    if (small && !fine) { dlim = min(dlim, (above - A_DET - top) * gDirK); continue; }
+    float ab = p.y - (small ? gy : hs);
+    if (ab > top) { dlim = min(dlim, (ab - top) * gDirK); continue; }
+    float cs = OC_CELL[o];
+    vec2 q = OC_ROT[o] * p.xz;
+    vec2 id = floor(q / cs);
+    vec2 f = q - (id + 0.5) * cs;
+    vec2 rq = OC_ROT[o] * gRay.xz;
+    vec2 ex = (sign(rq) * (cs * 0.5) - f) / (abs(rq) + 1e-6) * sign(rq);
+    dlim = min(dlim, min(ex.x, ex.y) + cs * 0.004);
+    vec4 h = hash42(id + float(o) * 17.0 + 5.0);
+    float r = rmax * mix(0.28, 1.0, h.z * h.z) * (1.0 - smoothstep(0.65, 1.0, lt / OC_RANGE[o]));
+    vec2 c = (h.xy - 0.5) * (cs * 0.94 - 2.5 * r);
+    vec3 v = vec3(f.x - c.x, ab, f.y - c.y);
+    float bs = length(v) - 1.3 * r;
+    if (bs > 0.6 * r || r < 1e-4) { dlim = min(dlim, max(bs, 0.0) + 0.5 * r); continue; }
+    vec2 ww = ((id + 0.5) * cs) * OC_ROT[o];
+    if (h.w > OC_DENS[o] * mix(0.22, 1.25, smoothstep(0.28, 0.74, masks(ww).r)) || (o < 2 && dot(ww, ww) < 81.0)) continue;
+    if (near && keepOut(ww + c * OC_ROT[o], r)) continue;
+    vec4 h2 = hash42(id * 1.37 + float(o) * 9.0 + 71.3);
+    v.y = ab - r * mix(-0.10, 0.20, h2.z);                       // half sunk in the ground, more or less
+    vec3 w;
+    float dk = rockSDF(v, r, h, h2, lt, w);
+    if (dk < dr) { dr = dk; gRockHash = h; gRockHash2 = h2; gRockLocal = w; kb = min(0.07, r * 0.30); }
+  }
+  if (near) {
+    vec3 lq;
+    float dh = heroSDF(p, hs, lq);
+    if (dh < dr) { dr = dh; gHero = 1.0; kb = 0.035; gHeroLocal = lq; }
+  }
+  if (dr < 1e8) {
+    float h = clamp(0.5 + 0.5 * (d - dr) / kb, 0.0, 1.0);
+    d = mix(d, dr, h) - kb * h * (1.0 - h);
+    gRock = h;
+  }
+  gLim = dlim;
+  return d;
+}
+
+// ── the figure, in centimetres, feet at the origin
+float figure(vec2 q) {
+  float d = sdSeg(q, vec2(0.0, 3.3), vec2(0.35, 6.2), 0.72, 0.82);
+  d = min(d, length(q - vec2(0.55, 7.55)) - 1.00);
+  d = min(d, sdSeg(q, vec2(-0.25, 3.3), vec2(-1.15, 1.7), 0.42, 0.36));
+  d = min(d, sdSeg(q, vec2(-1.15, 1.7), vec2(-0.95, 0.1), 0.36, 0.30));
+  d = min(d, sdSeg(q, vec2(-0.95, 0.1), vec2(-1.75, 0.05), 0.26, 0.26));
+  d = min(d, sdSeg(q, vec2(0.30, 3.3), vec2(1.25, 1.8), 0.42, 0.36));
+  d = min(d, sdSeg(q, vec2(1.25, 1.8), vec2(1.75, 0.15), 0.36, 0.30));
+  d = min(d, sdSeg(q, vec2(1.75, 0.15), vec2(2.55, 0.10), 0.26, 0.26));
+  d = min(d, sdSeg(q, vec2(0.50, 5.9), vec2(2.20, 6.2), 0.36, 0.32));
+  d = min(d, sdSeg(q, vec2(2.20, 6.2), vec2(2.95, 7.6), 0.32, 0.28));
+  d = min(d, sdSeg(q, vec2(2.90, 7.4), vec2(4.30, 9.9), 0.32, 0.82));
+  d = min(d, sdSeg(q, vec2(0.20, 5.9), vec2(-1.20, 5.2), 0.34, 0.30));
+  d = min(d, sdSeg(q, vec2(-1.20, 5.2), vec2(-1.90, 4.1), 0.30, 0.26));
+  return d;
+}
+
+// ── light. the sun's disc is a third of a degree across: shadows are razor-edged where they start and soften with distance;
+//    the glow around the disc carries the rest and softens them more
+vec2 sunShadow(vec3 p, float lt) {
+  bool farT = lt > 900.0;
+  gDirK = farT ? 1.6 : 3.3;
+  gFineK = 2.0;
+  gRay = uSun;
+  float res = 1.0, soft = 1.0;
+  float t = max(0.0012, 1.2 * uPix * lt);
+  float tmax = lt < 300.0 ? 16.0 + lt * 0.5 : 3000.0;
+  float tmin = 0.0006 * lt + 0.0005;
+  for (int i = uZero; i < 80; i++) {
+    float h = map(p + uSun * t, lt);
+    res = min(res, 170.0 * h / t);
+    soft = min(soft, 11.0 * h / t);
+    if (res < 0.003) break;
+    t += max(min(h, gLim), tmin + (farT ? 0.012 : 0.004) * t);
+    if (t > tmax) break;
+  }
+  return clamp(vec2(res, soft), 0.0, 1.0);
+}
+float occlusion(vec3 p, vec3 n, float lt) {
+  gDirK = 0.9; gFineK = 0.9; gRay = vec3(0.0);
+  float sc = max(1.0, lt / 4.0), occ = 0.0, w = 1.0;
+  for (int i = uZero; i < 5; i++) {
+    float h = (0.003 + 0.022 * float(i * i)) * sc;
+    occ += max(0.80 * h - map(p + n * h, lt), 0.0) / h * w;
+    w *= 0.75;
+  }
+  return clamp(1.0 - 0.62 * occ, 0.0, 1.0);
+}
+
+vec3 shade(vec3 ro, vec3 rd, float t) {
+  vec3 p = ro + rd * t;
+  float fp = t * uPix;
+  gDirK = 0.9; gFineK = 0.9; gRay = vec3(0.0);
+  float e = max(0.00035, 0.5 * fp);
+  vec3 n = vec3(0.0);
+  for (int i = uZero; i < 5; i++) {
+    vec3 k = i < 4 ? 0.5773 * (2.0 * vec3(float(((i + 3) >> 1) & 1), float((i >> 1) & 1), float(i & 1)) - 1.0) : vec3(0.0);
+    n += k * map(p + k * e, t);
+  }
+  n = normalize(n);
+  float rock = gRock, hero = gHero, pm = gPrint;
+  vec4 rh = gRockHash, rh2 = gRockHash2;
+  vec3 rl = gRockLocal, hl = gHeroLocal;
+  vec4 mk = masks(p.xz), mk2 = masks(p.xz * 0.131 + 7.0);
+  float ndv = max(dot(n, -rd), 0.02);
+
+  // ── soil: orange dust where it lies smooth, darker and greyer where the ground is stony
+  float stony = smoothstep(0.28, 0.74, mk.r);
+  float tone = 0.45 * mk.b + 0.25 * mk2.b + 0.30 * masks(p.xz * 7.3).a;
+  if (t < 60.0) tone -= 0.45 * gnoise(p.xz * 1.9 + 17.0) + 0.12 * gnoise(p.xz * 9.0 + 4.1);      // pale dust settles in the hollows
+  vec3 alb = mix(vec3(0.240, 0.192, 0.138), DUST, smoothstep(0.30, 0.70, tone)) * mix(vec3(1.0), vec3(0.80, 0.82, 0.86), stony * 0.8);
+  float grit = 1.0;                                             // shadowing by grains too small to march
+  if (t > 300.0) {
+    // far ground: sheets of dark sand and bright dust; on the slopes, beds of harder and softer rock
+    vec4 fa = tnoise(p.xz * 0.0031 + 7.0), fb = tnoise(p.xz * 0.013 + 2.0), fc = tnoise(p.xz * 0.061), fd = tnoise(p.xz * 0.23 + 4.0);
+    float ft = 0.42 * fa.x + 0.26 * fb.y + 0.18 * fc.z + 0.14 * fd.w;
+    alb = mix(vec3(0.150, 0.124, 0.096), vec3(0.300, 0.236, 0.160), smoothstep(0.32, 0.70, ft));
+    float steep = smoothstep(0.93, 0.74, n.y);
+    float layer = p.y * 0.11 + fa.y * 2.4 + fb.x * 0.6, li = floor(layer);
+    float strata = mix(hash12(vec2(li, 2.0)), hash12(vec2(li + 1.0, 2.0)), smoothstep(0.75, 1.0, layer - li));
+    alb = mix(alb, mix(vec3(0.105, 0.092, 0.078), vec3(0.275, 0.222, 0.158), strata), steep * 0.9);
+  }
+  // relief below the reach of the marcher, at every distance: a speckle a few pixels across
+  float sp = speckle(p.xz, 3.2 * fp / ndv) + 0.6 * speckle(p.xz + 31.7, 7.0 * fp / ndv);
+  float spAmt = mix(0.10, 0.26, stony) * smoothstep(0.0006, 0.004, fp);
+  alb *= 1.0 + spAmt * sp;
+  grit *= 1.0 - spAmt * 1.3 * max(-sp, 0.0);
+  if (fp < 0.006) {
+    // grains: every couple of millimetres another mineral, a few of them dark basalt, a few bright
+    float f = 1.0 - smoothstep(0.0025, 0.006, fp);
+    float g1 = hash12(floor(p.xz * 540.0)), g2 = hash12(floor(p.xz * 230.0) + 9.0);
+    alb *= 1.0 + f * (0.22 * (g1 - 0.5) + 0.16 * (g2 - 0.5) - 0.40 * step(0.94, g1) * stony + 0.22 * step(g2, 0.05));
+  }
+  if (fp < 0.0030 && rock < 0.5) {
+    float fg = (1.0 - smoothstep(0.0016, 0.0030, fp)) * (1.0 - pm) * (1.0 - 2.0 * rock);
+    float fine = 1.0 - smoothstep(0.0008, 0.0016, fp);
+    float h0 = micro(p.xz, mk.r, fine);
+    vec2 gr = vec2(micro(p.xz + vec2(0.0010, 0.0), mk.r, fine), micro(p.xz + vec2(0.0, 0.0010), mk.r, fine)) - h0;
+    n = normalize(n - fg * vec3(gr.x, 0.0, gr.y) / 0.0010);
+    vec2 sd = normalize(uSun.xz);
+    float tanEl = uSun.y / length(uSun.xz), lit = 1.0;
+    for (int j = uZero; j < 4; j++) {
+      float dd = 0.0018 * float(j + 1);
+      lit = min(lit, 1.0 - smoothstep(0.0, 0.0010, micro(p.xz + sd * dd, mk.r, fine) - h0 - dd * tanEl));
+    }
+    grit *= mix(1.0, lit, fg);
+    vec2 g1 = gravel(p.xz, 58.0, mk.r), g2 = gravel(p.xz * mat2(0.8, 0.6, -0.6, 0.8) + 3.7, 104.0, mk.r);
+    float on = max(smoothstep(0.0, 0.0006, g1.x), smoothstep(0.0, 0.0004, g2.x));
+    alb = mix(alb, mix(vec3(0.120, 0.118, 0.112), vec3(0.300, 0.275, 0.235), g1.y * g2.y * 1.6), fg * on * 0.85);
+  }
+  alb *= mix(vec3(1.0), vec3(0.66, 0.60, 0.55), pm);            // trodden dust is darker and redder
+
+  // ── rock
+  float bare = 0.0, glint = 0.0;
+  if (rock > 0.001) {
+    vec3 ra;
+    float mantle = smoothstep(0.42, 0.90, n.y) * smoothstep(0.25, 0.70, masks(p.xz * 31.0 + 20.0).a + 0.35 * (rh2.y - 0.5));
+    if (hero > 0.5) {
+      float seam;
+      float bed = heroBed(hl, seam);
+      float m1 = vnoise3(hl * 23.0), m2 = vnoise3(hl * 90.0), m3 = hash12(floor(hl.xy * 900.0) + floor(hl.z * 900.0));
+      ra = vec3(0.215, 0.200, 0.172) * (0.90 + 0.22 * bed) * (0.80 + 0.22 * m1 + 0.16 * m2 + 0.26 * (m3 - 0.5)) * (1.0 - 0.25 * seam);
+      ra = mix(ra, vec3(0.150, 0.120, 0.092), 0.5 * smoothstep(0.62, 0.80, vnoise3(hl * 9.0 + 40.0)));             // a darker weathering rind in patches
+      // the painting, on the flattish face
+      vec3 nf = vec3(uFace.z * HN[0].z, HN[0].y, uFace.w * HN[0].z);
+      float onFace = smoothstep(0.050, 0.030, abs(dot(hl, HN[0]) - HO[0])) * smoothstep(0.45, 0.75, dot(n, nf));
+      vec2 fq = vec2(hl.x + 0.045, dot(hl, vec3(0.0, 0.951, -0.309)) - 0.115) * HS * 100.0 / 1.5;
+      float wob = (vnoise3(hl * 160.0) - 0.5) * 0.24 + (vnoise3(hl * 55.0 + 3.0) - 0.5) * 0.18;
+      float fd = figure(fq) + wob;
+      float pig = smoothstep(0.10, -0.12, fd) * onFace;
+      float core = smoothstep(-0.10, -0.38, fd);
+      pig *= mix(0.50 + 0.50 * smoothstep(0.25, 0.55, vnoise3(hl * 210.0 + 7.0)), 1.0, 0.7 * core);   // the pigment sits on the high grains and misses the pits
+      pig *= (0.80 + 0.20 * smoothstep(0.2, 0.6, m2)) * (1.0 - 0.4 * seam);
+      ra = mix(ra, vec3(0.066, 0.026, 0.018), pig * 0.94);
+      mantle = max(mantle * 0.9, smoothstep(0.10, 0.0, hl.y) * 0.7 * m1);           // sand thrown against its foot
+    } else {
+      // from dark basalt to pale mudstone; clean faces are grey, weathered ones tan
+      float lum = mix(0.125, 0.42, rh.y * sqrt(rh.y));
+      float m1 = vnoise3(rl * 7.0 + rh.xyz * 30.0), m2 = vnoise3(rl * 23.0);
+      float speck = fp < 0.004 ? hash12(floor(p.xz * 520.0) + floor(p.y * 520.0)) - 0.5 : 0.0;
+      ra = lum * mix(vec3(0.97, 1.0, 1.02), vec3(1.10, 0.95, 0.78), rh.x * rh.x) * (0.80 + 0.26 * m1 + 0.14 * m2 + 0.24 * speck);
+      if (rh2.z > 0.70) {                                         // beds differ in tone
+        float g = rl.y / mix(0.22, 0.85, rh2.x * rh2.x) * mix(2.5, 6.0, rh.y);
+        ra *= 0.86 + 0.28 * hash12(vec2(floor(g + 0.8 * sin(g * 2.3 + rh.x * 6.0)), rh.x * 91.0));
+      }
+      glint = (1.0 - rh.y) * step(fp, 0.004);
+    }
+    ra = mix(ra, DUST, 0.10);                                                       // everything wears a film of dust
+    mantle = max(mantle, smoothstep(0.80, 0.25, rock));
+    bare = (1.0 - mantle) * smoothstep(0.3, 0.8, rock);
+    alb = mix(alb, mix(ra, DUST * 0.97, mantle), smoothstep(0.20, 0.70, rock));
+  }
+
+  // ── sun, sky, ground
+  vec2 sh = sunShadow(p + n * e * 1.5, t);
+  float ao = occlusion(p, n, t);
+  float ndl = max(dot(n, uSun), 0.0);
+  float cg = dot(uSun, -rd);
+  float soil = 1.0 - bare;
+  float body = mix(ndl, min(2.0 * ndl / (ndl + ndv), 1.3 * ndl + 0.08), 0.16 * soil);
+  float phase = 1.0 + (0.20 * cg + 0.30 * exp(-acos(clamp(cg, -1.0, 1.0)) / 0.10)) * soil;
+  vec3 light = SUN_E * (0.82 * sh.x + 0.18 * sh.y) * grit * body * phase;
+  vec3 skyE = PI * vec3(0.105, 0.088, 0.054) * (0.5 + 0.5 * n.y) * (1.0 + 0.30 * max(dot(n, normalize(vec3(uSun.x, 0.25, uSun.z))), 0.0));
+  vec3 bounce = vec3(0.29, 0.21, 0.12) * (0.5 - 0.5 * n.y) * (0.5 + 0.5 * sh.y);
+  vec3 col = alb / PI * (light + (skyE + bounce) * ao * (0.7 + 0.3 * grit));
+  // wind-polished rock keeps a sheen, and here and there a crystal face catches the sun
+  if (bare > 0.01) {
+    vec3 hv = normalize(uSun - rd);
+    float a = 0.36, nh = max(dot(n, hv), 0.0);
+    float dg = a * a / (PI * pow(nh * nh * (a * a - 1.0) + 1.0, 2.0));
+    col += SUN_E * sh.x * ndl * dg * 0.012 * bare * (hero > 0.5 ? 0.3 : 1.0);
+    if (glint > 0.0) {
+      vec3 jit = vec3(hash12(floor(p.xz * 700.0)), hash12(floor(p.zy * 700.0) + 3.0), hash12(floor(p.xy * 700.0) + 5.0)) - 0.5;
+      col += SUN_E * sh.x * bare * glint * 0.9 * pow(max(dot(normalize(n + 0.9 * jit), hv), 0.0), 160.0);
+    }
+  }
+  return col;
+}
+
+vec3 render(vec3 ro, vec3 rd, out float dist) {
+  dist = TMAX;
+  vec3 sky = skyRadiance(rd);
+  if (rd.y > 0.115) return sky;
+  float t = 0.05, lo = 0.0, hi = -1.0, down = max(-rd.y, 0.0);
+  int polish = 0;
+  bool escaped = false;
+  gFineK = 1.0 / (down + 0.35);
+  gRay = rd;
+  for (int i = uZero; i < 256; i++) {
+    bool farT = t > 900.0;
+    gDirK = 1.0 / (down + (farT ? 0.6 : 0.3));
+    float d = map(ro + rd * t, t);
+    if (hi > 0.0) {                                               // a crossing is bracketed: halve it
+      if (d < 0.0) hi = t; else lo = t;
+      if (++polish == 7) { t = lo; break; }
+      t = 0.5 * (lo + hi);
+      continue;
+    }
+    if (d < 0.0) { hi = t; t = 0.5 * (lo + hi); continue; }       // stepped into the ground
+    lo = t;
+    if (d < 0.00035 * t) { if (++polish == 3) break; t += d; continue; }
+    t += max(min(d, farT ? min(gLim, 0.07 * t) : gLim), (t < 300.0 ? 0.0004 : 0.002) * t);
+    if (t > TMAX) { escaped = true; break; }
+  }
+  if (escaped) return sky;
+  dist = t;
+  vec3 col = shade(ro, rd, t);
+  vec3 haze = skyRadiance(normalize(vec3(rd.x, 0.0, rd.z)));
+  float tr = exp(-BETA * t);
+  return col * tr + haze * (1.0 - tr);
+}
+
+void main() {
+  vec3 acc = vec3(0.0); float dsum = 0.0;
+  vec3 eye = vec3(0.0, Hs(vec2(0.0), 0.0) + uEye, 0.0);
+  vec2 rs = hash22(gl_FragCoord.xy);
+  for (int s = uZero; s < uSpp; s++) {
+    vec2 j = fract(rs + float(s) * vec2(0.7548776662, 0.5698402910));
+    vec2 uv = (floor(gl_FragCoord.xy) + j) / uPanoSize;
+    float az = uRegion.x + uv.x * uRegion.z, el = uRegion.y + uv.y * uRegion.w;
+    float dist;
+    acc += render(eye, vec3(sin(az) * cos(el), sin(el), cos(az) * cos(el)), dist);
+    dsum += dist;
+  }
+  fragColor = vec4(acc / float(uSpp), dsum / float(uSpp));
+}
+`;
+
+// What every camera pass shares: from a pixel of the video, at a moment of the frame's time, to the world.
+const LENS = /* glsl */`
+uniform sampler2D uWide, uDetail;
+uniform vec4 uWideRegion, uDetailRegion;   // azimuth and elevation of a corner, then their spans
+uniform vec3 uRa, uUa, uFa;                // the phone's axes when this frame's time begins
+uniform vec3 uRb, uUb, uFb;                // and when it ends
+uniform vec2 uSensor;
+uniform float uFocal, uK1;
+vec3 rayAt(vec2 xy, float when) {
+  vec2 n = (xy - 0.5 * uSensor) / uFocal;
+  n *= 1.0 + uK1 * dot(n, n);
+  return normalize(mix(uRa, uRb, when) * n.x + mix(uUa, uUb, when) * n.y + mix(uFa, uFb, when));
+}
+// Radiance along a direction, and the distance to what is there.
+vec4 world(vec3 d) {
+  vec2 a = vec2(atan(d.x, d.z), asin(d.y));
+  vec4 c = texture(uWide, (a - uWideRegion.xy) / uWideRegion.zw);
+  vec2 q = (a - uDetailRegion.xy) / uDetailRegion.zw, edge = min(q, 1.0 - q);
+  float inside = smoothstep(0.0, 0.04, min(edge.x, edge.y));
+  return inside > 0.0 ? mix(c, texture(uDetail, q), inside) : c;
+}
+`;
+
+// A small copy of the frame, for the exposure meter.
+const METER = HEAD + LENS + /* glsl */`
+uniform vec2 uMeterSize;
+void main() {
+  vec3 acc = vec3(0.0);
+  vec2 cell = uSensor / uMeterSize;
+  for (int i = uZero; i < 16; i++) {
+    vec2 o = (vec2(float(i & 3), float(i >> 2)) + 0.5) / 4.0;
+    acc += world(rayAt((floor(gl_FragCoord.xy) + o) * cell, 0.5)).rgb;
+  }
+  fragColor = vec4(acc / 16.0, 1.0);
+}
+`;
+
+// The light that reaches the sensor: the world through a moving lens, the caveman, the sun's glare.
+const OPTICS = HEAD + LENS + /* glsl */`
+uniform sampler2D uGuy;        // his frames, side by side
+uniform int uGuyFrame;         // which one; -1 when he is not there
+uniform vec4 uGuyAt;           // azimuth he stands at, how far, how high his feet are, how far to the side
+uniform vec3 uSun;
+uniform float uEye;
+uniform vec2 uShare;           // how the frame's time divides: the exposure's share, the readout's share
+uniform int uTaps, uFrame;
+const float GUY_CELL = ${(GUY_TALL / GUY_ROWS).toFixed(5)};          // one of his pixels, metres
+const vec3 GUY_LIGHT = vec3(0.088, 0.078, 0.062);                    // the sun is behind him: sky and ground light his front
+const vec3 IN_HIS_SHADOW = vec3(0.36, 0.34, 0.29);                   // what the sky alone leaves of sunlit ground
+const vec3 GLARE = vec3(0.30, 0.27, 0.21);
+
+// He is a flat, upright picture standing in the world. His pixel where a ray from p along d meets it, or nothing.
+// p is relative to the lens.
+vec4 guy(vec3 p, vec3 d) {
+  vec2 fwd = vec2(sin(uGuyAt.x), cos(uGuyAt.x));
+  float toward = dot(d.xz, fwd);
+  if (toward < 1e-3) return vec4(0.0);
+  float s = (uGuyAt.y - dot(p.xz, fwd)) / toward;
+  if (s < 0.0) return vec4(0.0);
+  vec3 q = p + d * s;
+  float x = dot(q.xz, vec2(fwd.y, -fwd.x)) - uGuyAt.w, y = q.y + uEye - uGuyAt.z;
+  ivec2 c = ivec2(floor(vec2(x / GUY_CELL + ${(GUY_COLS / 2).toFixed(1)}, ${GUY_ROWS.toFixed(1)} - y / GUY_CELL)));
+  if (c.x < 0 || c.x >= ${GUY_COLS} || c.y < 0 || c.y >= ${GUY_ROWS}) return vec4(0.0);
+  return texelFetch(uGuy, ivec2(uGuyFrame * ${GUY_COLS} + c.x, c.y), 0);
+}
+void main() {
+  vec2 xy = gl_FragCoord.xy;
+  float row = 1.0 - xy.y / uSensor.y;                                // the sensor reads out from the top row down
+  float jitter = fract(52.9829189 * fract(dot(xy + 5.588238 * float(uFrame & 63), vec2(0.06711056, 0.00583715))));
+  // his shadow on the ground, where the sun's way to it passes through him
+  vec3 lit = vec3(1.0);
+  if (uGuyFrame >= 0) {
+    vec3 d = rayAt(xy, 0.5 * uShare.x + uShare.y * row);
+    float far = world(d).a;
+    if (far < 60.0) lit = mix(lit, IN_HIS_SHADOW, guy(d * far, uSun).a);
+  }
+  vec3 col = vec3(0.0);
+  for (int i = uZero; i < uTaps; i++) {
+    vec3 d = rayAt(xy, uShare.x * (float(i) + jitter) / float(uTaps) + uShare.y * row);
+    vec3 c = world(d).rgb * lit;
+    if (uGuyFrame >= 0) { vec4 g = guy(vec3(0.0), d); c = mix(c, pow(g.rgb, vec3(2.2)) * GUY_LIGHT, g.a); }
+    float mu = max(dot(d, uSun), 0.0);                               // the sun itself, and its glare in the lens
+    col += c + GLARE * (60.0 * pow(mu, 2500.0) + 0.9 * pow(mu, 180.0) + 0.10 * pow(mu, 12.0));
+  }
+  fragColor = vec4(col / float(uTaps), 1.0);
+}
+`;
+
+// What the phone makes of it: sharpening, exposure, white balance, its tone curve, a little noise.
+const PHONE = HEAD + /* glsl */`
+uniform sampler2D uOptics;
+uniform vec2 uSensor;
+uniform float uExposure;
+uniform int uFrame;
+uint pcg(uint v) { uint s = v * 747796405u + 2891336453u; uint w = ((s >> ((s >> 28u) + 4u)) ^ s) * 277803737u; return (w >> 22u) ^ w; }
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy), top = textureSize(uOptics, 0) - 1;
+  vec3 c = texelFetch(uOptics, p, 0).rgb;
+  vec3 around = 0.25 * (texelFetch(uOptics, clamp(p + ivec2(2, 0), ivec2(0), top), 0).rgb + texelFetch(uOptics, clamp(p - ivec2(2, 0), ivec2(0), top), 0).rgb
+                      + texelFetch(uOptics, clamp(p + ivec2(0, 2), ivec2(0), top), 0).rgb + texelFetch(uOptics, clamp(p - ivec2(0, 2), ivec2(0), top), 0).rgb);
+  c = max(c + 0.55 * (c - around), 0.0);                             // phones sharpen
+  vec2 q = gl_FragCoord.xy / uSensor - 0.5;
+  c *= uExposure * (1.0 - 0.45 * dot(q, q)) * vec3(0.96, 1.0, 1.10); // darker corners; white balance pulls the dust part of the way to grey
+  c = (c * (2.51 * c + 0.03)) / (c * (2.43 * c + 0.59) + 0.14);      // the tone curve: bright, with soft highlights
+  c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / 2.2));
+  float luma = dot(c, vec3(0.299, 0.587, 0.114));
+  c = mix(vec3(luma), c, 1.15);
+  // noise: fine in brightness, blotchy in colour, more of it in the dark
+  uint s = pcg(uint(p.x) + uint(p.y) * 4099u + uint(uFrame) * 7919u);
+  uint s2 = pcg(uint(p.x >> 1) + uint(p.y >> 1) * 4099u + uint(uFrame) * 104729u);
+  vec2 tint = vec2(float(s2 & 1023u), float((s2 >> 10) & 1023u)) / 1023.0 - 0.5;
+  c += (0.018 + 0.035 * (1.0 - luma)) * (float(s & 1023u) / 1023.0 - 0.5 + 0.7 * vec3(tint.x, -0.5 * (tint.x + tint.y), tint.y));
+  fragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+}
+`;
+
+// Compression, in four passes: DCT along rows, DCT along columns with quantisation, then both inverses.
+// Luma works in 8x8 blocks; chroma is halved each way, so its blocks cover 16x16 pixels.
+const DCT = /* glsl */`
+uniform sampler2D uIn;
+uniform vec2 uSensor;
+const float A0 = 0.35355339, A1 = 0.5;
+float basis(float n, int u) { return (u == 0 ? A0 : A1) * cos((2.0 * n + 1.0) * float(u) * 0.19634954); }
+`;
+const DCT_ROWS = HEAD + DCT + /* glsl */`
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  int u = p.x & 7, bx = p.x - u, u2 = (p.x & 15) >> 1, bx2 = p.x - (p.x & 15);
+  float y = 0.0; vec2 cc = vec2(0.0);
+  for (int n = uZero; n < 8; n++) {
+    vec3 a = texelFetch(uIn, ivec2(bx + n, p.y), 0).rgb * 255.0;
+    y += (dot(a, vec3(0.299, 0.587, 0.114)) - 128.0) * basis(float(n), u);
+    vec3 b = texture(uIn, vec2(float(bx2 + 2 * n) + 1.0, float(p.y) + 0.5) / uSensor).rgb * 255.0;
+    cc += vec2(dot(b, vec3(-0.168736, -0.331264, 0.5)), dot(b, vec3(0.5, -0.418688, -0.081312))) * basis(float(n), u2);
+  }
+  fragColor = vec4(y, cc, 1.0);
+}
+`;
+const DCT_COLS = HEAD + DCT + /* glsl */`
+uniform sampler2D uQuant;
+uniform float uCoarse;        // how hard the encoder is squeezing: it scales the quantisation tables
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  int v = p.y & 7, by = p.y - v, v2 = (p.y & 15) >> 1, by2 = p.y - (p.y & 15);
+  float y = 0.0; vec2 cc = vec2(0.0);
+  for (int n = uZero; n < 8; n++) {
+    y += texelFetch(uIn, ivec2(p.x, by + n), 0).r * basis(float(n), v);
+    cc += texture(uIn, vec2(float(p.x) + 0.5, float(by2 + 2 * n) + 1.0) / uSensor).gb * basis(float(n), v2);
+  }
+  float qy = max(floor(texelFetch(uQuant, ivec2(p.x & 7, v), 0).r * uCoarse + 0.5), 1.0);
+  float qc = max(floor(texelFetch(uQuant, ivec2((p.x & 15) >> 1, v2), 0).g * uCoarse + 0.5), 1.0);
+  fragColor = vec4(floor(y / qy + 0.5) * qy, floor(cc / qc + 0.5) * qc, 1.0);
+}
+`;
+const IDCT_COLS = HEAD + DCT + /* glsl */`
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  int m = p.y & 7, by = p.y - m, by2 = p.y - (p.y & 15);
+  float m2 = (float(p.y & 15) + 0.5) * 0.5 - 0.5;
+  float y = 0.0; vec2 cc = vec2(0.0);
+  for (int v = uZero; v < 8; v++) {
+    y += texelFetch(uIn, ivec2(p.x, by + v), 0).r * basis(float(m), v);
+    cc += texelFetch(uIn, ivec2(p.x, by2 + 2 * v), 0).gb * basis(m2, v);
+  }
+  fragColor = vec4(y, cc, 1.0);
+}
+`;
+const IDCT_ROWS = HEAD + DCT + /* glsl */`
+void main() {
+  ivec2 p = ivec2(gl_FragCoord.xy);
+  int m = p.x & 7, bx = p.x - m, bx2 = p.x - (p.x & 15);
+  float m2 = (float(p.x & 15) + 0.5) * 0.5 - 0.5;
+  float y = 0.0; vec2 cc = vec2(0.0);
+  for (int u = uZero; u < 8; u++) {
+    y += texelFetch(uIn, ivec2(bx + u, p.y), 0).r * basis(float(m), u);
+    cc += texelFetch(uIn, ivec2(bx2 + 2 * u, p.y), 0).gb * basis(m2, u);
+  }
+  y += 128.0;
+  vec3 rgb = vec3(y + 1.402 * cc.y, y - 0.344136 * cc.x - 0.714136 * cc.y, y + 1.772 * cc.x);
+  fragColor = vec4(floor(clamp(rgb, 0.0, 255.0) + 0.5) / 255.0, 1.0);
+}
+`;
+
+// ───────────────────────────────────────────────────────────── renderer
+
+const canvas = document.getElementById('frame');
+const meta = document.getElementById('meta');
+const play = document.getElementById('play');
+
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, depth: false, stencil: false, powerPreference: 'high-performance' });
+} catch { /* reported below */ }
+const gl = renderer?.getContext();
+if (!(gl instanceof WebGL2RenderingContext) || !(gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('EXT_color_buffer_float'))) {
+  meta.textContent = 'This browser cannot play it (WebGL 2 with float targets is needed)';
+  throw new Error('WebGL 2 with float render targets is required');
+}
+renderer.setPixelRatio(1);
+renderer.setSize(W, H, false);
+renderer.autoClear = false;
+let lost = false;
+canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); lost = true; play.hidden = true; meta.textContent = 'The graphics context was lost; reload to play it'; });
+
+const stage = new THREE.Scene();
+const eye = new THREE.Camera();
+const quad = new THREE.Mesh(new THREE.BufferGeometry().setAttribute('position', new THREE.BufferAttribute(new Float32Array([-1, -1, 0, 3, -1, 0, -1, 3, 0]), 3)));
+quad.frustumCulled = false;
+stage.add(quad);
+
+function pass(fragmentShader, uniforms) {
+  return new THREE.RawShaderMaterial({
+    glslVersion: THREE.GLSL3, vertexShader: VERT, fragmentShader, depthTest: false, depthWrite: false,
+    uniforms: { uZero: { value: 0 }, ...uniforms },
+  });
+}
+function draw(material, target) {
+  quad.material = material;
+  renderer.setRenderTarget(target);
+  renderer.render(stage, eye);
+}
+function target(w, h, type, filter) {
+  return new THREE.WebGLRenderTarget(w, h, { type, format: THREE.RGBAFormat, minFilter: filter, magFilter: filter, depthBuffer: false, stencilBuffer: false, generateMipmaps: false });
+}
+function blank() {
+  renderer.setRenderTarget(null);
+  renderer.clear();
+}
+
+// noise for colour
+const noiseTex = (() => {
+  const data = new Uint8Array(256 * 256 * 4);
+  let s = 0x9e3779b9;
+  for (let i = 0; i < data.length; i++) { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; data[i] = s & 255; }
+  const tex = new THREE.DataTexture(data, 256, 256, THREE.RGBAFormat, THREE.UnsignedByteType);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.minFilter = tex.magFilter = THREE.LinearFilter; tex.needsUpdate = true;
+  return tex;
+})();
+
+// slow fields the ground is laid out by, 64 m to a tile: where it is stony, where sand lies loose, tone, mottle
+const maskTex = (() => {
+  const N = 256, data = new Uint8Array(N * N * 4);
+  let s = 0x1234567;
+  const rand = () => { s ^= s << 13; s ^= s >>> 17; s ^= s << 5; return (s >>> 0) / 4294967296; };
+  for (let ch = 0; ch < 4; ch++) {
+    const field = new Float32Array(N * N);
+    let amp = 1, total = 0;
+    for (let cells = ch === 3 ? 16 : 4; cells <= N / 2; cells *= 2, amp *= ch === 3 ? 0.7 : 0.55) {
+      const lattice = Float32Array.from({ length: cells * cells }, rand);
+      const at = (x, y) => lattice[(y % cells) * cells + (x % cells)];
+      for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+        const fx = (x / N) * cells, fy = (y / N) * cells, ix = Math.floor(fx), iy = Math.floor(fy);
+        const ux = (fx - ix) ** 2 * (3 - 2 * (fx - ix)), uy = (fy - iy) ** 2 * (3 - 2 * (fy - iy));
+        field[y * N + x] += amp * ((at(ix, iy) * (1 - ux) + at(ix + 1, iy) * ux) * (1 - uy) + (at(ix, iy + 1) * (1 - ux) + at(ix + 1, iy + 1) * ux) * uy);
+      }
+      total += amp;
+    }
+    // stretch to the full range: the octaves average towards the middle
+    for (let i = 0; i < N * N; i++) data[i * 4 + ch] = Math.max(0, Math.min(255, Math.round(((field[i] / total - 0.5) * 2.2 + 0.5) * 255)));
+  }
+  const tex = new THREE.DataTexture(data, N, N, THREE.RGBAFormat, THREE.UnsignedByteType);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping; tex.minFilter = tex.magFilter = THREE.LinearFilter; tex.needsUpdate = true;
+  return tex;
+})();
+
+// the standard JPEG tables; the encoder scales them
+const quantTex = (() => {
+  const luma = [16, 11, 10, 16, 24, 40, 51, 61, 12, 12, 14, 19, 26, 58, 60, 55, 14, 13, 16, 24, 40, 57, 69, 56, 14, 17, 22, 29, 51, 87, 80, 62,
+    18, 22, 37, 56, 68, 109, 103, 77, 24, 35, 55, 64, 81, 104, 113, 92, 49, 64, 78, 87, 103, 121, 120, 101, 72, 92, 95, 98, 112, 100, 103, 99];
+  const chroma = [17, 18, 24, 47, 99, 99, 99, 99, 18, 21, 26, 66, 99, 99, 99, 99, 24, 26, 56, 99, 99, 99, 99, 99, 47, 66, 99, 99, 99, 99, 99, 99];
+  const data = new Float32Array(64 * 4);
+  for (let i = 0; i < 64; i++) { data[i * 4] = luma[i]; data[i * 4 + 1] = chroma[i] ?? 99; data[i * 4 + 3] = 1; }
+  const tex = new THREE.DataTexture(data, 8, 8, THREE.RGBAFormat, THREE.FloatType);
+  tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.needsUpdate = true;
+  return tex;
+})();
+
+// the caveman's frames, side by side
+const guyTex = (() => {
+  const across = GUY_COLS * GUY_FRAMES.length, data = new Uint8Array(across * GUY_ROWS * 4);
+  GUY_FRAMES.forEach((art, f) => art.trim().split('\n').forEach((line, y) => [...line.trim()].forEach((ink, x) => {
+    if (ink === '.') return;
+    const i = (y * across + f * GUY_COLS + x) * 4, hex = GUY_INK[ink];
+    for (let c = 0; c < 3; c++) data[i + c] = parseInt(hex.slice(1 + 2 * c, 3 + 2 * c), 16);
+    data[i + 3] = 255;
+  })));
+  const tex = new THREE.DataTexture(data, across, GUY_ROWS, THREE.RGBAFormat, THREE.UnsignedByteType);
+  tex.minFilter = tex.magFilter = THREE.NearestFilter; tex.needsUpdate = true;
+  return tex;
+})();
+
+// ───────────────────────────────────────────────────────────── the panoramas: what to bake
+
+const TILE = 512;                        // a panorama is baked a tile at a time
+const MAX_ZOOM = Math.max(...PATH.map((key) => key[3]));
+
+// The part of the world the phone looks at over the take while zoomed in by at least `minZoom`, with a margin:
+// [least azimuth, least elevation, greatest azimuth, greatest elevation].
+function seen(minZoom) {
+  let az0 = Infinity, az1 = -Infinity, el0 = Infinity, el1 = -Infinity;
+  for (let step = 0; step <= Math.ceil(CUT * 60); step++) {
+    const t = step / 60, zoom = pose(t).zoom;
+    if (zoom < minZoom) continue;
+    for (const when of [t - SHUTTER, t + READOUT]) {
+      const ax = axes(pose(when));
+      for (let y = -24; y <= H + 24; y += 48) for (let x = -24; x <= W + 24; x += 48) {     // all over the frame
+        const nx = (x - W / 2) / (FOCAL * zoom), ny = (y - H / 2) / (FOCAL * zoom), k = 1 + K1 * (nx * nx + ny * ny);
+        const dx = ax.r[0] * nx * k + ax.u[0] * ny * k + ax.f[0], dy = ax.r[1] * nx * k + ax.u[1] * ny * k + ax.f[1], dz = ax.r[2] * nx * k + ax.u[2] * ny * k + ax.f[2];
+        const az = Math.atan2(dx, dz), el = Math.asin(dy / Math.hypot(dx, dy, dz));
+        az0 = Math.min(az0, az); az1 = Math.max(az1, az); el0 = Math.min(el0, el); el1 = Math.max(el1, el);
+      }
+    }
+  }
+  const pad = 1.5 * DEG;
+  return [az0 - pad, el0 - pad, az1 + pad, el1 + pad];
+}
+const SEEN = seen(0), SEEN_CLOSE = seen(1.6);
+
+// A panorama of that part of the world, `perRad` pixels to the radian.
+function plan(perRad, [az0, el0, az1, el1]) {
+  const pix = 1 / perRad, w = Math.ceil((az1 - az0) / pix), h = Math.ceil((el1 - el0) / pix);
+  return { w, h, pix, region: new THREE.Vector4(az0, el0, w * pix, h * pix) };
+}
+
+const sceneMat = pass(SCENE, {
+  uNoise: { value: noiseTex },
+  uMasks: { value: maskTex },
+  uPanoSize: { value: new THREE.Vector2() },
+  uRegion: { value: null },
+  uPix: { value: 0 },
+  uSpp: { value: 1 },
+  uEye: { value: EYE },
+  uSun: { value: new THREE.Vector3(...SUN) },
+  uRock: { value: new THREE.Vector4(ROCK[0], ROCK[1], 0, 0) },
+  uFace: { value: new THREE.Vector4(FACE_X[0], FACE_X[1], FACE_Z[0], FACE_Z[1]) },
+  uStand: { value: STAND.map((s) => new THREE.Vector4(...s)) },
+  uTrail: { value: new THREE.Vector4(TRAIL_START[0], TRAIL_START[1], TRAIL_DIR[0], TRAIL_DIR[1]) },
+});
+
+// The wide panorama is a little finer than the video at 1x; the fine one is a little finer than the video zoomed
+// right in. `sharp` scales both down for a slow GPU.
+const wideRT = target(TILE, TILE, THREE.HalfFloatType, THREE.LinearFilter);
+const detailRT = target(TILE, TILE, THREE.HalfFloatType, THREE.LinearFilter);
+wideRT.scissorTest = detailRT.scissorTest = true;
+const lens = {
+  uWide: { value: wideRT.texture }, uDetail: { value: detailRT.texture }, uWideRegion: { value: null }, uDetailRegion: { value: null },
+  uRa: { value: new THREE.Vector3() }, uUa: { value: new THREE.Vector3() }, uFa: { value: new THREE.Vector3() },
+  uRb: { value: new THREE.Vector3() }, uUb: { value: new THREE.Vector3() }, uFb: { value: new THREE.Vector3() },
+  uSensor: { value: new THREE.Vector2(W, H) }, uFocal: { value: FOCAL }, uK1: { value: K1 },
+};
+let panos;
+function layOut(sharp) {
+  const limit = gl.getParameter(gl.MAX_TEXTURE_SIZE);
+  let wide = plan(1.25 * FOCAL * sharp, SEEN);
+  if (wide.w > limit) wide = plan((1.25 * FOCAL * sharp * limit) / wide.w * 0.98, SEEN);
+  const detail = plan(1.08 * FOCAL * MAX_ZOOM * sharp, SEEN_CLOSE);
+  wideRT.setSize(wide.w, wide.h); detailRT.setSize(detail.w, detail.h);
+  lens.uWideRegion.value = wide.region; lens.uDetailRegion.value = detail.region;
+  panos = [{ ...wide, rt: wideRT }, { ...detail, rt: detailRT }];
+}
+layOut(matchMedia('(pointer: coarse)').matches ? 0.75 : 1);
+
+// Waits until the GPU has drawn everything asked of a panorama so far: reading a pixel back cannot return sooner.
+const onePixel = new Uint16Array(4);
+const drawn = (pano) => renderer.readRenderTargetPixels(pano.rt, 0, 0, 1, 1, onePixel);
+// Hands the page back between two tiles, to paint the count. A message comes round at once; a timer would be held
+// back four milliseconds.
+const turns = new MessageChannel();
+const nextTurn = () => new Promise((resolve) => { turns.port1.onmessage = resolve; turns.port2.postMessage(null); });
+function bakeRect(pano, x, y, w, h, spp) {
+  sceneMat.uniforms.uPanoSize.value.set(pano.w, pano.h);
+  sceneMat.uniforms.uRegion.value = pano.region;
+  sceneMat.uniforms.uPix.value = pano.pix;
+  sceneMat.uniforms.uSpp.value = spp;
+  pano.rt.scissor.set(x, y, w, h);
+  draw(sceneMat, pano.rt);
+}
+
+// The panoramas are baked a tile at a time, waiting for the GPU after each. The tiles are big because every wait
+// costs milliseconds however little was asked for. And all of it is baked before the take is offered: a GPU that
+// is still baking cannot also film sixty frames a second.
+const whenBaked = (async () => {
+  const tilesOf = (pano) => {
+    const tiles = [];
+    for (let y = 0; y < pano.h; y += TILE) for (let x = 0; x < pano.w; x += TILE) tiles.push([pano, x, y, Math.min(TILE, pano.w - x), Math.min(TILE, pano.h - y)]);
+    return tiles;
+  };
+  const bake = async (tile, spp) => {
+    bakeRect(...tile, spp);
+    drawn(tile[0]);
+    await nextTurn();
+    if (gl.isContextLost()) throw new Error('context lost');
+  };
+  // A pixel of each panorama first: that compiles the shader and has the panorama's memory made. Then the rest of
+  // the page sets itself up. Neither is what a tile costs.
+  for (const pano of panos) { bakeRect(pano, 0, 0, 1, 1, 1); drawn(pano); }
+  await nextTurn();
+  // A spread of tiles at one sample, timed, to learn how fast this GPU is and so how many samples to afford.
+  let tiles = panos.flatMap(tilesOf);
+  const probes = [0, 1, 2, 3, 4, 5].map((k) => tiles[Math.floor(((k + 0.5) / 6) * tiles.length)]), t0 = performance.now();
+  for (const tile of probes) await bake(tile, 1);
+  const pixels = (some) => some.reduce((sum, [, , , w, h]) => sum + w * h, 0);
+  const onePass = ((performance.now() - t0) * pixels(tiles)) / pixels(probes);   // ms to bake everything at one sample
+  if (onePass > 8000) { layOut(0.75); tiles = panos.flatMap(tilesOf); }       // a slow GPU: coarser panoramas, a shorter wait
+  const spp = Math.max(1, Math.min(4, Math.floor(5000 / onePass)));           // the samples five seconds of baking buy
+  for (let k = 0; k < tiles.length; k++) {
+    await bake(tiles[k], spp);
+    meta.textContent = `LOADING ${String(Math.floor(((k + 1) / tiles.length) * 100)).padStart(3)}%`;
+  }
+})();
+whenBaked.catch(() => { if (!lost) meta.textContent = 'It could not be rendered here; reload to try again'; });
+
+// ───────────────────────────────────────────────────────────── filming
+
+const METER_W = 18, METER_H = 32;
+const meterRT = target(METER_W, METER_H, THREE.HalfFloatType, THREE.LinearFilter);
+const opticsRT = target(W, H, THREE.HalfFloatType, THREE.NearestFilter);
+const rgbRT = target(W, H, THREE.UnsignedByteType, THREE.LinearFilter);
+const dctA = target(W, H, THREE.HalfFloatType, THREE.LinearFilter);
+const dctB = target(W, H, THREE.HalfFloatType, THREE.NearestFilter);
+
+const sensor = { uSensor: lens.uSensor };
+const meterMat = pass(METER, { ...lens, uMeterSize: { value: new THREE.Vector2(METER_W, METER_H) } });
+const opticsMat = pass(OPTICS, {
+  ...lens, uGuy: { value: guyTex }, uGuyFrame: { value: -1 }, uGuyAt: { value: new THREE.Vector4() },
+  uSun: { value: new THREE.Vector3(...SUN) }, uEye: { value: EYE },
+  uShare: { value: new THREE.Vector2(SHUTTER / (SHUTTER + READOUT), READOUT / (SHUTTER + READOUT)) }, uTaps: { value: 8 }, uFrame: { value: 0 },
+});
+const phoneMat = pass(PHONE, { uOptics: { value: opticsRT.texture }, ...sensor, uExposure: { value: 1 }, uFrame: { value: 0 } });
+const dctRows = pass(DCT_ROWS, { uIn: { value: rgbRT.texture }, ...sensor });
+const dctCols = pass(DCT_COLS, { uIn: { value: dctA.texture }, uQuant: { value: quantTex }, uCoarse: { value: 1 }, ...sensor });
+const idctCols = pass(IDCT_COLS, { uIn: { value: dctB.texture }, ...sensor });
+const idctRows = pass(IDCT_ROWS, { uIn: { value: dctA.texture }, ...sensor });
+
+// Auto-exposure, as a phone does it: aim the frame's average at a middle grey, and get there over a third of a second.
+let exposure = 0;
+const meterPixels = new Uint16Array(METER_W * METER_H * 4);
+function meter(dt) {
+  draw(meterMat, meterRT);
+  renderer.readRenderTargetPixels(meterRT, 0, 0, METER_W, METER_H, meterPixels);
+  let sum = 0;
+  for (let i = 0; i < meterPixels.length; i += 4) {
+    const half = THREE.DataUtils.fromHalfFloat;
+    sum += Math.log(Math.max(0.25 * half(meterPixels[i]) + 0.65 * half(meterPixels[i + 1]) + 0.1 * half(meterPixels[i + 2]), 1e-4));
+  }
+  const wanted = 0.19 / Math.exp(sum / (METER_W * METER_H));
+  exposure = exposure === 0 || dt === null ? wanted : exposure * (wanted / exposure) ** (1 - Math.exp(-dt / 0.3));
+}
+
+// One frame of video, at time t. dt: seconds since the last one, or null to let the exposure settle at once.
+let frames = 0;
+function film(t, dt) {
+  const b = axes(pose(t + READOUT)), zoom = pose(t).zoom;
+  let a = axes(pose(t - SHUTTER));
+  if (a.f[0] * b.f[0] + a.f[1] * b.f[1] + a.f[2] * b.f[2] < 0.5) a = b;     // a cut, not a turn: nothing to smear across
+  lens.uRa.value.set(...a.r); lens.uUa.value.set(...a.u); lens.uFa.value.set(...a.f);
+  lens.uRb.value.set(...b.r); lens.uUb.value.set(...b.u); lens.uFb.value.set(...b.f);
+  lens.uFocal.value = FOCAL * zoom;
+  const guy = guyAt(t);
+  opticsMat.uniforms.uGuyFrame.value = guy ? guy.frame : -1;
+  if (guy) opticsMat.uniforms.uGuyAt.value.set(BEHIND * DEG, guy.far, guy.up, guy.side);
+  opticsMat.uniforms.uFrame.value = phoneMat.uniforms.uFrame.value = frames++;
+  meter(dt);
+  phoneMat.uniforms.uExposure.value = exposure;
+  // the encoder has a fixed budget: the faster the picture moves, the harder it squeezes; the blow breaks it up
+  const turn = Math.acos(Math.min(a.f[0] * b.f[0] + a.f[1] * b.f[1] + a.f[2] * b.f[2], 1)) / DEG / (SHUTTER + READOUT) * zoom;   // degrees a second, on screen
+  dctCols.uniforms.uCoarse.value = t > BONK ? 6 : 0.7 + 2.2 * Math.min(turn / 300, 1);
+  draw(opticsMat, opticsRT);
+  draw(phoneMat, rgbRT);
+  draw(dctRows, dctA);
+  draw(dctCols, dctB);
+  draw(idctCols, dctA);
+  draw(idctRows, null);
+}
+
+// ───────────────────────────────────────────────────────────── the sound
+
+// Everything heard, scheduled on the audio clock from `at`: the breath, the wind, the hand on the phone, the club.
+function perform(ctx, at) {
+  const end = at + LENGTH;
+  const amp = (level = 0) => { const g = ctx.createGain(); g.gain.value = level; return g; };
+  const filter = (type, freq, q = 1, gain = 0) => { const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; f.gain.value = gain; return f; };
+  // two seconds of pink noise: everything that hisses, rumbles or cracks is cut from it
+  const hiss = ctx.createBuffer(1, 2 * ctx.sampleRate, ctx.sampleRate);
+  const samples = hiss.getChannelData(0);
+  for (let i = 0, b0 = 0, b1 = 0, b2 = 0; i < samples.length; i++) {
+    const white = Math.random() * 2 - 1;
+    b0 = 0.99765 * b0 + white * 0.099046; b1 = 0.963 * b1 + white * 0.2965164; b2 = 0.57 * b2 + white * 1.0526913;
+    samples[i] = (b0 + b1 + b2 + white * 0.1848) * 0.22;
+  }
+  const noise = (offset) => { const n = ctx.createBufferSource(); n.buffer = hiss; n.loop = true; n.start(at, offset); n.stop(end); return n; };
+
+  // the phone's microphone, then its limiter; once the phone lies face down everything is muffled
+  const mic = filter('lowpass', 9000, 0.5), limiter = ctx.createDynamicsCompressor(), out = amp(0.5);
+  limiter.threshold.value = -20; limiter.knee.value = 12; limiter.ratio.value = 5; limiter.attack.value = 0.004; limiter.release.value = 0.12;
+  mic.connect(limiter).connect(out).connect(ctx.destination);
+  mic.frequency.setValueAtTime(9000, at + CUT);
+  mic.frequency.exponentialRampToValueAtTime(420, at + CUT + 0.05);
+  out.gain.setValueAtTime(0.5, end - 0.4);
+  out.gain.linearRampToValueAtTime(0, end);
+
+  // Breath is air made noisy by the throat and mouth: a band or two of noise, in thinner and higher than out.
+  // Fear makes the breath out shake. It is heard from inside a helmet: close, boxy, dull, with a short ring.
+  const inGain = amp(), outGain = amp(), inTone = filter('bandpass', 1500, 1.1), outTone = filter('bandpass', 900, 1.2);
+  const inAir = noise(0), outAir = noise(0.7);
+  inAir.connect(inTone).connect(inGain);
+  inAir.connect(filter('bandpass', 3100, 1.6)).connect(amp(0.55)).connect(inGain);
+  outAir.connect(outTone).connect(outGain);
+  outAir.connect(filter('bandpass', 1900, 2)).connect(amp(0.45)).connect(outGain);
+  outAir.connect(filter('bandpass', 420, 1.3)).connect(amp(0.7)).connect(outGain);
+  const shiver = ctx.createOscillator(), shiverDepth = amp(0.1), shaken = amp(1);
+  shiver.frequency.value = 8.6;
+  shiver.connect(shiverDepth).connect(shaken.gain);
+  shiver.start(at); shiver.stop(end);
+  shiverDepth.gain.setValueAtTime(0.1, at);
+  shiverDepth.gain.linearRampToValueAtTime(0.45, at + 7.5);
+  shiverDepth.gain.linearRampToValueAtTime(0.6, at + 16.3);
+  outGain.connect(shaken);
+  const helmet = filter('peaking', 720, 2.2, 7), helmet2 = filter('peaking', 1650, 3, 4), dull = filter('lowpass', 3600, 0.7), dull2 = filter('lowpass', 4800, 0.7);
+  const ring = ctx.createDelay(0.05), ringBack = amp(0.36), breath = amp(3.0);
+  ring.delayTime.value = 0.0063;
+  inGain.connect(helmet); shaken.connect(helmet);
+  helmet.connect(helmet2).connect(dull).connect(dull2).connect(breath);
+  dull2.connect(ring); ring.connect(ringBack).connect(ring); ring.connect(amp(0.5)).connect(breath);
+  breath.connect(mic);
+  for (const [t, kind, dur, level] of BREATHS) {
+    const a = at + t;
+    if (kind === 'in') {
+      inGain.gain.setValueAtTime(0, a);
+      inGain.gain.linearRampToValueAtTime(level, a + 0.6 * dur);
+      inGain.gain.linearRampToValueAtTime(0, a + dur);
+      inTone.frequency.setValueAtTime(1200 + 300 * level, a);
+      inTone.frequency.linearRampToValueAtTime(1700 + 500 * level, a + dur);
+    } else {
+      outGain.gain.setValueAtTime(0, a);
+      outGain.gain.linearRampToValueAtTime(level, a + Math.min(0.08, 0.2 * dur));
+      outGain.gain.setTargetAtTime(0, a + 0.3 * dur, 0.25 * dur);
+      outTone.frequency.setValueAtTime(1150, a);
+      outTone.frequency.exponentialRampToValueAtTime(700, a + dur);
+    }
+  }
+  for (const stop of [SCUFF, BONK]) { inGain.gain.setTargetAtTime(0, at + stop, 0.015); outGain.gain.setTargetAtTime(0, at + stop, 0.015); }   // breath caught; breath knocked out
+
+  // thin wind, and the rumble of the hand moving the phone
+  const wind = amp(0.05), gust = ctx.createOscillator(), gustDepth = amp(0.02);
+  gust.frequency.value = 0.13; gust.connect(gustDepth).connect(wind.gain); gust.start(at); gust.stop(end);
+  noise(1.3).connect(filter('lowpass', 320, 0.5)).connect(wind).connect(mic);
+  const rumble = amp(), speeds = new Float32Array(Math.ceil(CUT * 20));
+  for (let i = 0; i < speeds.length; i++) {
+    const a = axes(pose(i / 20)).f, b = axes(pose(i / 20 + 0.05)).f;
+    speeds[i] = 0.9 * Math.min(Math.acos(Math.min(a[0] * b[0] + a[1] * b[1] + a[2] * b[2], 1)) / DEG / 0.05 / 350, 1) ** 1.5;
+  }
+  rumble.gain.setValueCurveAtTime(speeds, at, CUT);
+  noise(0.2).connect(filter('lowpass', 150, 0.7)).connect(rumble).connect(mic);
+
+  // short sounds: a burst of noise about one pitch, and a tone that falls
+  const grit = noise(1.1);
+  const burst = (t, freq, dur, level, q = 1.2, into = mic) => {
+    const g = amp();
+    grit.connect(filter('bandpass', freq, q)).connect(g).connect(into);
+    g.gain.setValueAtTime(0, at + t);
+    g.gain.linearRampToValueAtTime(level, at + t + 0.004);
+    g.gain.setTargetAtTime(0, at + t + 0.01, dur / 3);
+  };
+  const thump = (t, type, from, to, dur, level, into = mic) => {
+    const o = ctx.createOscillator(), g = amp();
+    o.type = type;
+    o.frequency.setValueAtTime(from, at + t);
+    o.frequency.exponentialRampToValueAtTime(to, at + t + dur);
+    g.gain.setValueAtTime(level, at + t);
+    g.gain.exponentialRampToValueAtTime(0.001, at + t + dur);
+    o.connect(g).connect(into);
+    o.start(at + t); o.stop(at + t + dur + 0.05);
+  };
+  // a stone turning under a foot, behind
+  burst(SCUFF, 2600, 0.07, 0.3); burst(SCUFF + 0.12, 1900, 0.09, 0.36); thump(SCUFF + 0.13, 'sine', 150, 90, 0.12, 0.3);
+  // a heart, from the painting on: faster and faster
+  for (let t = 6.5, gap = 0.58; t < BONK; t += gap, gap = Math.max(0.4, gap * 0.985)) { thump(t, 'sine', 62, 44, 0.11, 0.3); thump(t + 0.14, 'sine', 56, 40, 0.1, 0.2); }
+  // he pops up; then bonk: wood on a helmet
+  thump(POP, 'triangle', 660, 500, 0.06, 0.3);
+  const hit = amp(0.7);                                             // too loud and too sudden for the limiter to catch
+  hit.connect(out);
+  thump(BONK, 'sine', 230, 90, 0.26, 0.7, hit); thump(BONK, 'triangle', 880, 400, 0.13, 1.0, hit); burst(BONK, 850, 0.09, 9, 5, hit); burst(BONK, 3200, 0.02, 1.2, 1.2, hit); burst(BONK, 110, 0.2, 1.2, 0.7, hit);
+  // the phone lands in the dust
+  burst(CUT, 90, 0.25, 1.0, 0.7); burst(CUT + 0.02, 2400, 0.03, 0.5); burst(CUT + 0.16, 3100, 0.025, 0.3); burst(CUT + 0.27, 2700, 0.02, 0.18);
+  // over: unplug it all and break the ring, or each time it is played again another of these would be left running
+  shiver.onended = () => { out.disconnect(); ring.disconnect(); };
+}
+
+// ───────────────────────────────────────────────────────────── run
+
+const clockText = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const caption = (t) => { meta.textContent = t === null ? `IMG_0913.MOV   ${clockText(LENGTH)}` : `IMG_0913.MOV   ${clockText(t)} / ${clockText(LENGTH)}`; };
+
+await whenBaked;
+if (heldAt !== null) {
+  if (heldAt < CUT) film(heldAt, null); else blank();
+  caption(heldAt);
+} else {
+  film(0, null);                         // the poster: the take's first frame
+  caption(null);
+  play.hidden = false;
+
+  let sound = null, began = 0, playing = false, shot = 0, before = 0;
+  const audioTime = () => (sound ? sound.currentTime : performance.now() / 1000);
+  play.addEventListener('click', () => {
+    if (!sound) { try { sound = new AudioContext(); } catch { /* it plays silent */ } }
+    sound?.resume();
+    began = audioTime() + 0.08;
+    if (sound) perform(sound, began);
+    exposure = 0; before = 0; playing = true; play.hidden = true;
+  });
+  // A hidden tab stops drawing; stop the sound's clock with it, so the two stay together.
+  document.addEventListener('visibilitychange', () => { if (sound && playing) { if (document.hidden) sound.suspend(); else sound.resume(); } });
+
+  const tick = (now) => {
+    if (lost) return;
+    requestAnimationFrame(tick);
+    if (!playing || now - shot < 15) return;                       // sixty frames a second at most
+    shot = now;
+    const t = Math.max(audioTime() - began, 0);
+    if (t >= LENGTH) {                                             // over: back to the poster, to play again
+      playing = false;
+      film(0, null); caption(null);
+      play.setAttribute('aria-label', 'Play again, with sound'); play.hidden = false; play.focus({ preventScroll: true });
+      return;
+    }
+    if (t < CUT) film(t, before ? t - before : null); else blank();
+    before = t;
+    caption(t);
+  };
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>

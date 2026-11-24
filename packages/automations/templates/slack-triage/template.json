@@ -1,0 +1,6 @@
+{
+  "title": "Slack answers",
+  "category": "Issues and PRs",
+  "summary": "Mention @caveman in Slack and get an answer from the repository in the thread. Runs on Cloud.",
+  "scope": "project"
+}

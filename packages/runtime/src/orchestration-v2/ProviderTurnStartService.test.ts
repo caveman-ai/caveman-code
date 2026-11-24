@@ -1,0 +1,1999 @@
+// ), apps/server/src/orchestration-v2/ProviderTurnStartService.test.ts @ ab3a3cd1; perf from 39bd164d94.
+import * as NodePath from "@effect/platform-node/NodePath";
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { expect, it, vi } from "vitest";
+import { it as effectIt } from "@effect/vitest";
+import {
+  CheckpointScopeId,
+  ContextTransferId,
+  GitCommandError,
+  MessageId,
+  NodeId,
+  ProviderSessionId,
+  ProviderThreadId,
+  ProviderTurnId,
+  ProviderDriverKind,
+  ProviderInstanceId,
+  ProviderSetupError,
+  RunAttemptId,
+  RunId,
+  ThreadId,
+  ProjectId,
+  type OrchestrationV2ThreadProjection,
+  OrchestrationV2DomainEvent,
+} from "@caveman-app/protocol";
+import * as Cause from "effect/Cause";
+import * as DateTime from "effect/DateTime";
+import * as Deferred from "effect/Deferred";
+import * as Effect from "effect/Effect";
+import * as Exit from "effect/Exit";
+import * as FileSystem from "effect/FileSystem";
+import * as Fiber from "effect/Fiber";
+import * as Layer from "effect/Layer";
+import * as Option from "effect/Option";
+import * as Path from "effect/Path";
+import * as PlatformError from "effect/PlatformError";
+import * as Schema from "effect/Schema";
+import * as TestClock from "effect/testing/TestClock";
+
+import * as ServerConfig from "../config.ts";
+import { withWorkspaceLease } from "../workspace/workspaceLease.ts";
+import * as GitWorkflow from "../git/GitWorkflowService.ts";
+import * as GitVcsDriver from "../vcs/GitVcsDriver.ts";
+import { layerRealGit } from "./ProviderTurnStartService.testkit.ts";
+import * as ProjectService from "../project/ProjectService.ts";
+import * as ProviderAuthService from "../provider/ProviderAuthService.ts";
+import * as ServerSettings from "../serverSettings.ts";
+import * as ContextHandoffService from "./ContextHandoffService.ts";
+import * as EventSink from "./EventSink.ts";
+import * as IdAllocator from "@caveman-app/engine-core/server/IdAllocator";
+import { CodexProviderCapabilitiesV2 } from "./Adapters/CodexAdapterV2.ts";
+import { projectIdFor } from "./ProjectCommands.ts";
+import * as ProjectionStore from "./ProjectionStore.ts";
+import * as ProviderAdapter from "@caveman-app/engine-core/server/ProviderAdapter";
+import * as ProviderSessionManager from "./ProviderSessionManager.ts";
+import * as ProviderTurnStart from "./ProviderTurnStartService.ts";
+import * as RunExecutionService from "./RunExecutionService.ts";
+import * as RuntimePolicy from "./RuntimePolicy.ts";
+
+const isDomainEvent = Schema.is(OrchestrationV2DomainEvent);
+
+const managedWorktreesDir = "/tmp/provider-turn-start-worktrees";
+// fs.realpath applies `..` and `.` before following symlinks.
+const normalize = (target: string) => {
+  const parts: Array<string> = [];
+  for (const part of target.split("/")) {
+    if (part === "..") parts.pop();
+    else if (part !== "" && part !== ".") parts.push(part);
+  }
+  return `/${parts.join("/")}`;
+};
+const layerWorktreeLocation = (worktreesDir = managedWorktreesDir, pathLayer: Layer.Layer<Path.Path> = Path.layer) =>
+  Layer.mergeAll(
+    pathLayer,
+    Layer.mock(ServerConfig.ServerConfig)({ worktreesDir } as ServerConfig.ServerConfig["Service"]),
+    ServerSettings.layerTest(),
+  );
+
+/** Starts a run on a thread whose worktree folder is missing, with routing reads failing after. */
+function startWithMissingWorktree(
+  worktreePath: string,
+  realPaths: Record<string, string> = {
+    [managedWorktreesDir]: managedWorktreesDir,
+    [`${managedWorktreesDir}/project`]: `${managedWorktreesDir}/project`,
+  },
+  projectId: ProjectId = ProjectId.make("project_provider_turn_start_projection_failure"),
+) {
+  const threadId = ThreadId.make("thread_provider_turn_start_projection_failure");
+  const runId = RunId.make("run_provider_turn_start_projection_failure");
+  const attemptId = RunAttemptId.make("attempt_provider_turn_start_projection_failure");
+  const rootNodeId = NodeId.make("node_provider_turn_start_projection_failure");
+  const providerThreadId = ProviderThreadId.make(
+    "provider_thread_provider_turn_start_projection_failure",
+  );
+  const providerSessionId = ProviderSessionId.make(
+    "provider_session_provider_turn_start_projection_failure",
+  );
+  const messageId = MessageId.make("message_provider_turn_start_projection_failure");
+  const checkpointScopeId = CheckpointScopeId.make(
+    "checkpoint_scope_provider_turn_start_projection_failure",
+  );
+  const projection = {
+    thread: {
+      id: threadId,
+      projectId,
+      branch: "feature/restore",
+      worktreePath,
+    },
+    runs: [
+      {
+        id: runId,
+        status: "starting",
+        rootNodeId,
+        activeAttemptId: attemptId,
+        providerThreadId,
+        userMessageId: messageId,
+        ordinal: 2,
+      },
+    ],
+    nodes: [{ id: rootNodeId, checkpointScopeId }],
+    attempts: [{ id: attemptId }],
+    providerThreads: [{ id: providerThreadId, providerSessionId }],
+    messages: [{ id: messageId, text: "Continue", attachments: [] }],
+    checkpointScopes: [{ id: checkpointScopeId }],
+    contextHandoffs: [],
+    contextTransfers: [],
+    turnItems: [],
+  } as unknown as OrchestrationV2ThreadProjection;
+  let projectionReadCount = 0;
+  const writeIfRunCurrent = vi.fn(() =>
+    Effect.succeed({ committed: true, storedEvents: [] } as never),
+  );
+  const startRootRun = vi.fn(() => Effect.void);
+  const pruneWorktrees = vi.fn(() => Effect.void);
+  const createWorktree = vi.fn(() => Effect.succeed({} as never));
+  const listLocalBranchNames = vi.fn(() => Effect.succeed(["feature/restore"]));
+  const layer = ProviderTurnStart.layer.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.mock(ContextHandoffService.ContextHandoffServiceV2)({}),
+        Layer.mock(EventSink.EventSinkV2)({ writeIfRunCurrent }),
+        IdAllocator.layer,
+        Layer.succeed(FileSystem.FileSystem, {
+          exists: () => Effect.succeed(false),
+          // Paths that exist on the fake disk, mapped to where their symlinks lead.
+          realPath: (target: string) =>
+            normalize(target) in realPaths
+              ? Effect.succeed(realPaths[normalize(target)])
+              : Effect.fail(
+                  PlatformError.systemError({
+                    _tag: "NotFound",
+                    module: "FileSystem",
+                    method: "realPath",
+                    pathOrDescriptor: target,
+                  }),
+                ),
+        } as never),
+        layerWorktreeLocation(),
+        Layer.mock(GitWorkflow.GitWorkflowService)({
+          pruneWorktrees,
+          createWorktree,
+          listLocalBranchNames,
+        }),
+        Layer.mock(ProjectService.ProjectService)({
+          getById: () =>
+            Effect.succeed(
+              Option.some({ workspaceRoot: "/tmp/provider-turn-start-project" } as never),
+            ),
+        }),
+        Layer.mock(ProjectionStore.ProjectionStoreV2)({
+          getThreadRecords: () => {
+            projectionReadCount += 1;
+            return Effect.succeed(projection);
+          },
+          getTurnStartContext: () => {
+            projectionReadCount += 1;
+            return Effect.succeed({
+              ...projection,
+              hasConversation: projection.messages.some(
+                (m) =>
+                  m.role === "user" &&
+                  (m.text.trim().toLowerCase() !== "/compact" || m.attachments.length > 0),
+              ),
+            });
+          },
+          getRuntimeRecoveryProjection: () => {
+            projectionReadCount += 1;
+            return Effect.fail(
+              new ProjectionStore.ProjectionStoreReadError({
+                threadId,
+                cause: "simulated inherited-background projection failure",
+              }),
+            );
+          },
+        }),
+        Layer.mock(ProviderSessionManager.ProviderSessionManagerV2)({}),
+        Layer.mock(ProviderAuthService.ProviderAuthService)({
+          tryHandlePromptCommand: () => Effect.succeed(false),
+        }),
+        Layer.mock(RunExecutionService.RunExecutionServiceV2)({ startRootRun }),
+        Layer.mock(RuntimePolicy.RuntimePolicyV2)({}),
+      ),
+    ),
+  );
+
+  const start = Effect.gen(function* () {
+    return yield* (yield* ProviderTurnStart.ProviderTurnStartServiceV2)
+      .start({ threadId, runId })
+      .pipe(Effect.flip);
+  }).pipe(Effect.provide(layer), Effect.runPromise);
+  return {
+    start,
+    pruneWorktrees,
+    createWorktree,
+    writeIfRunCurrent,
+    startRootRun,
+    projectionReads: () => projectionReadCount,
+  };
+}
+
+it("does not commit running state when inherited background routing cannot be read", async () => {
+  const worktreePath = `${managedWorktreesDir}/project/feature-restore`;
+  const harness = startWithMissingWorktree(worktreePath);
+  const error = await harness.start;
+
+  expect(error._tag).toBe("ProviderTurnStartError");
+  expect(harness.projectionReads()).toBe(3);
+  expect(harness.pruneWorktrees).toHaveBeenCalledWith({ cwd: "/tmp/provider-turn-start-project" });
+  expect(harness.createWorktree).toHaveBeenCalledWith({
+    cwd: "/tmp/provider-turn-start-project",
+    refName: "feature/restore",
+    path: worktreePath,
+  });
+  expect(harness.writeIfRunCurrent).not.toHaveBeenCalled();
+  expect(harness.startRootRun).not.toHaveBeenCalled();
+});
+
+// Ours: a Caveman Code project's thread (its workspace owns the worktree) never gets a missing worktree recreated.
+it("leaves a Caveman Code workspace's missing worktree to workspace.restore", async () => {
+  const harness = startWithMissingWorktree(
+    `${managedWorktreesDir}/project/feature-restore`,
+    undefined,
+    projectIdFor("/tmp/provider-turn-start-project"),
+  );
+  expect((await harness.start)._tag).toBe("ProviderTurnStartError");
+  expect(harness.pruneWorktrees).not.toHaveBeenCalled();
+  expect(harness.createWorktree).not.toHaveBeenCalled();
+  expect(harness.startRootRun).not.toHaveBeenCalled();
+});
+
+it.each([
+  {
+    label: "<managed>/<repo>/<branch>",
+    worktreePath: `${managedWorktreesDir}/project/feature-restore`,
+    recreated: true,
+  },
+  {
+    label: "the real path of a symlinked managed folder",
+    worktreePath: "/real-worktrees/project/feature-restore",
+    realPaths: { [managedWorktreesDir]: "/real-worktrees", "/real-worktrees": "/real-worktrees" },
+    recreated: true,
+  },
+  {
+    label: "a path outside the managed folder",
+    worktreePath: "/tmp/provider-turn-start-project/.git/hooks",
+    recreated: false,
+  },
+  {
+    label: "a symlink inside the managed folder that leads out",
+    worktreePath: `${managedWorktreesDir}/project/hooks`,
+    realPaths: {
+      [managedWorktreesDir]: managedWorktreesDir,
+      [`${managedWorktreesDir}/project`]: "/tmp/provider-turn-start-project/.git",
+    },
+    recreated: false,
+  },
+  {
+    label: "a folder nested below a worktree",
+    worktreePath: `${managedWorktreesDir}/project/feature-restore/link/hooks`,
+    recreated: false,
+  },
+  {
+    label: "'..' out of the managed folder",
+    worktreePath: `${managedWorktreesDir}/project/../../outside`,
+    recreated: false,
+  },
+  {
+    // Left raw on purpose: git follows `link` before applying `..`.
+    label: "'..' after a symlink inside the managed folder",
+    worktreePath: `${managedWorktreesDir}/project/x/link/../../hooks`,
+    realPaths: {
+      [managedWorktreesDir]: managedWorktreesDir,
+      [`${managedWorktreesDir}/project`]: `${managedWorktreesDir}/project`,
+      [`${managedWorktreesDir}/project/x`]: `${managedWorktreesDir}/project/x`,
+      [`${managedWorktreesDir}/project/x/link`]: "/tmp/provider-turn-start-project/.git/refs/heads",
+    },
+    recreated: false,
+  },
+  { label: "a relative path", worktreePath: "project/feature-restore", recreated: false },
+])("recreates a missing worktree only at the managed location: $label", async (input) => {
+  const harness = startWithMissingWorktree(input.worktreePath, input.realPaths);
+  await harness.start;
+  expect(harness.createWorktree).toHaveBeenCalledTimes(input.recreated ? 1 : 0);
+});
+
+function makeLocalCommandHarness(input: {
+  readonly text: string;
+  readonly worktreePath?: string;
+  readonly worktreesDir?: string;
+  readonly workspaceRoot?: string;
+  readonly gitWorkflow?: GitWorkflow.GitWorkflowService["Service"];
+  readonly fileSystem?: FileSystem.FileSystem;
+  readonly previousNativeSession?: boolean;
+  readonly previousMessages?: ReadonlyArray<string>;
+  readonly logoutFailure?: string;
+  readonly openFailure?: unknown;
+  /** Opens the session, then fails loading its provider thread. */
+  readonly ensureThreadFailure?: unknown;
+  /**
+   * Resumes a thread that has a native ref: resume fails, the fresh-thread
+   * fallback succeeds, then reading history for its handoff fails.
+   */
+  readonly historyReadFailureAfterFallback?: unknown;
+  /** Resumes a thread that has a native ref and fails with this error. */
+  readonly resumeFailure?: ProviderAdapter.ProviderAdapterV2Error;
+  readonly interruptOpen?: boolean;
+  readonly interruptRunBeforeOpenFailure?: boolean;
+  readonly writeFailure?: unknown;
+  /** Loads the thread and starts the run, then fails every later state read. */
+  readonly failReadsAfterRunning?: boolean;
+  readonly previousTurn?: {
+    readonly runStatus: "failed" | "completed";
+    readonly turnStatus: "running" | "completed" | "interrupted";
+    readonly differentThread?: boolean;
+    readonly liveSession?: boolean;
+    readonly interruptFailure?: boolean;
+    readonly interruptCurrentRun?: boolean;
+  };
+}) {
+  const now = DateTime.makeUnsafe("2026-09-04T12:00:00Z");
+  const threadId = ThreadId.make("thread-native-account-command");
+  const runId = RunId.make("run-native-account-command");
+  const rootNodeId = NodeId.make("root-native-account-command");
+  const attemptId = RunAttemptId.make("attempt-native-account-command");
+  const providerThreadId = ProviderThreadId.make("new-provider-thread");
+  const providerSessionId = ProviderSessionId.make("new-provider-session");
+  const oldProviderThreadId = ProviderThreadId.make("existing-native-provider-thread");
+  const oldInstanceId = ProviderInstanceId.make("antigravity-personal");
+  const newInstanceId = ProviderInstanceId.make("codex-personal");
+  const checkpointScopeId = CheckpointScopeId.make("scope-native-account-command");
+  const messageId = MessageId.make("message-native-account-command");
+  const run: OrchestrationV2ThreadProjection["runs"][number] = {
+    id: runId,
+    threadId,
+    ordinal: 2,
+    providerInstanceId: newInstanceId,
+    modelSelection: { instanceId: newInstanceId, model: "gpt-5.4" },
+    providerThreadId,
+    userMessageId: messageId,
+    rootNodeId,
+    activeAttemptId: attemptId,
+    status: "starting",
+    requestedAt: now,
+    startedAt: null,
+    completedAt: null,
+    checkpointId: null,
+    contextHandoffId: null,
+  };
+  const providerThread: OrchestrationV2ThreadProjection["providerThreads"][number] = {
+    id: providerThreadId,
+    driver: ProviderDriverKind.make("codex"),
+    providerInstanceId: newInstanceId,
+    providerSessionId,
+    appThreadId: threadId,
+    ownerNodeId: null,
+    nativeThreadRef: null,
+    nativeConversationHeadRef: null,
+    status: "not_loaded",
+    firstRunOrdinal: 2,
+    lastRunOrdinal: 2,
+    handoffIds: [],
+    forkedFrom: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  const message: OrchestrationV2ThreadProjection["messages"][number] = {
+    id: messageId,
+    threadId,
+    runId,
+    nodeId: rootNodeId,
+    role: "user",
+    text: input.text,
+    attachments: [],
+    streaming: false,
+    createdBy: "user",
+    creationSource: "web",
+    createdAt: now,
+    updatedAt: now,
+  };
+  let projection: OrchestrationV2ThreadProjection = {
+    thread: {
+      id: threadId,
+      activeProviderThreadId: providerThreadId,
+      projectId: ProjectId.make("project-native-account-command"),
+      branch: input.worktreePath === undefined ? null : "feature/restore",
+      worktreePath: input.worktreePath ?? null,
+      updatedAt: now,
+    } as OrchestrationV2ThreadProjection["thread"],
+    runs: [
+      ...(input.previousNativeSession
+        ? [
+            {
+              ...run,
+              id: RunId.make("previous-native-run"),
+              ordinal: 1,
+              status: "completed" as const,
+              providerInstanceId: oldInstanceId,
+              providerThreadId: oldProviderThreadId,
+            },
+          ]
+        : []),
+      run,
+    ],
+    attempts: [
+      {
+        id: attemptId,
+        runId,
+        rootNodeId,
+        attemptOrdinal: 1,
+        providerInstanceId: newInstanceId,
+        providerThreadId,
+        providerTurnId: null,
+        reason: "initial",
+        status: "pending",
+        startedAt: null,
+        completedAt: null,
+      },
+    ],
+    nodes: [
+      {
+        id: rootNodeId,
+        threadId,
+        runId,
+        parentNodeId: null,
+        rootNodeId,
+        kind: "root_turn",
+        status: "pending",
+        countsForRun: true,
+        providerThreadId,
+        providerTurnId: null,
+        nativeItemRef: null,
+        runtimeRequestId: null,
+        checkpointScopeId,
+        startedAt: null,
+        completedAt: null,
+      },
+    ],
+    providerThreads: [
+      ...(input.previousNativeSession
+        ? [
+            {
+              ...providerThread,
+              id: oldProviderThreadId,
+              providerInstanceId: oldInstanceId,
+              driver: ProviderDriverKind.make("antigravity"),
+              lastRunOrdinal: 1,
+              nativeThreadRef: {
+                driver: ProviderDriverKind.make("antigravity"),
+                nativeId: "existing-session",
+                strength: "strong" as const,
+              },
+            },
+          ]
+        : []),
+      providerThread,
+    ],
+    messages: [
+      ...(input.previousMessages ?? []).map((text, index) => ({
+        ...message,
+        id: MessageId.make(`previous-message-${index}`),
+        text,
+      })),
+      message,
+    ],
+    checkpointScopes: [
+      {
+        id: checkpointScopeId,
+        threadId,
+        runId,
+        nodeId: rootNodeId,
+        parentScopeId: null,
+        providerThreadId,
+        kind: "root_run",
+        ordinalWithinParent: 0,
+        advancesAppRunCount: true,
+        cwd: "/tmp/native-account-command",
+        createdAt: now,
+      },
+    ],
+    providerSessions: [],
+    providerTurns: [],
+    contextHandoffs: [],
+    contextTransfers: [],
+    turnItems: [],
+    visibleTurnItems: [],
+    runtimeRequests: [],
+    subagents: [],
+    plans: [],
+    checkpoints: [],
+    updatedAt: now,
+  };
+  if ("historyReadFailureAfterFallback" in input || "resumeFailure" in input) {
+    const nativeThreadRef = {
+      driver: providerThread.driver,
+      nativeId: "native-resume-thread",
+      strength: "strong" as const,
+    };
+    projection = {
+      ...projection,
+      providerThreads: projection.providerThreads.map((candidate) =>
+        candidate.id === providerThreadId ? { ...candidate, nativeThreadRef } : candidate,
+      ),
+    };
+  }
+  const previousTurnId = ProviderTurnId.make("previous-provider-turn");
+  if (input.previousTurn !== undefined) {
+    const previousRunId = RunId.make("previous-failed-run");
+    const previousAttemptId = RunAttemptId.make("previous-failed-attempt");
+    const previousProviderThreadId = input.previousTurn.differentThread
+      ? oldProviderThreadId
+      : providerThreadId;
+    projection = {
+      ...projection,
+      runs: [
+        {
+          ...run,
+          id: previousRunId,
+          ordinal: 1,
+          status: input.previousTurn.runStatus,
+          rootNodeId: NodeId.make("previous-root"),
+          activeAttemptId: previousAttemptId,
+          providerThreadId: previousProviderThreadId,
+          completedAt: now,
+        },
+        run,
+      ],
+      providerThreads: [
+        {
+          ...providerThread,
+          nativeThreadRef: {
+            driver: providerThread.driver,
+            nativeId: "existing-native-conversation",
+            strength: "strong",
+          },
+        },
+      ],
+      providerTurns: [
+        {
+          id: previousTurnId,
+          providerThreadId: previousProviderThreadId,
+          nodeId: NodeId.make("previous-root"),
+          runAttemptId: previousAttemptId,
+          ordinal: 1,
+          nativeTurnRef: null,
+          status: input.previousTurn.turnStatus,
+          startedAt: now,
+          completedAt: input.previousTurn.turnStatus === "running" ? null : now,
+        },
+      ],
+    };
+  }
+  let providerBusy =
+    input.previousTurn?.runStatus === "failed" &&
+    input.previousTurn.turnStatus === "running" &&
+    !input.previousTurn.differentThread &&
+    input.previousTurn.liveSession !== false;
+  const interruptTurn = vi.fn((request: ProviderAdapter.ProviderAdapterV2InterruptInput) =>
+    Effect.gen(function* () {
+      expect(request.providerTurnId).toBe(previousTurnId);
+      expect(request.providerThread.id).toBe(providerThreadId);
+      if (input.previousTurn?.interruptFailure) {
+        return yield* new ProviderAdapter.ProviderAdapterInterruptError({
+          driver: providerThread.driver,
+          providerThreadId,
+          providerTurnId: request.providerTurnId,
+          cause: "provider interrupt failed",
+        });
+      }
+      providerBusy = false;
+      if (input.previousTurn?.interruptCurrentRun) interruptRun();
+    }),
+  );
+  const events: Array<OrchestrationV2DomainEvent> = [];
+  const interruptRun = () => {
+    projection = {
+      ...projection,
+      runs: projection.runs.map((candidate) =>
+        candidate.id === runId
+          ? { ...candidate, status: "interrupted", completedAt: now }
+          : candidate,
+      ),
+    };
+  };
+  const ensureThread = vi.fn(() =>
+    Effect.sync(() => {
+      if (input.interruptRunBeforeOpenFailure === true) interruptRun();
+    }).pipe(
+      Effect.andThen(
+        Effect.fail(
+          new ProviderAdapter.ProviderAdapterEventStreamError({
+            driver: providerThread.driver,
+            providerSessionId,
+            cause: input.ensureThreadFailure,
+          }),
+        ),
+      ),
+    ),
+  );
+  const fallbackEnsureThread = vi.fn(() => Effect.succeed(providerThread));
+  const resumeFallbackSession = {
+    driver: providerThread.driver,
+    resumeThread: () =>
+      Effect.fail(
+        input.resumeFailure ??
+          new ProviderAdapter.ProviderAdapterEventStreamError({
+            driver: providerThread.driver,
+            providerSessionId,
+            cause: "native thread is gone",
+          }),
+      ),
+    ensureThread: fallbackEnsureThread,
+  };
+  const open = vi.fn(() =>
+    input.interruptOpen === true
+      ? Effect.interrupt
+      : "historyReadFailureAfterFallback" in input || "resumeFailure" in input
+        ? Effect.succeed(resumeFallbackSession as never)
+        : "ensureThreadFailure" in input
+          ? Effect.succeed({ driver: providerThread.driver, ensureThread } as never)
+          : "openFailure" in input
+            ? Effect.sync(() => {
+                if (input.interruptRunBeforeOpenFailure === true) interruptRun();
+              }).pipe(
+                Effect.andThen(
+                  Effect.fail(
+                    new ProviderSessionManager.ProviderSessionOpenError({
+                      instanceId: newInstanceId,
+                      providerSessionId,
+                      cause: input.openFailure,
+                    }),
+                  ),
+                ),
+              )
+            : input.failReadsAfterRunning === true || input.previousTurn !== undefined
+              ? Effect.succeed({
+                  driver: providerThread.driver,
+                  providerSession: {
+                    id: providerSessionId,
+                    driver: providerThread.driver,
+                    providerInstanceId: newInstanceId,
+                    status: "ready",
+                    cwd: "/tmp/native-account-command",
+                    model: null,
+                    capabilities: CodexProviderCapabilitiesV2,
+                    createdAt: now,
+                    updatedAt: now,
+                    lastError: null,
+                  },
+                  ensureThread: () => Effect.succeed(providerThread),
+                  resumeThread: () => Effect.succeed(projection.providerThreads[0]),
+                } as never)
+              : Effect.die("A local command must not open a native session."),
+  );
+  const startRootRun = vi.fn<
+    (input: RunExecutionService.RunExecutionServiceV2StartRootRunInput) => Effect.Effect<void>
+  >(() =>
+    input.failReadsAfterRunning === true || input.previousTurn !== undefined
+      ? Effect.suspend(() =>
+          providerBusy ? Effect.die("The previous provider turn is still running.") : Effect.void,
+        )
+      : Effect.die("A local command must not start a native turn."),
+  );
+  const failReadIfRunning = Effect.suspend(() =>
+    input.failReadsAfterRunning === true &&
+    projection.runs.find((candidate) => candidate.id === runId)?.status === "running"
+      ? Effect.fail(
+          new ProjectionStore.ProjectionStoreReadError({ threadId, cause: "database unavailable" }),
+        )
+      : Effect.void,
+  );
+  const tryHandlePromptCommand = vi.fn(() =>
+    input.logoutFailure === undefined
+      ? Effect.succeed(true)
+      : Effect.fail(
+          new ProviderSetupError({
+            instanceId: oldInstanceId,
+            operation: "logout",
+            detail: input.logoutFailure,
+          }),
+        ),
+  );
+  const writeIfRunCurrent = vi.fn(({ events: incoming, activeAttemptId, expectedStatus }) =>
+    "writeFailure" in input
+      ? Effect.fail(
+          new EventSink.EventSinkWriteError({
+            eventCount: incoming.length,
+            cause: input.writeFailure,
+          }),
+        )
+      : Effect.sync(() => {
+          const current = projection.runs.find((candidate) => candidate.id === runId);
+          const committed =
+            current !== undefined &&
+            current.activeAttemptId === activeAttemptId &&
+            current.status === expectedStatus;
+          if (committed) {
+            for (const event of incoming) {
+              expect(isDomainEvent(event)).toBe(true);
+              events.push(event);
+              projection = ProjectionStore.applyToProjection(projection, event);
+            }
+          }
+          return { committed, storedEvents: [] };
+        }),
+  );
+  const resolveRuntimePolicy = vi.fn(
+    ({ thread }: Parameters<RuntimePolicy.RuntimePolicyV2Shape["resolve"]>[0]) =>
+      Effect.succeed({ cwd: thread.worktreePath ?? "/tmp/native-account-command" } as never),
+  );
+  const createWorktree = vi.fn<GitWorkflow.GitWorkflowService["Service"]["createWorktree"]>(() =>
+    Effect.succeed({} as never),
+  );
+  const getThreadRecords = vi.fn<ProjectionStore.ProjectionStoreV2Shape["getThreadRecords"]>(() =>
+    Effect.succeed(projection),
+  );
+  const getTurnStartContext = vi.fn(() =>
+    Effect.succeed({
+      ...projection,
+      hasConversation: projection.messages.some(
+        (m) =>
+          m.role === "user" &&
+          (m.text.trim().toLowerCase() !== "/compact" || m.attachments.length > 0),
+      ),
+    }),
+  );
+  const layer = ProviderTurnStart.layer.pipe(
+    Layer.provide(
+      Layer.mergeAll(
+        Layer.mock(ContextHandoffService.ContextHandoffServiceV2)({
+          prepareProviderHandoff: () => Effect.die("history read must fail first"),
+        }),
+        Layer.mock(EventSink.EventSinkV2)({ writeIfRunCurrent }),
+        IdAllocator.layer,
+        // Over a real filesystem, the host's paths (a Windows temp folder is no POSIX path).
+        layerWorktreeLocation(input.worktreesDir, input.fileSystem === undefined ? Path.layer : NodePath.layer),
+        input.fileSystem === undefined
+          ? FileSystem.layerNoop({ exists: () => Effect.succeed(true) })
+          : Layer.succeed(FileSystem.FileSystem, input.fileSystem),
+        input.gitWorkflow === undefined
+          ? Layer.mock(GitWorkflow.GitWorkflowService)({
+              pruneWorktrees: () => Effect.void,
+              listLocalBranchNames: () => Effect.succeed(["feature/restore"]),
+              createWorktree,
+            })
+          : Layer.succeed(GitWorkflow.GitWorkflowService, input.gitWorkflow),
+        Layer.mock(ProjectService.ProjectService)({
+          getById: () =>
+            Effect.succeed(
+              Option.some({
+                workspaceRoot: input.workspaceRoot ?? "/tmp/native-account-project",
+              } as never),
+            ),
+        }),
+        Layer.mock(ProjectionStore.ProjectionStoreV2)({
+          getThreadRecords,
+          getTurnStartContext,
+          getRuntimeRecoveryProjection: () =>
+            Effect.as(failReadIfRunning, {
+              ...projection,
+              hasConversation: projection.messages.some(
+                (m) =>
+                  m.role === "user" &&
+                  (m.text.trim().toLowerCase() !== "/compact" || m.attachments.length > 0),
+              ),
+            }),
+          getTurnStartHistory: () =>
+            Effect.fail(
+              new ProjectionStore.ProjectionStoreReadError({
+                threadId,
+                cause: input.historyReadFailureAfterFallback,
+              }),
+            ),
+        }),
+        Layer.mock(ProviderSessionManager.ProviderSessionManagerV2)({
+          open,
+          get: () =>
+            Effect.succeed(
+              input.previousTurn?.liveSession === false
+                ? Option.none()
+                : Option.some({
+                    driver: providerThread.driver,
+                    providerSessionId,
+                    interruptTurn,
+                  } as unknown as ProviderAdapter.ProviderAdapterV2SessionRuntime),
+            ),
+        }),
+        Layer.mock(ProviderAuthService.ProviderAuthService)({ tryHandlePromptCommand }),
+        Layer.mock(RunExecutionService.RunExecutionServiceV2)({ startRootRun }),
+        Layer.mock(RuntimePolicy.RuntimePolicyV2)({
+          resolve: resolveRuntimePolicy,
+        }),
+      ),
+    ),
+  );
+  return {
+    getThreadRecords,
+    getTurnStartContext,
+    setProjection: (next: OrchestrationV2ThreadProjection) => {
+      projection = next;
+    },
+    resolveRuntimePolicy,
+    createWorktree,
+    open,
+    fallbackEnsureThread,
+    writeIfRunCurrent,
+    startRootRun,
+    interruptTurn,
+    tryHandlePromptCommand,
+    events,
+    oldInstanceId,
+    newInstanceId,
+    attemptId,
+    projection: () => projection,
+    start: Effect.gen(function* () {
+      yield* (yield* ProviderTurnStart.ProviderTurnStartServiceV2).start({ threadId, runId });
+    }).pipe(Effect.provide(layer)),
+    startWithRetry: Effect.gen(function* () {
+      yield* (yield* ProviderTurnStart.ProviderTurnStartServiceV2).start({
+        threadId,
+        runId,
+        willRetry: true,
+      });
+    }).pipe(Effect.provide(layer)),
+  };
+}
+
+effectIt.effect(
+  "recovers the local or pushed thread tip, else the current branch, remote default, or detached HEAD",
+  () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const gitWorkflow = yield* GitWorkflow.GitWorkflowService;
+      const driver = yield* GitVcsDriver.GitVcsDriver;
+      const root = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-recreate-repo-" });
+      const workspaceRoot = path.join(root, "project");
+      const originRoot = path.join(root, "origin.git");
+      const worktreesDir = path.join(root, "worktrees");
+      const worktreePath = path.join(worktreesDir, "project", "restore");
+      yield* fileSystem.makeDirectory(workspaceRoot);
+      const git = (cwd: string, args: ReadonlyArray<string>) =>
+        driver
+          .execute({ operation: "test.worktreeRecovery", cwd, args })
+          .pipe(Effect.map((result) => result.stdout.trim()));
+      const branchConfig = (key: string) =>
+        git(workspaceRoot, ["config", "--get", `branch.feature/restore.${key}`]).pipe(
+          Effect.orElseSucceed(() => ""),
+        );
+      yield* git(root, ["init", "--bare", "-b", "main", originRoot]);
+      yield* git(workspaceRoot, ["init", "-b", "main"]);
+      yield* git(workspaceRoot, ["config", "user.name", "Test"]);
+      yield* git(workspaceRoot, ["config", "user.email", "test@example.com"]);
+      yield* git(workspaceRoot, ["commit", "--allow-empty", "-m", "base"]);
+      const baseTip = yield* git(workspaceRoot, ["rev-parse", "HEAD"]);
+      yield* git(workspaceRoot, ["remote", "add", "origin", originRoot]);
+      yield* git(workspaceRoot, ["push", "origin", "main"]);
+      yield* git(workspaceRoot, ["remote", "set-head", "origin", "main"]);
+      yield* git(workspaceRoot, ["worktree", "add", "-b", "feature/restore", worktreePath]);
+      yield* fileSystem.writeFileString(path.join(worktreePath, "thread.txt"), "thread work");
+      yield* git(worktreePath, ["add", "."]);
+      yield* git(worktreePath, ["commit", "-m", "thread tip"]);
+      const threadTip = yield* git(worktreePath, ["rev-parse", "HEAD"]);
+      yield* git(workspaceRoot, ["switch", "-c", "project-current"]);
+      yield* fileSystem.writeFileString(
+        path.join(workspaceRoot, "project.txt"),
+        "new project code",
+      );
+      yield* git(workspaceRoot, ["add", "."]);
+      yield* git(workspaceRoot, ["commit", "-m", "project tip"]);
+      const projectTip = yield* git(workspaceRoot, ["rev-parse", "HEAD"]);
+      expect(projectTip).not.toBe(threadTip);
+      // Tags must neither hide the thread branch nor select a different recovery tip.
+      yield* git(workspaceRoot, ["tag", "feature/restore", projectTip]);
+      yield* git(workspaceRoot, ["tag", "project-current", threadTip]);
+      yield* git(workspaceRoot, ["tag", "origin/feature/restore", threadTip]);
+
+      const expectedTips = {
+        retained: { tip: threadTip, file: "thread.txt", upstream: null, base: "" },
+        deleted: { tip: projectTip, file: "project.txt", upstream: null, base: "project-current" },
+        pushed: {
+          tip: threadTip,
+          file: "thread.txt",
+          upstream: "refs/remotes/origin/feature/restore",
+          base: "",
+        },
+        "pushed-detached": {
+          tip: threadTip,
+          file: "thread.txt",
+          upstream: "refs/remotes/origin/feature/restore",
+          base: "",
+        },
+        detached: { tip: baseTip, file: null, upstream: null, base: "main" },
+        "detached-no-remote": { tip: projectTip, file: "project.txt", upstream: null, base: "" },
+      } as const;
+      // Reuse the workflow across turns so recovery cannot select a cached project branch.
+      for (const scenario of Object.keys(expectedTips) as Array<keyof typeof expectedTips>) {
+        const expected = expectedTips[scenario];
+        if (scenario === "pushed") {
+          yield* git(workspaceRoot, ["push", "origin", `${threadTip}:refs/heads/feature/restore`]);
+          yield* git(workspaceRoot, ["fetch", "origin"]);
+        }
+        if (scenario === "pushed-detached") {
+          yield* git(workspaceRoot, ["switch", "--detach"]);
+          expect(yield* git(workspaceRoot, ["branch", "--show-current"])).toBe("");
+        }
+        if (scenario === "detached") {
+          yield* git(workspaceRoot, ["push", "origin", "--delete", "feature/restore"]);
+        }
+        if (scenario === "detached-no-remote") {
+          yield* git(workspaceRoot, ["remote", "remove", "origin"]);
+        }
+        yield* fileSystem.remove(worktreePath, { recursive: true });
+        if (scenario !== "retained") {
+          yield* git(workspaceRoot, ["worktree", "prune"]);
+          yield* git(workspaceRoot, ["branch", "-D", "feature/restore"]);
+        }
+        const harness = makeLocalCommandHarness({
+          text: "Continue",
+          workspaceRoot,
+          worktreePath,
+          worktreesDir,
+          fileSystem,
+          gitWorkflow,
+          failReadsAfterRunning: true,
+        });
+        const open = harness.open.getMockImplementation()!;
+        harness.open.mockImplementation(() =>
+          Effect.gen(function* () {
+            expect(yield* git(worktreePath, ["branch", "--show-current"])).toBe("feature/restore");
+            expect(yield* git(worktreePath, ["rev-parse", "HEAD"])).toBe(expected.tip);
+            for (const file of ["thread.txt", "project.txt"]) {
+              expect(yield* fileSystem.exists(path.join(worktreePath, file))).toBe(
+                file === expected.file,
+              );
+            }
+            expect(yield* branchConfig("merge")).toBe(
+              expected.upstream === null ? "" : "refs/heads/feature/restore",
+            );
+            if (expected.upstream !== null) {
+              expect(
+                yield* git(worktreePath, ["rev-parse", "--symbolic-full-name", "@{upstream}"]),
+              ).toBe(expected.upstream);
+            }
+            expect(yield* branchConfig("gh-merge-base")).toBe(expected.base);
+            return yield* open();
+          }).pipe(Effect.orDie),
+        );
+
+        yield* harness.start;
+
+        expect(harness.open).toHaveBeenCalledOnce();
+        expect(harness.startRootRun).toHaveBeenCalledWith(
+          expect.objectContaining({
+            runtimePolicy: expect.objectContaining({ cwd: worktreePath }),
+          }),
+        );
+        expect(harness.projection().runs.at(-1)?.status).toBe("running");
+      }
+    }).pipe(Effect.scoped, Effect.provide(layerRealGit)),
+);
+
+effectIt.effect(
+  "preserves recreation interrupts and retries, then fails the final attempt before provider start",
+  () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const worktreesDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-recreate-failure-",
+      });
+      const worktreePath = path.join(worktreesDir, "project", "restore");
+      const harness = makeLocalCommandHarness({
+        text: "Continue",
+        worktreesDir,
+        worktreePath,
+        fileSystem,
+        failReadsAfterRunning: true,
+      });
+      harness.createWorktree.mockImplementationOnce(() => Effect.interrupt);
+      harness.createWorktree.mockImplementation(() =>
+        Effect.fail(
+          new GitCommandError({
+            operation: "worktree-add",
+            command: "git worktree add",
+            cwd: "/tmp/native-account-project",
+            detail: "fatal: private git diagnostic",
+          }),
+        ),
+      );
+
+      const interrupted = yield* Effect.exit(harness.start);
+      expect(interrupted._tag).toBe("Failure");
+      if (interrupted._tag === "Failure")
+        expect(Cause.hasInterruptsOnly(interrupted.cause)).toBe(true);
+      expect(harness.events).toEqual([]);
+      expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+
+      const retry = yield* Effect.result(harness.startWithRetry);
+      expect(retry).toMatchObject({ _tag: "Failure", failure: { _tag: "ProviderTurnStartError" } });
+      expect(harness.events).toEqual([]);
+      expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+
+      yield* harness.start;
+      expect(harness.createWorktree).toHaveBeenCalledTimes(3);
+      expect(harness.writeIfRunCurrent).toHaveBeenCalledOnce();
+      expect(harness.open).not.toHaveBeenCalled();
+      expect(harness.startRootRun).not.toHaveBeenCalled();
+      const projection = harness.projection();
+      expect(projection.runs.at(-1)).toMatchObject({ status: "failed", startedAt: null });
+      expect(projection.attempts[0]).toMatchObject({ status: "failed", startedAt: null });
+      expect(projection.nodes[0]).toMatchObject({ status: "failed", startedAt: null });
+      expect(projection.turnItems).toMatchObject([
+        {
+          type: "error",
+          failure: {
+            message: `Could not recreate the worktree for branch 'feature/restore' at ${worktreePath}.`,
+          },
+        },
+      ]);
+      expect(JSON.stringify(harness.events)).not.toContain("private git diagnostic");
+    }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
+);
+
+// A provider that stays up but never answers the session open: each attempt gives up within its
+// budget, and the last one fails the run with the reason instead of leaving it starting.
+effectIt.effect.each([
+  { willRetry: true, status: "starting" },
+  { willRetry: false, status: "failed" },
+] as const)(
+  "gives up on a session open the provider never answers (willRetry $willRetry)",
+  ({ willRetry, status }) =>
+    Effect.gen(function* () {
+      const harness = makeLocalCommandHarness({ text: "Continue", failReadsAfterRunning: true });
+      harness.open.mockImplementation(() => Effect.never);
+      const attempt = yield* (willRetry ? harness.startWithRetry : harness.start).pipe(
+        Effect.exit,
+        Effect.timeoutOption("1 hour"),
+        Effect.forkChild,
+      );
+      yield* TestClock.adjust("21 minutes");
+      yield* TestClock.adjust("1 hour");
+
+      const exit = yield* Fiber.join(attempt);
+      expect(Option.isSome(exit), "the start never gave up on the unanswered open").toBe(true);
+      expect(harness.startRootRun).not.toHaveBeenCalled();
+      const projection = harness.projection();
+      expect(projection.runs.at(-1)?.status).toBe(status);
+      if (willRetry) {
+        expect(Option.isSome(exit) && Exit.isFailure(exit.value)).toBe(true);
+        expect(projection.turnItems).toEqual([]);
+      } else {
+        expect(projection.turnItems).toMatchObject([
+          {
+            type: "error",
+            title: "Provider session failed to open",
+            failure: {
+              message: "The provider stopped answering: a session open got no reply within 20m.",
+            },
+          },
+        ]);
+      }
+    }),
+);
+
+effectIt.effect("recovers an abandoned failed turn before continuing its native conversation", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      previousTurn: { runStatus: "failed", turnStatus: "running" },
+    });
+
+    yield* harness.start;
+
+    expect(harness.interruptTurn).toHaveBeenCalledOnce();
+    expect(harness.projection().runs.at(-1)?.status).toBe("running");
+    expect(harness.projection().providerTurns[0]).toMatchObject({
+      status: "interrupted",
+      completedAt: expect.anything(),
+    });
+    expect(harness.startRootRun).toHaveBeenCalledOnce();
+    expect(harness.startRootRun.mock.calls[0]?.[0].providerThread.nativeThreadRef?.nativeId).toBe(
+      "existing-native-conversation",
+    );
+  }),
+);
+
+effectIt.effect.each([
+  { runStatus: "failed", turnStatus: "completed" },
+  { runStatus: "completed", turnStatus: "completed" },
+  { runStatus: "failed", turnStatus: "running", differentThread: true },
+  { runStatus: "failed", turnStatus: "running", liveSession: false },
+  { runStatus: "failed", turnStatus: "interrupted", interruptFailure: true },
+] as const)("continues without interrupting when recovery does not apply: %j", (previousTurn) =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({ text: "Continue", previousTurn });
+
+    yield* harness.start;
+
+    expect(harness.interruptTurn).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("running");
+  }),
+);
+
+effectIt.effect("does not start another turn when abandoned-turn cleanup fails", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      previousTurn: { runStatus: "failed", turnStatus: "running", interruptFailure: true },
+    });
+
+    yield* harness.start;
+
+    expect(harness.interruptTurn).toHaveBeenCalledOnce();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("failed");
+  }),
+);
+
+effectIt.effect("retries abandoned-turn cleanup without failing the continuation early", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      previousTurn: { runStatus: "failed", turnStatus: "running", interruptFailure: true },
+    });
+
+    const error = yield* harness.startWithRetry.pipe(Effect.flip);
+
+    expect(error._tag).toBe("ProviderTurnStartError");
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+    expect(harness.open).not.toHaveBeenCalled();
+  }),
+);
+
+effectIt.effect("does not start the continuation if recording recovery fails", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      previousTurn: { runStatus: "failed", turnStatus: "running" },
+      writeFailure: new Error("database unavailable"),
+    });
+
+    const error = yield* harness.start.pipe(Effect.flip);
+
+    expect(error._tag).toBe("ProviderTurnStartError");
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+    expect(harness.projection().providerTurns[0]?.status).toBe("running");
+    expect(harness.open).not.toHaveBeenCalled();
+  }),
+);
+
+effectIt.effect("does not resume a continuation stopped while recovery was in flight", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      previousTurn: { runStatus: "failed", turnStatus: "running", interruptCurrentRun: true },
+    });
+
+    yield* harness.start;
+
+    expect(harness.projection().runs.at(-1)?.status).toBe("interrupted");
+    expect(harness.open).not.toHaveBeenCalled();
+  }),
+);
+
+effectIt.effect.each(["cleanup-first", "startup-first"])(
+  "coordinates provider startup with %s",
+  (order) =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const path = yield* Path.Path;
+      const workspaceRoot = yield* fileSystem.makeTempDirectoryScoped({ prefix: "t3-start-" });
+      const worktreePath = path.join(workspaceRoot, "project", "worktree");
+      yield* fileSystem.makeDirectory(worktreePath, { recursive: true });
+      const release = yield* Deferred.make<void>();
+      const openEntered = yield* Deferred.make<void>();
+      const harness = makeLocalCommandHarness({
+        text: "Continue",
+        worktreePath,
+        worktreesDir: workspaceRoot,
+        fileSystem,
+        failReadsAfterRunning: true,
+      });
+      harness.createWorktree.mockImplementation(() =>
+        fileSystem.makeDirectory(worktreePath).pipe(Effect.as({} as never), Effect.orDie),
+      );
+      const open = harness.open.getMockImplementation()!;
+      harness.open.mockImplementation(() =>
+        Effect.gen(function* () {
+          expect(yield* fileSystem.exists(worktreePath).pipe(Effect.orDie)).toBe(true);
+          yield* Deferred.succeed(openEntered, undefined);
+          if (order === "startup-first") yield* Deferred.await(release);
+          return yield* open();
+        }),
+      );
+      let cleanupEntered = false;
+      const cleanupEffect = withWorkspaceLease(
+        worktreePath,
+        Effect.gen(function* () {
+          cleanupEntered = true;
+          if (order === "cleanup-first") yield* Deferred.await(release);
+          else {
+            expect(harness.projection().providerSessions).toHaveLength(1);
+            expect(harness.projection().runs.at(-1)?.status).toBe("running");
+          }
+          yield* fileSystem.remove(worktreePath, { recursive: true, force: true });
+        }),
+      );
+      const cleanup =
+        order === "cleanup-first"
+          ? yield* cleanupEffect.pipe(Effect.forkChild({ startImmediately: true }))
+          : undefined;
+      const startup = yield* harness.start.pipe(Effect.forkChild({ startImmediately: true }));
+      if (order === "cleanup-first") expect(harness.open).not.toHaveBeenCalled();
+      if (order === "startup-first") yield* Deferred.await(openEntered);
+      const laterCleanup =
+        order === "startup-first"
+          ? yield* cleanupEffect.pipe(Effect.forkChild({ startImmediately: true }))
+          : undefined;
+      if (order === "startup-first") expect(cleanupEntered).toBe(false);
+      yield* Deferred.succeed(release, undefined);
+      if (cleanup !== undefined) yield* Fiber.join(cleanup);
+      yield* Fiber.join(startup);
+      if (laterCleanup !== undefined) yield* Fiber.join(laterCleanup);
+      if (order === "cleanup-first") {
+        expect(harness.createWorktree).toHaveBeenCalledWith({
+          cwd: "/tmp/native-account-project",
+          refName: "feature/restore",
+          path: worktreePath,
+        });
+      }
+      expect(harness.resolveRuntimePolicy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          thread: expect.objectContaining({ worktreePath }),
+        }),
+      );
+      expect(harness.open).toHaveBeenCalledWith(
+        expect.objectContaining({
+          runtimePolicy: expect.objectContaining({ cwd: worktreePath }),
+        }),
+      );
+      expect(harness.startRootRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          appThread: expect.objectContaining({ worktreePath }),
+          runtimePolicy: expect.objectContaining({ cwd: worktreePath }),
+        }),
+      );
+    }).pipe(Effect.scoped, Effect.provide(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))),
+);
+
+effectIt.effect("reads only thread state before taking the startup lease", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({ text: "/logout", previousNativeSession: true });
+    yield* harness.start;
+    expect(harness.getThreadRecords).toHaveBeenCalledExactlyOnceWith(
+      harness.projection().thread.id,
+      [],
+    );
+    expect(harness.getTurnStartContext).toHaveBeenCalledOnce();
+    expect(harness.projection().runs.at(-1)?.status).toBe("completed");
+  }),
+);
+
+effectIt.effect("reads current startup state after waiting for the workspace lease", () =>
+  Effect.gen(function* () {
+    const worktreePath = "/tmp/provider-start-fresh-state";
+    const release = yield* Deferred.make<void>();
+    const readEntered = yield* Deferred.make<void>();
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      worktreePath,
+      failReadsAfterRunning: true,
+    });
+    harness.getThreadRecords.mockImplementationOnce(() =>
+      Deferred.succeed(readEntered, undefined).pipe(Effect.as(harness.projection())),
+    );
+    const holder = yield* withWorkspaceLease(worktreePath, Deferred.await(release)).pipe(
+      Effect.forkChild({ startImmediately: true }),
+    );
+    const startup = yield* harness.start.pipe(Effect.forkChild({ startImmediately: true }));
+    yield* Deferred.await(readEntered);
+    expect(harness.getTurnStartContext).not.toHaveBeenCalled();
+    const projection = harness.projection();
+    harness.setProjection({
+      ...projection,
+      runs: projection.runs.map((run) => ({ ...run, status: "running" })),
+    });
+    yield* Deferred.succeed(release, undefined);
+    yield* Fiber.join(holder);
+    yield* Fiber.join(startup);
+    expect(harness.open).not.toHaveBeenCalled();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+  }),
+);
+
+effectIt.effect.each([
+  { boundary: "policy resolution", nativeMode: "ensure", loss: "replaced" },
+  { boundary: "policy resolution", nativeMode: "ensure", loss: "interrupted" },
+  { boundary: "session opening", nativeMode: "ensure", loss: "replaced" },
+  { boundary: "session opening", nativeMode: "ensure", loss: "interrupted" },
+  { boundary: "session opening", nativeMode: "resume", loss: "replaced" },
+  { boundary: "session opening", nativeMode: "fork", loss: "replaced" },
+])(
+  "does not continue $nativeMode startup when $loss during $boundary",
+  ({ boundary, nativeMode, loss }) =>
+    Effect.gen(function* () {
+      const entered = yield* Deferred.make<void>();
+      const release = yield* Deferred.make<void>();
+      const gate = Deferred.succeed(entered, undefined).pipe(
+        Effect.andThen(Deferred.await(release)),
+      );
+      const harness = makeLocalCommandHarness({ text: "Continue" });
+      const projection = harness.projection();
+      const run = projection.runs[0]!;
+      const providerThread = projection.providerThreads[0]!;
+      if (nativeMode === "resume") {
+        harness.setProjection({
+          ...projection,
+          providerThreads: [
+            {
+              ...providerThread,
+              nativeThreadRef: {
+                driver: providerThread.driver,
+                nativeId: "existing",
+                strength: "strong",
+              },
+            },
+          ],
+        });
+      } else if (nativeMode === "fork") {
+        const sourceThreadId = ThreadId.make("fork-source");
+        harness.getThreadRecords.mockReturnValue(
+          Effect.succeed({
+            ...projection,
+            thread: { ...projection.thread, id: sourceThreadId },
+          }),
+        );
+        harness.setProjection({
+          ...projection,
+          contextTransfers: [
+            {
+              id: ContextTransferId.make("pending-fork"),
+              type: "fork",
+              sourceThreadId,
+              targetThreadId: projection.thread.id,
+              sourcePoint: { threadId: sourceThreadId, runId: run.id },
+              basePoint: null,
+              sourceProviderInstanceId: run.providerInstanceId,
+              targetProviderInstanceId: run.providerInstanceId,
+              targetRunId: run.id,
+              status: "pending",
+              resolution: null,
+              createdBy: "user",
+              error: null,
+              createdAt: projection.updatedAt,
+              updatedAt: projection.updatedAt,
+              consumedAt: null,
+            },
+          ],
+        });
+      }
+      const ensureThread = vi.fn(() => Effect.succeed(providerThread));
+      const resumeThread = vi.fn(() => Effect.succeed(providerThread));
+      const forkThread = vi.fn(() => Effect.succeed(providerThread));
+      harness.open.mockReturnValue(
+        (boundary === "session opening" ? gate : Effect.void).pipe(
+          Effect.as({
+            driver: providerThread.driver,
+            ensureThread,
+            resumeThread,
+            forkThread,
+          } as never),
+        ),
+      );
+      if (boundary === "policy resolution") {
+        harness.resolveRuntimePolicy.mockReturnValue(
+          gate.pipe(Effect.as({ cwd: "/tmp/native-account-command" } as never)),
+        );
+      }
+
+      const startup = yield* harness.start.pipe(Effect.forkChild({ startImmediately: true }));
+      yield* Deferred.await(entered);
+      const current = harness.projection();
+      const replacementId = RunAttemptId.make("replacement-attempt");
+      const updated = {
+        ...current,
+        runs: current.runs.map((candidate) =>
+          loss === "replaced"
+            ? { ...candidate, activeAttemptId: replacementId }
+            : { ...candidate, status: "interrupted" as const, completedAt: current.updatedAt },
+        ),
+        attempts:
+          loss === "replaced"
+            ? [
+                ...current.attempts,
+                { ...current.attempts[0]!, id: replacementId, attemptOrdinal: 2 },
+              ]
+            : current.attempts,
+      };
+      harness.setProjection(updated);
+      yield* Deferred.succeed(release, undefined);
+      yield* Fiber.join(startup);
+
+      expect(harness.open).toHaveBeenCalledTimes(boundary === "session opening" ? 1 : 0);
+      expect(ensureThread).not.toHaveBeenCalled();
+      expect(resumeThread).not.toHaveBeenCalled();
+      expect(forkThread).not.toHaveBeenCalled();
+      expect(harness.startRootRun).not.toHaveBeenCalled();
+      expect(harness.writeIfRunCurrent).not.toHaveBeenCalled();
+      expect(harness.events).toEqual([]);
+      expect(harness.projection()).toEqual(updated);
+    }),
+);
+
+effectIt.effect(
+  "a native fork from before a revert hands the provider only the turns still in its conversation",
+  () =>
+    Effect.gen(function* () {
+      const harness = makeLocalCommandHarness({ text: "Continue" });
+      const projection = harness.projection();
+      const run = projection.runs[0]!;
+      const attempt = projection.attempts[0]!;
+      const providerThread = projection.providerThreads[0]!;
+      const now = projection.updatedAt;
+      const sourceThreadId = ThreadId.make("fork-source");
+      const sourceProviderThread = {
+        ...providerThread,
+        appThreadId: sourceThreadId,
+        nativeThreadRef: {
+          driver: providerThread.driver,
+          nativeId: "native-source",
+          strength: "strong" as const,
+        },
+      };
+      // Turns 2 and 3 were reverted, then turn 4 was sent. The reverted turns
+      // stay in the projection, but not in the provider's conversation.
+      const ordinals = [1, 2, 3, 4] as const;
+      const reverted = (ordinal: number) => ordinal === 2 || ordinal === 3;
+      const sourceRunId = (ordinal: number) => RunId.make(`source-run-${ordinal}`);
+      const sourceAttemptId = (ordinal: number) => RunAttemptId.make(`source-attempt-${ordinal}`);
+      const sourceTurnId = (ordinal: number) => ProviderTurnId.make(`source-turn-${ordinal}`);
+      harness.getThreadRecords.mockReturnValue(
+        Effect.succeed({
+          ...projection,
+          thread: { ...projection.thread, id: sourceThreadId },
+          providerThreads: [sourceProviderThread],
+          runs: ordinals.map((ordinal) => ({
+            ...run,
+            id: sourceRunId(ordinal),
+            threadId: sourceThreadId,
+            ordinal,
+            activeAttemptId: sourceAttemptId(ordinal),
+            status: reverted(ordinal) ? ("rolled_back" as const) : ("completed" as const),
+            completedAt: now,
+          })),
+          attempts: ordinals.map((ordinal) => ({
+            ...attempt,
+            id: sourceAttemptId(ordinal),
+            runId: sourceRunId(ordinal),
+            attemptOrdinal: 1,
+            providerTurnId: sourceTurnId(ordinal),
+            status: "completed" as const,
+            startedAt: now,
+            completedAt: now,
+          })),
+          providerTurns: ordinals.map((ordinal) => ({
+            id: sourceTurnId(ordinal),
+            providerThreadId: providerThread.id,
+            nodeId: NodeId.make(`source-root-${ordinal}`),
+            runAttemptId: sourceAttemptId(ordinal),
+            nativeTurnRef: {
+              driver: providerThread.driver,
+              nativeId: `entry-${ordinal}`,
+              strength: "strong" as const,
+            },
+            ordinal,
+            status: "completed" as const,
+            startedAt: now,
+            completedAt: now,
+          })),
+        }),
+      );
+      harness.setProjection({
+        ...projection,
+        contextTransfers: [
+          {
+            id: ContextTransferId.make("pending-fork"),
+            type: "fork",
+            sourceThreadId,
+            targetThreadId: projection.thread.id,
+            sourcePoint: { threadId: sourceThreadId, runId: sourceRunId(1) },
+            basePoint: null,
+            sourceProviderInstanceId: run.providerInstanceId,
+            targetProviderInstanceId: run.providerInstanceId,
+            targetRunId: run.id,
+            status: "pending",
+            resolution: null,
+            createdBy: "user",
+            error: null,
+            createdAt: now,
+            updatedAt: now,
+            consumedAt: null,
+          },
+        ],
+      });
+      const forkThread = vi.fn((_: ProviderAdapter.ProviderAdapterV2ForkThreadInput) =>
+        Effect.fail(
+          new ProviderAdapter.ProviderAdapterForkThreadError({
+            driver: providerThread.driver,
+            providerThreadId: sourceProviderThread.id,
+          }),
+        ),
+      );
+      harness.open.mockReturnValue(
+        Effect.succeed({
+          driver: providerThread.driver,
+          providerSession: {
+            id: providerThread.providerSessionId,
+            driver: providerThread.driver,
+            providerInstanceId: run.providerInstanceId,
+            status: "ready",
+            cwd: "/tmp/native-account-command",
+            model: null,
+            capabilities: CodexProviderCapabilitiesV2,
+            createdAt: now,
+            updatedAt: now,
+            lastError: null,
+          },
+          forkThread,
+        } as never),
+      );
+
+      yield* harness.start;
+
+      expect(forkThread).toHaveBeenCalledTimes(1);
+      const forked = forkThread.mock.calls[0]![0];
+      expect(forked.providerTurnId).toBe(sourceTurnId(1));
+      expect(forked.sourceProviderTurns?.map((turn) => turn.id)).toEqual([
+        sourceTurnId(1),
+        sourceTurnId(4),
+      ]);
+    }),
+);
+
+effectIt.effect("starts another provider in the same checkout while a turn is pending", () =>
+  Effect.gen(function* () {
+    const worktreePath = "/tmp/provider-start-shared-checkout";
+    const turnEntered = yield* Deferred.make<void>();
+    const releaseTurn = yield* Deferred.make<void>();
+    const first = makeLocalCommandHarness({
+      text: "Continue",
+      worktreePath,
+      failReadsAfterRunning: true,
+    });
+    const second = makeLocalCommandHarness({
+      text: "Continue",
+      worktreePath,
+      failReadsAfterRunning: true,
+    });
+    first.startRootRun.mockImplementation(() =>
+      Deferred.succeed(turnEntered, undefined).pipe(Effect.andThen(Deferred.await(releaseTurn))),
+    );
+    const pending = yield* first.start.pipe(Effect.forkChild({ startImmediately: true }));
+    yield* Deferred.await(turnEntered);
+    yield* second.start;
+    expect(second.startRootRun).toHaveBeenCalledOnce();
+    expect(second.projection().runs.at(-1)?.status).toBe("running");
+    yield* Deferred.succeed(releaseTurn, undefined);
+    yield* Fiber.join(pending);
+  }),
+);
+
+effectIt.effect("terminalizes a starting run when its provider session cannot open", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new Error("DESCRIPTION is not valid ACP JSON"),
+    });
+
+    yield* harness.start;
+
+    expect(harness.open).toHaveBeenCalledOnce();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    expect(harness.writeIfRunCurrent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        activeAttemptId: harness.attemptId,
+        expectedStatus: "starting",
+      }),
+    );
+    const projection = harness.projection();
+    expect(projection.runs.at(-1)).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.attempts[0]).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.nodes[0]).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.turnItems).toMatchObject([
+      {
+        type: "error",
+        status: "failed",
+        failure: {
+          class: "provider_error",
+          message: "DESCRIPTION is not valid ACP JSON",
+        },
+      },
+    ]);
+  }),
+);
+
+effectIt.effect("a session that cannot open fails with the engine's own reason, not the session id", () =>
+  Effect.gen(function* () {
+    // As an ACP agent that exits at once reports it: two wrappers naming only ids, then what happened.
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new Error("Failed to open acpRegistry provider session provider-session:provider-instance:gemini:thread:t1:abc.", {
+        cause: new Error("ACP transport operation failed.", { cause: new Error("ACP process exited with code 1") }),
+      }),
+    });
+
+    yield* harness.start;
+
+    expect(harness.projection().turnItems).toMatchObject([
+      { type: "error", status: "failed", failure: { class: "provider_error", message: "ACP process exited with code 1" } },
+    ]);
+  }),
+);
+
+effectIt.effect("a session waiting on a sign-in fails at once instead of opening the sign-in again", () =>
+  Effect.gen(function* () {
+    const reason = "Authentication timed out after 5 minutes. The browser tab may have gotten stuck in a loading state.";
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new Error("Failed to open acpRegistry provider session provider-session:x.", { cause: new Error(reason) }),
+    });
+
+    // Even on an attempt the worker would retry.
+    yield* harness.startWithRetry;
+
+    expect(harness.open).toHaveBeenCalledOnce();
+    expect(harness.projection().runs.at(-1)).toMatchObject({ status: "failed" });
+    expect(harness.projection().turnItems).toMatchObject([{ type: "error", failure: { message: reason } }]);
+  }),
+);
+
+it("startFailureReason and needsSignIn read the whole cause chain", () => {
+  const { startFailureReason, needsSignIn } = ProviderTurnStart;
+  expect(startFailureReason(new Error("plain"))).toBe("plain");
+  expect(startFailureReason(new Error("Failed to open codex provider session s1."))).toBe("Failed to open codex provider session s1.");
+  expect(startFailureReason(new Error("Failed to open x session s.", { cause: "spawn claude ENOENT" }))).toBe("spawn claude ENOENT");
+  expect(needsSignIn(new Error("wrap", { cause: new Error("Not signed in. Run codex login.") }))).toBe(true);
+  expect(needsSignIn(new Error("wrap", { cause: new Error("ACP process exited with code 1") }))).toBe(false);
+});
+
+effectIt.effect("leaves the run starting when a session-open failure will be retried", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new Error("provider session rejected"),
+    });
+
+    const error = yield* harness.startWithRetry.pipe(Effect.flip);
+
+    expect(error._tag).toBe("ProviderTurnStartError");
+    expect(harness.writeIfRunCurrent).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+  }),
+);
+
+effectIt.effect("keeps a session-open failure retryable when terminal persistence fails", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new Error("provider session rejected"),
+      writeFailure: new Error("database unavailable"),
+    });
+
+    const error = yield* harness.start.pipe(Effect.flip);
+
+    expect(error._tag).toBe("ProviderTurnStartError");
+    expect(harness.writeIfRunCurrent).toHaveBeenCalledOnce();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+    expect(harness.events).toEqual([]);
+  }),
+);
+
+effectIt.effect("fails the run without a retry when the provider needs sign-in", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new ProviderAdapter.ProviderAdapterOpenSessionError({
+        driver: ProviderDriverKind.make("antigravity"),
+        providerSessionId: ProviderSessionId.make("new-provider-session"),
+        requiresSignIn: true,
+      }),
+    });
+
+    yield* harness.startWithRetry;
+
+    expect(harness.open).toHaveBeenCalledOnce();
+    expect(harness.projection().runs.at(-1)?.status).toBe("failed");
+    expect(harness.projection().turnItems).toMatchObject([
+      {
+        type: "error",
+        status: "failed",
+        failure: {
+          class: "provider_error",
+          message: "Failed to open antigravity provider session new-provider-session.",
+        },
+      },
+    ]);
+  }),
+);
+
+effectIt.effect("does not terminalize a provider-session open interruption", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({ text: "Continue", interruptOpen: true });
+
+    const exit = yield* Effect.exit(harness.start);
+
+    expect(exit._tag).toBe("Failure");
+    if (exit._tag === "Failure") {
+      expect(Cause.hasInterruptsOnly(exit.cause)).toBe(true);
+    }
+    expect(harness.writeIfRunCurrent).not.toHaveBeenCalled();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+    expect(harness.events).toEqual([]);
+  }),
+);
+
+effectIt.effect("does not overwrite a run interrupted while its provider session opens", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      openFailure: new Error("provider session rejected"),
+      interruptRunBeforeOpenFailure: true,
+    });
+
+    yield* harness.start;
+
+    expect(harness.writeIfRunCurrent).toHaveBeenCalledOnce();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    const projection = harness.projection();
+    expect(projection.runs.at(-1)?.status).toBe("interrupted");
+    expect(projection.attempts[0]?.status).toBe("pending");
+    expect(projection.nodes[0]?.status).toBe("pending");
+    expect(projection.turnItems).toEqual([]);
+    expect(harness.events).toEqual([]);
+  }),
+);
+
+effectIt.effect("fails a starting run when its last start attempt cannot load the thread", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      ensureThreadFailure: new Error("Pi RPC read failed: pi process exited with code 1."),
+    });
+
+    yield* harness.start;
+
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    const projection = harness.projection();
+    expect(projection.runs.at(-1)).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.attempts[0]).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.nodes[0]).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.turnItems).toMatchObject([
+      {
+        type: "error",
+        title: "Provider turn failed to start",
+        failure: {
+          class: "provider_error",
+          message: "Pi RPC read failed: pi process exited with code 1.",
+        },
+      },
+    ]);
+  }),
+);
+
+effectIt.effect("leaves the run starting when a thread-load failure will be retried", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      ensureThreadFailure: new Error("pi process exited with code 1"),
+    });
+
+    const error = yield* harness.startWithRetry.pipe(Effect.flip);
+
+    expect(error._tag).toBe("ProviderTurnStartError");
+    expect(harness.writeIfRunCurrent).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+  }),
+);
+
+effectIt.effect("keeps a thread-load failure retryable when terminal persistence fails", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      ensureThreadFailure: new Error("pi process exited with code 1"),
+      writeFailure: new Error("database unavailable"),
+    });
+
+    const error = yield* harness.start.pipe(Effect.flip);
+
+    expect(error._tag).toBe("ProviderTurnStartError");
+    expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+    expect(harness.events).toEqual([]);
+  }),
+);
+
+effectIt.effect(
+  "keeps a store failure after the provider loaded the thread typed and retryable",
+  () =>
+    Effect.gen(function* () {
+      const harness = makeLocalCommandHarness({
+        text: "Continue",
+        historyReadFailureAfterFallback: new Error("database unavailable"),
+      });
+
+      const error = yield* harness.start.pipe(Effect.flip);
+
+      // The provider succeeded; the failing stage is the projection read, so
+      // the run is not failed as a provider error on the last attempt.
+      expect(error._tag).toBe("ProviderTurnStartError");
+      expect((error.cause as { _tag?: string } | undefined)?._tag).toBe("ProjectionStoreReadError");
+      expect(harness.writeIfRunCurrent).not.toHaveBeenCalled();
+      expect(harness.projection().runs.at(-1)?.status).toBe("starting");
+      expect(harness.events).toEqual([]);
+    }),
+);
+
+effectIt.effect("fails the run instead of replacing a native thread another client holds", () =>
+  Effect.gen(function* () {
+    const detail = "This conversation is open in another Codex client.";
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      resumeFailure: new ProviderAdapter.ProviderAdapterThreadInUseError({
+        driver: ProviderDriverKind.make("codex"),
+        providerThreadId: ProviderThreadId.make("new-provider-thread"),
+        detail,
+        cause: new Error("thread native-resume-thread already has an active writer"),
+      }),
+    });
+
+    const exit = yield* Effect.exit(harness.start);
+
+    expect(harness.fallbackEnsureThread).not.toHaveBeenCalled();
+    expect(exit._tag).toBe("Success");
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    const projection = harness.projection();
+    expect(projection.providerThreads.at(-1)?.nativeThreadRef?.nativeId).toBe(
+      "native-resume-thread",
+    );
+    expect(projection.contextHandoffs).toEqual([]);
+    expect(projection.runs.at(-1)).toMatchObject({ status: "failed", startedAt: null });
+    expect(projection.turnItems).toMatchObject([
+      {
+        type: "error",
+        title: "Provider turn failed to start",
+        failure: { class: "provider_error", message: detail },
+      },
+    ]);
+  }),
+);
+
+effectIt.effect("does not mistake a failed state read for a superseded run", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({ text: "Continue", failReadsAfterRunning: true });
+
+    yield* harness.start;
+
+    expect(harness.projection().runs.at(-1)?.status).toBe("running");
+    const controls = harness.startRootRun.mock.calls[0]?.[0];
+    expect(controls).toBeDefined();
+    if (controls === undefined) return;
+    // "false" would skip the provider turn or the terminal write and leave the
+    // run active. A read failure must reach the caller instead.
+    const startCheck = yield* Effect.flip(controls.shouldStartProviderTurn!());
+    const finalizeCheck = yield* Effect.flip(controls.shouldFinalizeRun!());
+    expect(startCheck._tag).toBe("ProjectionStoreReadError");
+    expect(finalizeCheck._tag).toBe("ProjectionStoreReadError");
+  }),
+);
+
+effectIt.effect("does not overwrite a run interrupted while its thread loads", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "Continue",
+      ensureThreadFailure: new Error("pi process exited with code 1"),
+      interruptRunBeforeOpenFailure: true,
+    });
+
+    yield* harness.start;
+
+    expect(harness.projection().runs.at(-1)?.status).toBe("interrupted");
+    expect(harness.projection().turnItems).toEqual([]);
+    expect(harness.events).toEqual([]);
+  }),
+);
+
+effectIt.effect(
+  "signs out the existing native provider before opening the newly selected provider",
+  () =>
+    Effect.gen(function* () {
+      const harness = makeLocalCommandHarness({ text: "/logout", previousNativeSession: true });
+
+      yield* harness.start;
+      yield* harness.start;
+
+      expect(harness.tryHandlePromptCommand).toHaveBeenCalledExactlyOnceWith({
+        instanceId: harness.oldInstanceId,
+        text: "/logout",
+        hasAttachments: false,
+      });
+      expect(harness.open).not.toHaveBeenCalled();
+      expect(harness.startRootRun).not.toHaveBeenCalled();
+      const projection = harness.projection();
+      expect(projection.runs.at(-1)?.status).toBe("completed");
+      expect(projection.attempts[0]?.status).toBe("completed");
+      expect(projection.nodes[0]?.status).toBe("completed");
+      expect(projection.turnItems).toMatchObject([
+        {
+          type: "command_execution",
+          title: "Provider signed out",
+          output: "Provider signed out",
+          status: "completed",
+        },
+      ]);
+      expect(projection.providerTurns).toEqual([]);
+      expect(projection.checkpoints).toEqual([]);
+    }),
+);
+
+effectIt.effect("persists a failed sign-out without starting a provider turn", () =>
+  Effect.gen(function* () {
+    const harness = makeLocalCommandHarness({
+      text: "/logout",
+      logoutFailure: "Could not stop all sessions for this provider. Try again.",
+    });
+
+    yield* harness.start;
+
+    expect(harness.open).not.toHaveBeenCalled();
+    expect(harness.startRootRun).not.toHaveBeenCalled();
+    expect(harness.projection().runs.at(-1)?.status).toBe("failed");
+    expect(harness.projection().turnItems).toMatchObject([
+      {
+        type: "error",
+        title: "Provider sign-out failed",
+        failure: {
+          class: "permission_error",
+          message: "Could not stop all sessions for this provider. Try again.",
+        },
+      },
+    ]);
+  }),
+);
+
+for (const previousMessages of [[], ["/compact", " /COMPACT "]]) {
+  effectIt.effect(
+    `rejects compaction without conversation context after ${previousMessages.length} prior compactions`,
+    () =>
+      Effect.gen(function* () {
+        const harness = makeLocalCommandHarness({ text: "/compact", previousMessages });
+
+        yield* harness.start;
+
+        expect(harness.open).not.toHaveBeenCalled();
+        expect(harness.tryHandlePromptCommand).not.toHaveBeenCalled();
+        expect(harness.startRootRun).not.toHaveBeenCalled();
+        expect(harness.projection().runs.at(-1)?.status).toBe("failed");
+        expect(harness.projection().turnItems).toMatchObject([
+          {
+            type: "error",
+            failure: {
+              class: "validation_error",
+              message: "Start a conversation before compacting this thread.",
+            },
+          },
+        ]);
+      }),
+  );
+}

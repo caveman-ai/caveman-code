@@ -1,0 +1,252 @@
+{
+  "author": "Ahmed Hassan",
+  "source": "https://www.figma.com/community/file/1626392436817658229/super-visuals-50-stunning-backgrounds-v1",
+  "license": "https://creativecommons.org/licenses/by/4.0/",
+  "images": [
+    {
+      "file": "midnight-currents.webp",
+      "originalHash": "91eef33d7ed2c8bf6aec6d63399eb6b0b084ac8a",
+      "originalSha256": "9777f87893aaac1522a60a88604b205104fa8ce8ae32b9f03051e0e183f90d2b",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "blue-silk.webp",
+      "originalHash": "bc95e9f44545c77785bf0d05a3d46437d1c91045",
+      "originalSha256": "59cd8a57efc1f9bea64c492c1a8a57aa9cb42986010da2511b0d703361c6cc8f",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "arctic-light.webp",
+      "originalHash": "2b94174b81bf07b587a0cd51d631870648f9ed2c",
+      "originalSha256": "3fff1ac4133fa739d177fe00c68da072f620dabfd86eca743ad12b5a472a0258",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "teal-edge.webp",
+      "originalHash": "663f7b9c536f2b0154b878f9b53261d70d623d7c",
+      "originalSha256": "6e3b55d0a1d7be0302ca613caebf0e8fbd1bf9267d606f67e228a6b57dedadfe",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "monochrome-moon.webp",
+      "originalHash": "80b517919b76a938cb4a85f495f29e7f9958e341",
+      "originalSha256": "05d22cf7eaae0d9192100cf56df210cc90a0311907bb26f63e2b74f55f46090b",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "peach-and-ice.webp",
+      "originalHash": "45cf484d9421f1d00f2d20f8737e891bed339927",
+      "originalSha256": "3d6366935d9273e7f4c1830b29ed30b6e222ba90c1b1ccb218cd2fc512cdf442",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "lilac-haze.webp",
+      "originalHash": "c9f55932fb3de3562486567574b8abb7d8054c29",
+      "originalSha256": "d355938e31c8cabc21902ba55ab3ce2cf8aed5a43ba0b219465e45ae7478b971",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "mint-drift.webp",
+      "originalHash": "b188d84759ac0f9aad04bd578d769c8077b04bea",
+      "originalSha256": "4b86ebde1dc262f978f2f9ab93e2ff6021398f8fae30fe8583bf129d756b9e43",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "aqua-veil.webp",
+      "originalHash": "36cfef7892d92aa8c337174d3c873e3c85bae788",
+      "originalSha256": "76de432bf31ac18fea0b846c9e9eb24c22d5d0f1635543f8540b9271da5290e0",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "opal-glass.webp",
+      "originalHash": "d7eda6ddd386589bfecaa01d12be9e59ff6e26a7",
+      "originalSha256": "4bf1de463063850c94a6cf2e5f85b292d39895cfed728d52af5fe14ba51a7503",
+      "width": 1487,
+      "height": 1058
+    },
+    {
+      "file": "ember-silk.webp",
+      "originalHash": "eeaaa1c3d50e359d9d7238ccfe95f55f722caadd",
+      "originalSha256": "d3df7f205ee3b9c3df6ef732612a8aec53d2f6019531d1a95576ae46f601efec",
+      "width": 1491,
+      "height": 1055
+    },
+    {
+      "file": "molten-glass.webp",
+      "originalHash": "298079837587e6b662fbece161ce819e1aa2cad4",
+      "originalSha256": "fd5274385b3e85ffcf95461aa1b1befee7aee73897802147c422ce92c00d538b",
+      "width": 1487,
+      "height": 1058
+    },
+    {
+      "file": "coral-prism.webp",
+      "originalHash": "3cbfb3f63b9ef9448b453a7913c3b3d0a588a135",
+      "originalSha256": "8eaa8304ff7c99b7cae5e8ea2d51dcc9a1411b90af3b7a967e427e0eb80908cb",
+      "width": 1487,
+      "height": 1058
+    },
+    {
+      "file": "emerald-and-lime.webp",
+      "originalHash": "609d779edc820a7b140ed560e2ba6036bcbb193d",
+      "originalSha256": "fd1ceb1e911613a13b6492a9ca386a749fc4dc8863133936251dae00c4754d1f",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "electric-streaks.webp",
+      "originalHash": "4714423b15f88b9f086da266270c0d338554f978",
+      "originalSha256": "30902993258b43ce19c8e5d8d099c062f016fb72c8515347bb809ba73968623f",
+      "width": 4096,
+      "height": 2731
+    },
+    {
+      "file": "painted-twilight.webp",
+      "originalHash": "dc7270338b8ad0b6a435af3620b1eaabde1cac15",
+      "originalSha256": "7a5eb2f26aeceb413f93e5170cfe52dac194f4dd5ef28005a6b66f5137bc0f95",
+      "width": 4096,
+      "height": 2914
+    },
+    {
+      "file": "apricot-clouds.webp",
+      "originalHash": "736c99fbce6e09f3a9a1a25e373a05563b7aeee8",
+      "originalSha256": "a158d9ffcc794edabf8dde8e5845888b76e6d2de6190db94da07996e01ebef98",
+      "width": 4096,
+      "height": 2914
+    },
+    {
+      "file": "tangerine-skies.webp",
+      "originalHash": "3f5b49c1c9004366a5271ef3e393c9669408cd1d",
+      "originalSha256": "25ba415c7a6eef046a499c264efd4c9967c5bbdc90cf3c0e1a6ab31c0f8d4663",
+      "width": 4096,
+      "height": 2914
+    },
+    {
+      "file": "golden-mountain-canvas.webp",
+      "originalHash": "aa4b7555a28f3c06daf040122675b27d88858f5c",
+      "originalSha256": "777f2cb254aa55cb6e991fc04c14bb21ec76efd4cf6547bb6151dfa3f10031d6",
+      "width": 4096,
+      "height": 2913
+    },
+    {
+      "file": "pastel-rainbow-dunes.webp",
+      "originalHash": "a1377bb66d6e1c6b906bfa856f6a794af2240ccf",
+      "originalSha256": "ee911bcbfe0aca8720d72e51c698807b39a61511639a7730e7100d270d37906b",
+      "width": 4096,
+      "height": 2262
+    },
+    {
+      "file": "dune-above-blue-sea.webp",
+      "originalHash": "0222bd198c9f599f94132d81d5f151c0d8146e70",
+      "originalSha256": "843843145ff2882b3cbe8fb72fd332dc832581ad85aba663c1cc5d90bb56cccc",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "pebbles-in-meadow.webp",
+      "originalHash": "a8411a093aa31915f85fe2a207ee2586ce1a02d7",
+      "originalSha256": "a8781d902402829a7ceac8c7b5e3caa8bb7a9e5ea288ddc3d9961a91f88b589a",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "moonlit-acacia-desert.webp",
+      "originalHash": "fe184f6871c7129956969f06a48bf3e0c892d696",
+      "originalSha256": "5df46f5ef3bdd056a185b4ce8fc42c21db7e30d7e5fa28647b75615b575c9013",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "white-arch-in-desert.webp",
+      "originalHash": "7da139546cc282fe7c49a5d5db8f04daeda8e055",
+      "originalSha256": "521de5146eb8d5b8b41df685f78935d69cda1af0dfe50c92405af784c34e12fe",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "crimson-hills-and-clouds.webp",
+      "originalHash": "3744eebc40d0f275b7bb13c117160be8cfe6c859",
+      "originalSha256": "e8d2068fcfad637cee2393a179842c7daabf649860e74c75c9f9d823d0899639",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "sunlit-green-valley.webp",
+      "originalHash": "913088c06b7f3fc4b7e2ec6a3eb6fb3c3e1db95e",
+      "originalSha256": "9d190e9530fc6b2e7ce3f6b56a71d4178fa4464d5f723156e6cf504b1b0f3eb9",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "violet-mountains-at-sunset.webp",
+      "originalHash": "6ee657a27a8595c099b9759485946792dde50daa",
+      "originalSha256": "097b5ac1d5c1b5e277255a8ba87db436108ef2e7d23d67101b01fedcdd5b18bd",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "crimson-rolling-hills.webp",
+      "originalHash": "4e779ca7356c3d80417ffef6cd680aef9e64426f",
+      "originalSha256": "544ba7fc96aa7cbd8e5f59f1624c19bb4c6457ef23b8606fd221a74bf5aa2de9",
+      "width": 4096,
+      "height": 2262
+    },
+    {
+      "file": "alpine-sunrise.webp",
+      "originalHash": "104eb50c2c25e6120c703eb4efae3e68ff6c9b3f",
+      "originalSha256": "46e8828268aac5f5e1e205818b1c48bfb034fe99f64d030fed7d1abfa8c04964",
+      "width": 4096,
+      "height": 2731
+    },
+    {
+      "file": "birds-over-teal-water.webp",
+      "originalHash": "24989a74a3e000c3c970d1c907a6859d9feaca14",
+      "originalSha256": "126191d19f8c8ae888cc5ec94bd3390ee8c8b13511b524ab2dc32827846ebef8",
+      "width": 3840,
+      "height": 2160
+    },
+    {
+      "file": "pixel-river-valley.webp",
+      "originalHash": "1a3fe229720a75f72d209df0ac8057b4225f7eb3",
+      "originalSha256": "d440a73c601f302d0ef2ae3295833264077c339556625a6a44b45ae9c4c37a01",
+      "width": 4096,
+      "height": 2731
+    },
+    {
+      "file": "autumn-woodland.webp",
+      "originalHash": "5a4791f642b44132a93e48849b697aee7bddc234",
+      "originalSha256": "9d61a42f8284b24d3dc6a9b703b44709c70fadaa92454b0ef38eba85590c9f82",
+      "width": 4096,
+      "height": 2731
+    },
+    {
+      "file": "crimson-moon-portal.webp",
+      "originalHash": "0e241e270d7fa634bfbfc2d2c25294827c3ba68e",
+      "originalSha256": "bb7151f44a24f86647eaf48f1fccd64be70c81dddf73d703cdb77fe87a508469",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "blue-moon-valley.webp",
+      "originalHash": "549801b23ee6cb210b74248b8a2d826588a03417",
+      "originalSha256": "e0d569a872e56eb4e243ae94ba87c2a8b3b616e2c132619c2430263b6e69affe",
+      "width": 1536,
+      "height": 1024
+    },
+    {
+      "file": "ember-doorway.webp",
+      "originalHash": "6d90cc27c16be4ababc0078c53c34823e5109883",
+      "originalSha256": "ae8b70b600094b230f99ff530c08f25ed4f56e4cdda470956997126b777e2486",
+      "width": 1536,
+      "height": 1024
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "linear",
+  "version": "1.0.0",
+  "description": "Pick up a Linear issue, work on it in this repository, and keep its status and comments current.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://linear.app/",
+  "keywords": [
+    "issues",
+    "project management",
+    "tickets"
+  ]
+}

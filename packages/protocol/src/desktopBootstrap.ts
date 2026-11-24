@@ -1,0 +1,55 @@
+// ), packages/contracts/src/desktopBootstrap.ts @ ab3a3cd1.
+import * as Schema from "effect/Schema";
+
+import { PortSchema, PositiveInt, TrimmedNonEmptyString } from "./baseSchemas.ts";
+
+// A supervisor must not restart a server refused by the state-directory owner.
+export const SERVER_EXIT_CODE_STATE_DIR_OWNED = 78;
+// Nor one whose database a newer build migrated (persistence/Migrations.ts DatabaseNewerThanRuntime): it prints a line
+// with that tag and both versions, and changes nothing.
+export const SERVER_EXIT_CODE_DATABASE_NEWER = 79;
+
+export const DesktopBackendBootstrap = Schema.Struct({
+  mode: Schema.Literal("desktop"),
+  noBrowser: Schema.Boolean,
+  port: PortSchema,
+  // Omitted when the desktop launches the backend inside WSL, since the
+  // Windows-side baseDir maps to /mnt/c/... and the Linux side should use its
+  // own home directory instead.
+  t3Home: Schema.optional(Schema.String),
+  host: Schema.String,
+  desktopBootstrapToken: Schema.String,
+  // Present when the desktop rotates the renderer's bootstrap token: the
+  // backend derives the accepted tokens from this secret instead of trusting
+  // `desktopBootstrapToken` for its whole run. See
+  // `@caveman-app/shared/desktopBootstrapToken`.
+  desktopBootstrapSecret: Schema.optionalKey(Schema.String),
+  // Set only when the desktop already merged the user's shell environment into
+  // the environment it hands this backend. Absent means the backend hydrates
+  // PATH itself, which WSL and older desktops rely on.
+  shellEnvironmentPrepared: Schema.optionalKey(Schema.Boolean),
+  otlpTracesUrl: Schema.optional(Schema.String),
+  otlpMetricsUrl: Schema.optional(Schema.String),
+  otlpLogsUrl: Schema.optional(Schema.String),
+  desktopTelemetryFd: Schema.optionalKey(PositiveInt),
+  desktopTelemetryControlFd: Schema.optionalKey(PositiveInt),
+  /** Desktop -> server: the desktop's browser tabs, as newline-delimited JSON. */
+  desktopBrowserFd: Schema.optionalKey(PositiveInt),
+  /** Server -> desktop: commands for those tabs. */
+  desktopBrowserControlFd: Schema.optionalKey(PositiveInt),
+  resourceMonitorPath: Schema.optionalKey(TrimmedNonEmptyString),
+  /**
+   * This Mac's agents key (PKCS#8 PEM, P-256): the key its chats sign mail to the person's other Macs with
+   * (session-protocol macMail.ts). Handed over here only, on the private bootstrap descriptor, never in the
+   * environment or argv, and kept in memory: the desktop app holds it sealed in the keychain.
+   */
+  agentsKey: Schema.optionalKey(Schema.String),
+});
+
+export type DesktopBackendBootstrap = typeof DesktopBackendBootstrap.Type;
+
+/** Written to `<t3Home>/runtime` just before the desktop app stops its
+    backend to install an update. The updated app starts a new backend right
+    away, so a backend that sees a fresh marker at shutdown keeps its managed
+    tunnel. */
+export const DESKTOP_UPDATE_RESTART_MARKER_FILE = "desktop-update-restart";

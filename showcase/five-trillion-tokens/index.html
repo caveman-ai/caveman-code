@@ -1,0 +1,1284 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5,000,000,000,000</title>
+<!--
+  Five trillion tokens a week, announced in eleven seconds of pixel art. One file, nothing loaded: the picture,
+  the sound and the caveman (the app's own Chief, built from the parts in packages/ui/scripts/cast/caveman.py)
+  are all made here.
+
+  The take: he bonks his rock, and every bonk puts ",000" on the count. The fourth does nothing. While he
+  scratches his beard a crack runs from the rock up the volcano behind him, and the volcano fires the last three
+  zeros into the count itself.
+
+  How a frame is made:
+    1. The valley is painted into a picture of 320x180 pixels, thirty times a second. A frame is worked out from
+       its time alone, so any second of the take can be held, or filmed on its own.
+    2. A camera shows that picture at a whole number of screen pixels to one of its own (12 down to 6), so a
+       pixel is always a square, the same size across the frame. It steps back as the count grows.
+    3. The sound is synthesised to the same clock.
+
+  ?t=7 holds the frame at that second of the take, silent. render.mjs films the take into a video.
+-->
+<style>
+  html, body { height: 100%; margin: 0; background: #000; }
+  body {
+    display: grid; place-items: center;
+    color: #777; font: 11px/1.4 ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  figure { margin: 0; width: min(100vw, calc((100vh - 36px) * 16 / 9)); width: min(100vw, calc((100dvh - 36px) * 16 / 9)); }
+  .video { position: relative; }
+  canvas { display: block; width: 100%; aspect-ratio: 16 / 9; background: #000; }
+  button {
+    position: absolute; inset: 0; box-sizing: border-box; width: 100%; padding: 0; border: 0; background: none; cursor: pointer;
+    display: grid; place-items: center;
+  }
+  button[hidden] { display: none; }
+  /* Over: the last frame is the announcement, so the button steps out of its way. */
+  button.again { place-items: end; padding: 0 16px 16px 0; }
+  button svg { width: 68px; height: 68px; }
+  button.again svg { width: 40px; height: 40px; }
+  button:focus-visible { outline: 2px solid #fff; outline-offset: -8px; }
+  figcaption { padding: 8px 2px 0; white-space: pre-wrap; font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+<figure>
+  <div class="video">
+    <canvas id="frame" width="1920" height="1080" role="img"
+      aria-label="Pixel art at dusk. A caveman bonks a rock with his club; with every bonk the count above him grows by three zeros, from 5 to 5 billion. The fourth bonk does nothing. As he scratches his beard, a glowing crack climbs the volcano behind him. It erupts and fires three more zeros into the count: 5,000,000,000,000. 5 trillion tokens a week, processed by Caveman."></canvas>
+    <button id="play" type="button" aria-label="Play, with sound" hidden>
+      <svg viewBox="0 0 68 68" aria-hidden="true"><circle cx="34" cy="34" r="34" fill="#000" fill-opacity=".45"/><path d="M27 20v28l22-14z" fill="#fff"/></svg>
+    </button>
+  </div>
+  <figcaption id="meta"></figcaption>
+</figure>
+
+<script type="module">
+// ───────────────────────────────────────────────────────────── the take
+
+const W = 320, H = 180;                  // the picture, in its own pixels
+const SCREEN_H = 1080;                   // the video's height: the canvas is 1920x1080
+const PAD = 12;                          // painted past every edge, for the camera to shake into
+const FPS = 30;                          // held frames: nothing moves between two of them
+const F = (s) => Math.round(s * FPS) / FPS;   // a time on a frame
+
+const params = new URLSearchParams(location.search);
+// For people who asked for less motion the camera holds still and the blast does not flash.
+const calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+const BONKS = [0.7, 1.3, 1.9].map(F);    // the club lands: thousand, million, billion
+const WIND = F(2.4);                     // he winds up for the fourth
+const DUD = F(3.2);                      // it lands, and nothing comes out
+const CRACK = F(3.6);                    // a crack leaves the rock, behind his back
+const HM = F(3.7);                       // he scratches his beard
+const WIDE = F(3.9);                     // the camera steps back to the whole valley
+const RIM = F(4.7);                      // the crack reaches the crater; everything holds its breath
+const BOOM = F(5.1);
+const SHOTS = [1.0, 1.3, 1.6].map((s) => F(BOOM + s));   // the crater fires the last three zeros
+const FLIGHT = F(0.2);
+const SLAMS = SHOTS.map((s) => F(s + FLIGHT));
+const TITLE = SLAMS[2];                  // the count is whole
+const LOCKUP = F(TITLE + 0.9);           // "processed by Caveman"
+const LENGTH = F(LOCKUP + 3.4);
+
+const clamp = (v, lo = 0, hi = 1) => Math.min(Math.max(v, lo), hi);
+const lerp = (a, b, u) => a + (b - a) * u;
+const span = (t, a, b) => clamp((t - a) / (b - a));             // 0 until a, 1 from b
+const easeOut = (u) => 1 - (1 - u) ** 3;
+// Whole frames since a moment. Every "has it happened yet" below is asked in frames: seconds added together
+// land a hair off a frame, and the picture would be a frame late.
+const frames = (t, since) => Math.round((t - since) * FPS);
+
+// A number between 0 and 1 from a whole number, the same every time; and a stream of them from a seed.
+const hash = (n) => { n = Math.imul(n ^ (n >>> 15), 0x2c1b3c6d); n = Math.imul(n ^ (n >>> 12), 0x297a2d39); return ((n ^ (n >>> 15)) >>> 0) / 4294967296; };
+const rand = (seed) => () => { seed = (seed + 0x6d2b79f5) | 0; let x = Math.imul(seed ^ (seed >>> 15), 1 | seed); x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x; return ((x ^ (x >>> 14)) >>> 0) / 4294967296; };
+const noise = (x) => { const i = Math.floor(x), f = x - i; return lerp(hash(i), hash(i + 1), f * f * (3 - 2 * f)); };
+
+// ───────────────────────────────────────────────────────────── the picture
+
+const BW = W + 2 * PAD, BH = H + 2 * PAD;
+const image = new ImageData(BW, BH);
+const pixels = new Uint32Array(image.data.buffer);
+const kinds = new Uint8Array(BW * BH);   // what each pixel shows, for the frames of the blast drawn in two inks
+const SKY = 0, CLOUD = 1, FIRE = 2, LAND = 3, GUY = 4, TEXT = 5;
+let kind = SKY;
+
+const ink = (h) => { const n = parseInt(h.slice(1), 16); return (0xff000000 | ((n & 0xff) << 16) | (n & 0xff00) | (n >>> 16)) >>> 0; };
+const inks = (list) => list.split(' ').map(ink);
+
+function set(x, y, c) {
+  if (x < -PAD || x >= W + PAD || y < -PAD || y >= H + PAD) return;
+  const i = (y + PAD) * BW + x + PAD;
+  pixels[i] = c; kinds[i] = kind;
+}
+const kindAt = (x, y) => (x < -PAD || x >= W + PAD || y < -PAD || y >= H + PAD ? -1 : kinds[(y + PAD) * BW + x + PAD]);
+function box(x, y, w, h, c) { for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) set(x + i, y + j, c); }
+
+// Ordered dither: a colour between two steps of a ramp is the two of them in a 4x4 pattern.
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map((v) => (v + 0.5) / 16);
+const bayer = (x, y) => BAYER[((y & 3) << 2) | (x & 3)];
+function shade(ramp, v, x, y) {
+  const s = clamp(v, 0, 0.9999) * (ramp.length - 1), i = Math.floor(s);
+  return ramp[s - i > bayer(x, y) ? i + 1 : i];
+}
+
+// The app's bitmap letters (packages/ui/src/components/pixel-text.tsx): five rows, the old NES look.
+const LETTERS = {
+  A: ['.###.', '#...#', '#####', '#...#', '#...#'], B: ['####.', '#...#', '####.', '#...#', '####.'],
+  C: ['.####', '#....', '#....', '#....', '.####'], D: ['####.', '#...#', '#...#', '#...#', '####.'],
+  E: ['#####', '#....', '####.', '#....', '#####'], F: ['#####', '#....', '####.', '#....', '#....'],
+  G: ['.####', '#....', '#..##', '#...#', '.###.'], H: ['#...#', '#...#', '#####', '#...#', '#...#'],
+  I: ['###', '.#.', '.#.', '.#.', '###'], J: ['....#', '....#', '....#', '#...#', '.###.'],
+  K: ['#...#', '#..#.', '###..', '#..#.', '#...#'], L: ['#....', '#....', '#....', '#....', '#####'],
+  M: ['#...#', '##.##', '#.#.#', '#...#', '#...#'], N: ['#...#', '##..#', '#.#.#', '#..##', '#...#'],
+  O: ['.###.', '#...#', '#...#', '#...#', '.###.'], P: ['####.', '#...#', '####.', '#....', '#....'],
+  Q: ['.###.', '#...#', '#.#.#', '#..#.', '.##.#'], R: ['####.', '#...#', '####.', '#..#.', '#...#'],
+  S: ['.####', '#....', '.###.', '....#', '####.'], T: ['#####', '..#..', '..#..', '..#..', '..#..'],
+  U: ['#...#', '#...#', '#...#', '#...#', '.###.'], V: ['#...#', '#...#', '#...#', '.#.#.', '..#..'],
+  W: ['#...#', '#...#', '#.#.#', '##.##', '#...#'], X: ['#...#', '.#.#.', '..#..', '.#.#.', '#...#'],
+  Y: ['#...#', '.#.#.', '..#..', '..#..', '..#..'], Z: ['#####', '...#.', '..#..', '.#...', '#####'],
+  5: ['#####', '#....', '####.', '....#', '####.'],
+  '!': ['#', '#', '#', '.', '#'], '?': ['.###.', '#...#', '..##.', '.....', '..#..'], ' ': ['..', '..', '..', '..', '..'],
+};
+const widthOf = (text) => [...text].reduce((w, ch) => w + LETTERS[ch][0].length + 1, -1);
+// Letters from their top left corner.
+function write(text, x, y, c) {
+  for (const ch of text) {
+    const rows = LETTERS[ch];
+    for (let j = 0; j < 5; j++) for (let i = 0; i < rows[j].length; i++) if (rows[j][i] === '#') set(x + i, y + j, c);
+    x += rows[0].length + 1;
+  }
+}
+
+// The same letters over the picture: a line all round them, so they read on anything.
+function shout(text, x, y, c, edge) {
+  for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (i || j) write(text, x + i, y + j, edge);
+  write(text, x, y, c);
+}
+
+// A drawing of letters, one colour to a letter; '.' is see-through.
+function stamp(rows, x, y, palette) {
+  for (let j = 0; j < rows.length; j++) for (let i = 0; i < rows[j].length; i++) {
+    const c = palette[rows[j][i]];
+    if (c !== undefined) set(x + i, y + j, c);
+  }
+}
+
+// ───────────────────────────────────────────────────────────── the caveman
+
+// The app's Chief, built as packages/ui/scripts/cast/caveman.py builds him: a stack of parts on a 24x24 grid, each
+// a grid of letters where you can see every pixel. Letters are the identity colours of packages/ui's pixel.css.
+const GUY_INK = Object.fromEntries(Object.entries({
+  O: '#0d0914', e: '#0d0914', H: '#2c1912', h: '#58341e', S: '#f1b582', s: '#d07c4f', d: '#8b4530', T: '#eb9e3d',
+  t: '#aa6128', D: '#58341e', G: '#4add80', W: '#8b4530', w: '#d07c4f', V: '#58341e', k: '#2c2a26', m: '#6b6964',
+  R: '#8a877f', l: '#c2beb4', '*': '#fedbb7', L: '#fedbb7',
+}).map(([letter, h]) => [letter, ink(h)]));
+
+const part = (y, art) => { const rows = art.trim().split('\n'), w = Math.max(...rows.map((r) => r.length)); return [y, rows.map((r) => r.padEnd(w, '.'))]; };
+const at = ([y, rows], dx = 0, dy = 0) => [y + dy, rows.map((r) => (dx >= 0 ? '.'.repeat(dx) + r : r.slice(-dx) + '.'.repeat(-dx)))];
+const dots = ([y0, rows], points) => { const grid = rows.map((r) => [...r]); for (const [x, y, ch] of points) grid[y - y0][x] = ch; return [y0, grid.map((r) => r.join(''))]; };
+function stack(...layers) {
+  const grid = Array.from({ length: 24 }, () => Array(24).fill('.'));
+  for (const [y0, rows] of layers) rows.forEach((row, j) => { if (y0 + j >= 0 && y0 + j < 24) [...row.slice(0, 24)].forEach((ch, x) => { if (ch !== '.') grid[y0 + j][x] = ch; }); });
+  return grid.map((r) => r.join(''));
+}
+const flat = (...layers) => [0, stack(...layers)];
+const fx = (points) => dots([0, Array(24).fill('.'.repeat(24))], points);
+const star = (x, y) => [[x, y - 1, '*'], [x - 1, y, '*'], [x, y, '*'], [x + 1, y, '*'], [x, y + 1, '*']];
+
+const HEAD = part(1, `
+..........OOOOO.........
+.........OhhhHHOO.......
+........OhhHHHHHHO......
+.......OhhHHHHHHHHOO....
+......OhhHHHHHHHHHHHO...
+.....OhhHHHHHHHHHHhHO...
+.....OhHHSSSSSSSHHHHHO..
+.....OHHSSSSSSSSSSHhHO..
+.....OHHSSeSSsSSeSHHHO..
+.....OHHSSSSsdsSSSSHHO..
+.....OHHHSHHHHHHHSHHHO..
+.....OHHHHHHddHHHHHHHO..
+......OHHHHHHHHHHHH.....
+.......HHHHHGHHHHH......
+........HH.HHH.HH.......
+.........H....H.........
+`);
+// Expressions, as pixels on the head: brows row 8, eyes row 9, mouth row 12. `rock` is his eyes on the rock.
+const FACES = {
+  closed: [[10, 9, 'd'], [16, 9, 'd']],
+  aside: [[10, 9, 'S'], [16, 9, 'S'], [11, 9, 'O'], [17, 9, 'O'], [16, 8, 'S']],
+  rock: [[10, 9, 'S'], [16, 9, 'S'], [9, 10, 'O'], [15, 10, 'O']],
+  crossed: [[10, 9, 'S'], [16, 9, 'S'], [11, 9, 'O'], [15, 9, 'O'], [9, 8, 'S'], [17, 8, 'S']],
+  happy: [[10, 9, 'd'], [16, 9, 'd'], [9, 9, 'd'], [17, 9, 'd'], [10, 8, 'S'], [16, 8, 'S']],
+  grunt: [[12, 12, 'O'], [13, 12, 'O']],
+  shout: [[11, 12, 'O'], [12, 12, 'O'], [13, 12, 'O'], [14, 12, 'O'], [12, 13, 'd'], [13, 13, 'd']],
+  grin: [[11, 12, 'L'], [12, 12, 'L'], [13, 12, 'L'], [14, 12, 'L']],
+  wavy: [[11, 12, 'd'], [12, 12, 'H'], [13, 12, 'd'], [14, 12, 'H'], [12, 13, 'd']],
+};
+const head = (...faces) => dots(HEAD, faces.flatMap((f) => FACES[f]));
+
+const TORSO = part(13, `
+......OSSSSSSSSSSSSSSSO.
+.....OSSSSSSSSSSSSSSSSSO
+....OTTTTTTTTTTTTTTO....
+....OTDTTTTTTTTTTTO.....
+....OTTTTTTTTTDTTtO.....
+....OTTDTTTTTTTTtO......
+....OTTTTTTDTTTttO......
+....OOTtOOOTTTOOtOO.....
+.....OSSdO..OSSSdO......
+....OSSSdO.OSSSSdO......
+....OOOOOO.OOOOOOO......
+`);
+// His left arm (our right).
+const ARM_DOWN = part(15, `
+...................OSSSO
+..................OdSSO.
+..................OdSSO.
+.................OOSSSO.
+...................OOO..
+`);
+const ARM_SCRATCH = part(5, `
+....................OOO.
+...................OSSSO
+...................OSSdO
+....................OSSO
+....................OSSO
+....................OSSO
+....................OdSO
+...................OSSSO
+`);
+const WAVE_HAND = part(2, `
+...................OOOO.
+..................OSSSSO
+.................OSSSSSO
+..................OSSSdO
+...................OSSO.
+`);
+const WAVE_ARM = part(7, `
+....................OSSO
+....................OSSO
+....................OSSO
+....................OdSO
+....................OdSO
+...................OSSSO
+`);
+const FIST = part(2, `
+...................OOOO.
+..................OSSSSO
+..................OSdSSO
+..................OSSSSO
+...................OSSO.
+`);
+const ARM_TUCK = part(15, `
+..................OSSO..
+.................OdSSO..
+...............OSSSdO...
+...............OOOOO....
+`);
+// His right arm and the club.
+const CLUB_UP = part(0, `
+..OOOO..................
+.OwwWWO.................
+OwwWWVVO................
+OwWWVWVO................
+OWWVVVO.................
+OWVWVVO.................
+.OVVVO..................
+..OWVO..................
+..OWVO..................
+..OWVO..................
+..OWVO..................
+..OWVO..................
+.OSSSO..................
+OSSSSSO.................
+OSdSSSS.................
+.OSSS...................
+..OVO...................
+..OOO...................
+`);
+const CLUB_HIGH = part(1, `
+..OOOO..................
+.OwwWWO.................
+OwwWWVVO................
+OwWWVWVO................
+OWWVVVO.................
+OWVWVVO.................
+.OSSSO..................
+OSSSSSO.................
+OSdSSSO.................
+.OSSSO..................
+..OSSO..................
+..OSSSO.................
+..OdSSSO................
+...OSSSS................
+`);
+const CLUB_DIAG = part(4, `
+.OOOO...................
+OwwWWO..................
+OwWWVVO.................
+OWWVVVO.................
+OWVVVO..................
+.OOVVO..................
+...OWVO.................
+....OWVO................
+...OSSSO................
+..OSSSSSO...............
+..OSdSSSS...............
+...OSSS.................
+`);
+const CLUB_HIT = part(12, `
+...OSSSO................
+..OSSSSSO...............
+..OSdSSSS...............
+...OVWVO................
+..OVVWWVO...............
+.OVWWwwWO...............
+.OWWwwwWO...............
+..OOOOOO................
+`);
+const CLUB_GROUND = part(19, `
+.OOOO...................
+OwwWVO..................
+OwWVVOOOOOO.............
+OWVVVWWWWVO.............
+.OOOOOOOOOO.............
+`);
+const ROCK = part(20, `
+.OOOO...................
+OlllRO..................
+ORmmkkO.................
+OOOOOOO.................
+`);
+const WAVE = flat(WAVE_HAND, WAVE_ARM), CHEER = flat(WAVE_ARM, FIST);
+const waveTilt = (dx) => flat(at(WAVE_HAND, dx), WAVE_ARM);
+// The club coming down too fast to see: a streak where it passed.
+const STREAK = fx([[5, 2], [5, 3], [4, 3], [4, 4], [5, 4], [4, 5], [3, 5], [4, 6], [3, 6], [3, 7], [4, 7], [3, 8], [3, 9], [4, 9], [3, 10], [4, 11], [4, 12]].map(([x, y]) => [x, y, '*']));
+
+// A frame: what is painted under the head, where the head goes and with which faces, what is painted over it.
+const pose = (under, faces, dx, dy, over) => stack(...under, at(head(...faces), dx, dy), ...over);
+const body = (faces, arm, club, sink = 0) => pose([TORSO], faces, 0, sink, [arm, club]);
+const hop = (faces, arm, club) => pose([at(TORSO, 0, -1)], faces, 0, -1, [at(arm, 0, -1), at(club, 0, -1)]);
+// Two pixels to our right, left hand on his belly: room for the swing and the rock.
+const stepped = (faces, club, ...more) => pose([at(TORSO, 2)], faces, 2, 0, [at(ARM_TUCK, 2), club, ...more]);
+const dazed = (dx, stars) => pose([CLUB_GROUND, at(TORSO, 2)], ['crossed', 'wavy'], dx, 0, [at(ARM_TUCK, 2), fx(stars)]);
+
+const POSES = {
+  idle: [body([], ARM_DOWN, CLUB_UP), body([], ARM_DOWN, at(CLUB_UP, 0, 1), 1)],
+  blink: [body(['closed'], ARM_DOWN, CLUB_UP), body(['closed'], ARM_DOWN, at(CLUB_UP, 0, 1), 1)],
+  hit: stepped(['shout'], CLUB_HIT),
+  swing: stepped(['grunt'], CLUB_DIAG),
+  up: stepped([], at(CLUB_UP, 2)),
+  high: [stepped(['grunt'], at(CLUB_HIGH, 2)), pose([at(TORSO, 2)], ['grunt'], 2, -1, [at(ARM_TUCK, 2), at(CLUB_HIGH, 2, -1)])],
+  streak: stepped(['shout'], CLUB_DIAG, STREAK),
+  stare: stepped(['rock'], at(CLUB_UP, 2)),
+  think: [body(['aside'], ARM_SCRATCH, CLUB_UP), body(['aside'], at(ARM_SCRATCH, 0, 1), CLUB_UP)],
+  dazed: [dazed(2, [...star(5, 2), ...star(21, 1)]), dazed(3, [...star(8, 1), ...star(19, 3)])],
+  cheer: [body(['happy', 'shout'], CHEER, CLUB_HIGH), hop(['happy', 'shout'], CHEER, CLUB_HIGH), body(['happy', 'grin'], CHEER, CLUB_HIGH)],
+  wave: [body(['grin'], WAVE, CLUB_UP), body(['happy', 'grin'], waveTilt(-1), CLUB_UP), body(['happy', 'grin'], waveTilt(1), CLUB_UP), body(['grin'], WAVE, CLUB_UP)],
+};
+const GUY_X = 148, GUY_Y = 132;          // his grid's top left corner: feet on the ledge, the rock at his right hand
+const ROCK_TOP = [GUY_X + 3, GUY_Y + 20];   // where the club lands
+
+// Which frame he is in. A strike is drawn as the app draws it: club up, halfway, down, and back.
+function guyAt(t) {
+  const every = (list, hold, since = 0) => list[Math.floor(frames(t, since) / hold) % list.length];
+  if (frames(BONKS[0], t) > 10) return (frames(t, 0) >= 4 && frames(t, 0) < 7 ? POSES.blink : POSES.idle)[0];
+  if (t < WIND) {
+    const next = BONKS.find((s) => t < s), last = BONKS.findLast((s) => t >= s);
+    if (next !== undefined && frames(next, t) <= 3) return POSES.swing;
+    if (last === undefined) return POSES.up;
+    return frames(t, last) < 4 ? POSES.hit : frames(t, last) < 7 ? POSES.swing : POSES.up;
+  }
+  if (t < DUD) {
+    if (frames(t, WIND) < 3) return POSES.up;
+    if (frames(DUD, t) <= 2) return POSES.streak;
+    return calm ? POSES.high[0] : every(POSES.high, 2, WIND);       // he shakes with the effort
+  }
+  if (t < HM) return frames(t, DUD) < 8 ? POSES.hit : frames(t, DUD) < 11 ? POSES.swing : POSES.stare;
+  if (frames(t, BOOM) < 6) return every(POSES.think, 10, HM);
+  if (frames(t, TITLE) < 3) return every(POSES.dazed, 8, BOOM);
+  const cheered = frames(t, TITLE) - 3;
+  if (frames(t, LOCKUP) < 24) return POSES.cheer[cheered % 20 < 4 ? 0 : cheered % 20 < 8 ? 1 : 2];
+  const waved = frames(t, LOCKUP) - 24;
+  if (waved < 32) return POSES.wave[Math.floor(waved / 4) % 4];
+  return (waved % 70 > 64 ? POSES.blink : POSES.idle)[Math.floor(waved / 15) % 2];
+}
+
+// ───────────────────────────────────────────────────────────── the camera
+
+// Screen pixels to one of the picture's. It steps a whole number at a time, one step a frame.
+const ZOOMS = [[0, 12], [BONKS[0], 11], [BONKS[1], 10], [BONKS[2], 9], [F(WIND + 0.25), 10], [WIDE, 6]];
+function zoomAt(t) {
+  let n = ZOOMS[0][1];
+  for (const [since, to] of ZOOMS) {
+    if (t < since) break;
+    n += Math.sign(to - n) * Math.min(Math.abs(to - n), frames(t, since) + 1);
+  }
+  return n;
+}
+// Close up the frame ends twelve rows under his feet; the whole valley is the whole picture.
+const viewBottom = (n) => (n >= 8 ? 168 : 168 + (8 - n) * 6);
+const viewTop = (n) => viewBottom(n) - SCREEN_H / n;
+
+// What shakes the camera: when, how many pixels, for how long.
+const SHAKES = [
+  [BONKS[0], 1, 0.15], [BONKS[1], 2, 0.2], [BONKS[2], 2, 0.2], [BOOM, 8, 1.4],
+  ...SHOTS.map((s) => [s, 2, 0.15]), [SLAMS[0], 3, 0.25], [SLAMS[1], 3, 0.25], [SLAMS[2], 5, 0.45],
+];
+function cameraAt(t) {
+  const n = zoomAt(t), f = Math.round(t * FPS);
+  let x = CX, y = viewBottom(n) - SCREEN_H / 2 / n;
+  if (!calm) {
+    let reach = 0;
+    for (const [since, by, lasts] of SHAKES) if (t >= since && t < since + lasts) reach = Math.max(reach, by * (1 - (t - since) / lasts) ** 2);
+    // the ground trembles as the crack climbs, then holds still
+    if (t >= WIDE && t < RIM && hash(f * 3) < span(t, WIDE, RIM)) reach = Math.max(reach, 1);
+    x += Math.round((hash(f * 2 + 11) * 2 - 1) * reach);
+    y += Math.round((hash(f * 2 + 12) * 2 - 1) * reach);
+  }
+  return { n, x, y };
+}
+
+// ───────────────────────────────────────────────────────────── the valley
+
+const CX = 160;                          // the volcano stands behind him, in the middle
+const PEAK = 68, FOOT = 142;             // its top row and the row its slopes end on
+const CRATER = 72;                       // where the fire comes out
+const HORIZON = 140;
+const GROUND = 156;                      // the first row of the ledge he stands on
+
+const DUSK = inks('#3a2c62 #4b3672 #624382 #7e4f8c #9d588a #bb5f7f #d56b6c #e97f57 #f69a4c #fdb75a #ffd07a');
+const NIGHT = inks('#0a0616 #100920 #180c29 #220e30 #2f1134 #421535 #5b1b34 #7a2630 #9f382c #c9502a #ee7a2e #ffab44 #ffd98a');
+// Smoke to fire: cold and dark at one end, white hot at the other.
+const HEAT = inks('#0c0816 #150c20 #20112b #301735 #48203a #6a2a38 #933730 #bf4a28 #e56a24 #f9942e #ffc24c #ffe58a #fff8d8');
+const COOLING = [HEAT[12], HEAT[11], HEAT[10], HEAT[9], HEAT[8], HEAT[7], HEAT[6]];
+const OUTLINE = ink('#0d0914');
+
+// How hard the fire lights the valley: a flare at the blast, a pulse with every shot, then a steady glow.
+function fireAt(t) {
+  if (t < BOOM) return 0;
+  let v = 0.3 + 0.7 * Math.exp(-(t - BOOM) * 1.5) + 0.04 * Math.sin(t * 9);
+  for (const s of [...SHOTS, TITLE]) if (t >= s) v += 0.25 * Math.exp(-(t - s) * 7);
+  return v;
+}
+
+function paintSky(t) {
+  kind = SKY;
+  const night = t >= BOOM, fire = fireAt(t), blast = (frames(t, BOOM) - 3) / FPS;
+  const ring = blast >= 0 && blast < 0.7 ? 14 + blast * 520 : -1;       // the shock, a circle running out across the sky
+  for (let y = -PAD; y < H + PAD; y++) {
+    const down = clamp(y / HORIZON);
+    for (let x = -PAD; x < W + PAD; x++) {
+      if (!night) { set(x, y, shade(DUSK, down ** 1.15, x, y)); continue; }
+      const dx = x - CX, dy = y - CRATER;
+      let v = 0.3 * down + 0.62 * fire / (1 + (dx * dx + 1.5 * dy * dy) / 2600);
+      if (ring > 0 && Math.abs(Math.hypot(dx, dy) - ring) < 2.5) v += 0.3 * (1 - blast / 0.7);
+      set(x, y, shade(NIGHT, v, x, y));
+    }
+  }
+}
+
+const STARS = (() => { const r = rand(7); return Array.from({ length: 54 }, () => [Math.floor(r() * (W + 2 * PAD)) - PAD, Math.floor(r() * 84) - PAD, r()]); })();
+const STAR_INK = { dusk: inks('#8a73b8 #b9a3dc'), night: inks('#6c5c96 #e9dcff') };   // dim, bright
+function paintStars(t) {
+  const night = t >= BOOM, f = Math.round(t * FPS);
+  STARS.forEach(([x, y, size], i) => {
+    if (!night && (size < 0.72 || y > 34)) return;                       // at dusk only the first few are out
+    const bright = hash(i * 31 + Math.floor(f / 9 + size * 40)) > 0.25;  // they twinkle
+    set(x, y, (night ? STAR_INK.night : STAR_INK.dusk)[bright ? 1 : 0]);
+  });
+}
+
+// A bank of cloud: its top is rows of half circles of three sizes, drifting past each other.
+const hump = (u) => { const f = u - Math.floor(u) - 0.5; return Math.sqrt(1 - 4 * f * f); };
+const CLOUDS = {
+  far: { base: 117, seed: 0.37, deep: 26, dusk: inks('#ffe0a6 #fcc98a #f6ae76 #ef986c #f09a62 #f6a85c'), night: inks('#e8702e #b8452e #86303a #57203c #391637 #28102f #1c0c27 #150a21'), lights: 0.7 },
+  near: { base: 131, seed: 0.81, deep: 30, dusk: inks('#fff0c0 #ffd894 #fbbd7c #f2a070 #e4866c #d9766c #cd6a6e'), night: inks('#ffb04a #f07a30 #b8452e #7a2a36 #47193a #2b1132 #1d0c28 #160a22'), lights: 1 },
+};
+function cloudTop(bank, x, t) {
+  let top = bank.base - 5.5 * hump(x / 37 + bank.seed + t * 0.012) - 3.2 * hump(x / 13.7 + bank.seed * 3.1 - t * 0.02) - 1.6 * hump(x / 6.3 + bank.seed * 7.7 + t * 0.035);
+  // the blast flattens the clouds around the mountain; they close in again slowly
+  if (t >= BOOM) top += 8 * Math.exp(-(((x - CX) / (50 + 160 * span(t, BOOM, BOOM + 0.6))) ** 2)) * Math.exp(-(t - BOOM) * 0.3) * span(t, BOOM, BOOM + 0.2);
+  return Math.round(top);
+}
+function paintClouds(bank, t) {
+  kind = CLOUD;
+  const night = t >= BOOM, fire = fireAt(t);
+  for (let x = -PAD; x < W + PAD; x++) {
+    const top = cloudTop(bank, x, t), lit = clamp(1 - Math.abs(x - CX) / 170) * Math.min(fire * 1.3, 1) * bank.lights;
+    for (let y = top; y < top + bank.deep && y < H + PAD; y++) {
+      if (!night) { set(x, y, shade(bank.dusk, (y - top) / bank.deep, x, y)); continue; }
+      const under = 1 - Math.exp(-(y - top) / 2.2);                       // the light does not get far into a cloud
+      set(x, y, shade(bank.night, (1 - lit) * 0.5 + under * (0.5 + 0.3 * lit), x, y));
+    }
+  }
+}
+
+// The volcano: slopes that steepen towards the top, gullies running down them from the summit.
+const slope = (y) => 7 + 84 * ((y - PEAK) / (FOOT - PEAK)) ** 1.7;       // half its width at a row
+const ragged = (x) => PEAK + 4 + Math.floor(hash(x + 900) * 3);          // its top row once the summit is gone
+const ROCK_DUSK = inks('#5a3f7c #6f4886 #87518c #a25a8a #bb6584 #d0747c');
+const ROCK_NIGHT = inks('#0d0818 #150b21 #1f0f2a #2e1433 #451a36 #652433 #8c312e #b8452a');
+function paintVolcano(t) {
+  kind = LAND;
+  const blown = t >= BOOM, fire = fireAt(t), waking = span(t, RIM, RIM + 0.15);
+  for (let y = PEAK; y < FOOT + 16; y++) {
+    const half = slope(Math.min(y, FOOT));
+    for (let x = Math.ceil(CX - half); x <= CX + half; x++) {
+      // the crater: a dip between two lips, until the blast takes the summit off
+      if (blown ? y < ragged(x) : y < PEAK + 2 && Math.abs(x - CX) < 5) continue;
+      const across = (x - CX) / half;                                    // -1 on the left slope, 1 on the right
+      const gully = noise(across * 9 + 40) - 0.5 + 0.5 * (noise(across * 23 + 7) - 0.5);
+      if (blown) {
+        const lit = clamp(1 - Math.hypot(x - CX, y - CRATER) / 62) ** 2;
+        set(x, y, shade(ROCK_NIGHT, 0.12 + 0.3 * gully + 0.85 * fire * lit, x, y));
+      } else if (waking && y < PEAK + 4 && Math.abs(x - CX) < 9 && waking > bayer(x, y)) {
+        set(x, y, COOLING[Math.abs(x - CX) < 5 ? y - PEAK - 2 : Math.abs(x - CX) < 8 ? 2 + ((y - PEAK) >> 1) : 4]);   // the rim, lit from inside
+      } else {
+        const pale = 0.3 * span(y, FOOT - 34, FOOT) ** 2;                 // its foot is lost in the evening
+        set(x, y, shade(ROCK_DUSK, 0.56 - 0.4 * across + 0.5 * gully + pale, x, y));
+      }
+    }
+  }
+}
+
+// Dark hills between the clouds and the ledge, then the ledge itself with its grass and stones.
+const hillTop = (x) => 140 + Math.round(3.2 * Math.sin(x * 0.045 + 1.3) + 2.2 * Math.sin(x * 0.11 + 0.4) - 4.5 * Math.exp(-(((x - 96) / 34) ** 2)) - 3 * Math.exp(-(((x - 250) / 40) ** 2)));
+const ledgeTop = (x) => GROUND + (Math.abs(x - CX) > 46 ? Math.round(1.2 * Math.sin(x * 0.21) + 0.8 * Math.sin(x * 0.07 + 2)) : 0);
+const HILL = { dusk: inks('#402b5c #36244f #2c1d45 #25183c'), night: inks('#160b22 #120920 #0e071a #0b0615'), rim: [ink('#5f4172'), ink('#8a2f30'), ink('#2b1532')] };
+const LEDGE = { dusk: inks('#261a3c #1e1433 #170f2a #110b21'), night: inks('#100919 #0c0714 #090510 #07040d'), rim: [ink('#7c5279'), ink('#d4622c'), ink('#5c2836')] };
+// Tufts of grass: 't' a blade's lit tip, 'b' the blade. Each is drawn standing, and leaning as the wind takes it.
+const TUFT_ART = [
+  ['..t....', 't.b..t.', 'b.b.b..', '.bbb...', '.bbb...'],
+  ['.t...t.', '.b.t.b.', '..bbb..', '..bbb..'],
+  ['t.t', 'b.b', '.b.'],
+  ['...t...', '.t.b..t', '.b.b.b.', '..bbb..', '..bbb..', '..bbb..'],
+];
+const TUFTS = (() => {
+  const r = rand(23), list = [];
+  for (let x = -PAD + 3; x < W + PAD; x += 9 + Math.floor(r() * 16)) {
+    if (Math.abs(x - 156) < 34) continue;                               // bare rock where he stands
+    list.push({ x, art: TUFT_ART[Math.floor(r() * TUFT_ART.length)], sway: r() });
+  }
+  return list;
+})();
+const STONES = [[92, 5, 3], [214, 6, 3], [118, 3, 2], [196, 3, 2]];   // x, width, height
+const BLADE = [ink('#4d3464'), ink('#2f1634')];   // a blade of grass under its lit tip: at dusk, by the fire
+function paintLand(t) {
+  kind = LAND;
+  const night = t >= BOOM, fire = Math.min(fireAt(t), 1), f = Math.round(t * FPS);
+  const rimOf = (set3, x, y) => (!night ? set3[0] : clamp(1 - Math.abs(x - CX) / 190) * fire > bayer(x, y) ? set3[1] : set3[2]);
+  for (let x = -PAD; x < W + PAD; x++) {
+    const hill = hillTop(x), ledge = ledgeTop(x);
+    for (let y = hill; y < ledge; y++) set(x, y, y === hill ? rimOf(HILL.rim, x, y) : shade(night ? HILL.night : HILL.dusk, (y - hill) / 18, x, y));
+    for (let y = ledge; y < H + PAD; y++) set(x, y, y === ledge ? rimOf(LEDGE.rim, x, y) : shade(night ? LEDGE.night : LEDGE.dusk, (y - ledge) / 34, x, y));
+  }
+  for (const [x, w, h] of STONES) {
+    const y = ledgeTop(x + (w >> 1)) - h;
+    for (let j = 0; j < h; j++) for (let i = j === 0 ? 1 : 0; i < (j === 0 ? w - 1 : w); i++) {
+      const top = j === 0 || (i === 0 && j === 1);
+      set(x + i, y + j, top ? rimOf(LEDGE.rim, x + i, y + j) : (night ? LEDGE.night : LEDGE.dusk)[i > w / 2 ? 2 : 0]);
+    }
+  }
+  // grass: it sways, and lies down away from the blast
+  const flattened = frames(t, BOOM) >= 6 && frames(t, BOOM) < 33;
+  for (const tuft of TUFTS) {
+    const rows = tuft.art, top = ledgeTop(tuft.x) - rows.length;
+    const away = Math.sign(tuft.x - CX), swaying = hash(Math.floor(f / 14 + tuft.sway * 20) + tuft.x) < 0.4;
+    rows.forEach((row, j) => {
+      if (flattened && j < rows.length - 3) return;                       // the blast lays it down
+      for (let i = 0; i < row.length; i++) {
+        if (row[i] === '.') continue;
+        const lean = flattened ? away * (rows.length - j - 1) : swaying && row[i] === 't' ? 1 : 0;
+        const x = tuft.x + i + lean, y = top + j;
+        set(x, y, row[i] === 't' || (flattened && j === rows.length - 3) ? rimOf(LEDGE.rim, x, y) : BLADE[night ? 1 : 0]);
+      }
+    });
+  }
+}
+
+// ───────────────────────────────────────────────────────────── the crack
+
+// A line through points, pixel by pixel.
+function trace(points) {
+  const line = [];
+  for (let k = 1; k < points.length; k++) {
+    let [x, y] = points[k - 1];
+    const [x1, y1] = points[k], dx = Math.abs(x1 - x), dy = -Math.abs(y1 - y), sx = x < x1 ? 1 : -1, sy = y < y1 ? 1 : -1;
+    for (let err = dx + dy; x !== x1 || y !== y1;) {
+      line.push([x, y]);
+      const twice = 2 * err;
+      if (twice >= dy) { err += dy; x += sx; }
+      if (twice <= dx) { err += dx; y += sy; }
+    }
+  }
+  line.push(points[points.length - 1]);
+  return line;
+}
+// From the foot of the rock along the ledge, up the hill behind it, under the clouds and up the mountain.
+const onLedge = ([x, up]) => [x, GROUND - up], onSlope = ([across, down]) => [CX + across, PEAK + down];
+const VEIN = trace([
+  ...[[149, 1], [146, 0], [141, 0], [138, 0], [136, 3], [138, 6], [134, 10], [136, 13], [133, 17], [136, 21], [132, 25], [135, 29], [132, 33]].map(onLedge),
+  ...[[-24, 54], [-27, 49], [-21, 44], [-24, 38], [-18, 33], [-20, 27], [-14, 22], [-15, 16], [-10, 11], [-11, 7], [-6, 4], [-5, 1]].map(onSlope),
+]);
+// Side cracks: each leaves the main one where it starts.
+const TWIGS = [
+  [[-27, 49], [-33, 46], [-36, 42], [-41, 41]], [[-24, 38], [-30, 36], [-32, 31]], [[-18, 33], [-12, 35], [-8, 32], [-3, 34]],
+  [[-14, 22], [-8, 24], [-5, 21]], [[-15, 16], [-20, 14], [-22, 10]], [[-21, 44], [-15, 46], [-11, 43]],
+].map((points) => points.map(onSlope)).map((points) => ({ line: trace(points), from: VEIN.findIndex(([x, y]) => x === points[0][0] && y === points[0][1]) }));
+// Lava that runs down from the crater once it is open.
+const FLOWS = [
+  [[6, 6], [10, 12], [8, 18], [14, 24], [12, 30], [18, 37], [16, 43], [22, 50], [21, 58]],
+  [[0, 6], [-2, 12], [2, 19], [0, 26], [5, 32], [3, 39], [7, 46], [5, 54]],
+  [[-8, 6], [-13, 10], [-11, 16]],
+].map((points) => trace(points.map(onSlope)));
+const reached = (i) => CRACK + (RIM - CRACK) * (i / VEIN.length) ** (1 / 2.2);   // when the crack gets to its i-th pixel: it creeps, then runs
+
+function paintCrack(t) {
+  if (t < CRACK) return;
+  const f = Math.round(t * FPS), open = t >= BOOM, split = ink('#3d1f47');
+  const lit = [];                        // every pixel of it there is by now: x, y, how long ago, how far along
+  const glowing = (x, y, age, along) => lit.push([x, y, age, along]);
+  const burn = (x, y, age, along) => {
+    let c;
+    if (open) c = ((along - Math.floor(f / 2)) % 7 + 7) % 7 < 2 ? HEAT[11] : HEAT[9];            // lava, moving
+    else c = age < 0.07 ? HEAT[12] : age < 0.2 ? HEAT[11] : age < 0.45 ? HEAT[10] : hash(along + Math.floor(f / 5)) < 0.3 ? HEAT[8] : HEAT[9];
+    const under = kindAt(x, y);
+    if (under === LAND) { kind = LAND; set(x, y, c); }
+    else if (under === CLOUD && !open) {                                                         // under the clouds: they light up from inside
+      kind = CLOUD;
+      for (let j = -2; j <= 2; j++) for (let i = -2; i <= 2; i++) {
+        const far = Math.abs(i) + Math.abs(j);
+        if (far <= 3 && kindAt(x + i, y + j) === CLOUD && (age < 0.5 ? 1.1 : 0.75) - far * 0.28 > bayer(x + i, y + j)) set(x + i, y + j, far < 2 ? ink('#fff6d0') : ink('#ffe2a0'));
+      }
+    }
+  };
+  VEIN.forEach(([x, y], i) => { const age = t - reached(i); if (age >= 0) glowing(x, y, age, i); });
+  for (const twig of TWIGS) {
+    const since = t - reached(twig.from);
+    twig.line.forEach(([x, y], i) => { const age = since - i / 60; if (age >= 0) glowing(x, y, age, twig.from + i); });
+  }
+  if (open) FLOWS.forEach((line, k) => {
+    const front = (t - BOOM - 0.3 - k * 0.25) * 15;                                               // lava is slow
+    line.forEach(([x, y], i) => { if (i < front) { glowing(x, y, 9, i); if (i < 14) glowing(x + 1, y, 9, i + 3); } });
+  });
+  kind = LAND;
+  if (!open) for (const [x, y] of lit) if (kindAt(x + 1, y) === LAND) set(x + 1, y, split);
+  for (const pixel of lit) burn(...pixel);
+}
+
+// ───────────────────────────────────────────────────────────── the eruption
+
+// Smoke and fire are balls: each leaves the crater at its own speed, slows, swells and cools. The ones of the
+// blast go wide; after it a column keeps climbing, and every shot throws a few more.
+const PUFFS = (() => {
+  const r = rand(5), list = [];
+  const puff = (born, spread, slow, fast, grow, cools) => {
+    const lean = (r() - 0.5) * spread, speed = slow + (fast - slow) * r() ** 1.6;
+    list.push({ born, vx: Math.sin(lean) * speed, vy: Math.cos(lean) * speed, drag: 1.5 + r() * 1.2, lift: 5 + r() * 6, from: 2.5 + r() * 2, grow: grow * (0.75 + r() * 0.5), cools: cools * (0.7 + r() * 0.6) });
+  };
+  for (let i = 0; i < 52; i++) puff(r() * 0.1, 2.0, 40, 230, 15, 0.5);
+  for (let at = 0.15; at < LENGTH - BOOM; at += 0.06) puff(at, 0.55, 46, 84, 9.5, 0.7);
+  for (const s of SHOTS) for (let i = 0; i < 7; i++) puff(s - BOOM + r() * 0.05, 1.3, 30, 90, 7, 0.4);
+  return list.sort((a, b) => a.born - b.born);
+})();
+function paintPlume(t) {
+  if (t < BOOM) return;
+  kind = FIRE;
+  const fire = fireAt(t), tau = t - BOOM;
+  for (const p of PUFFS) {
+    const age = tau - p.born;
+    if (age < 0) break;
+    const gone = 1 - Math.exp(-p.drag * age);
+    const x = Math.round(CX + (p.vx / p.drag) * gone + 3 * age), y = Math.round(CRATER - (p.vy / p.drag) * gone - p.lift * age);
+    const r = p.from + p.grow * (1 - Math.exp(-2.2 * age));
+    if (y + r < -PAD) continue;
+    const hot = Math.exp(-age / p.cools);
+    // lit from below, by the crater: the side of a ball that faces it glows
+    const away = Math.hypot(x - CX, y - CRATER) || 1, lx = (CX - x) / away, ly = (CRATER - y) / away;
+    const glow = fire * 0.75 * clamp(1.15 - away / 130);
+    const reach = Math.ceil(r);
+    for (let j = -reach; j <= reach; j++) for (let i = -reach; i <= reach; i++) {
+      const d = Math.hypot(i, j) / r;
+      if (d > 1) continue;
+      const facing = clamp(0.5 + 0.5 * ((i * lx + j * ly) / r)) * (0.55 + 0.45 * d);
+      set(x + i, y + j, shade(HEAT, 0.07 + hot * (1.05 - 0.35 * d) + glow * facing, x + i, y + j));
+    }
+  }
+}
+
+// Sparks of lava: thrown by the blast, then a fountain, then a spurt with every shot. They rise and fall.
+const SPARKS = (() => {
+  const r = rand(11), list = [];
+  const spark = (born, spread, slow, fast) => { const lean = (r() - 0.5) * spread, speed = slow + (fast - slow) * r(); list.push({ born, vx: Math.sin(lean) * speed, vy: Math.cos(lean) * speed, lasts: 0.6 + r() * 1.5 }); };
+  for (let i = 0; i < 170; i++) spark(r() * 0.12, 2.3, 50, 230);
+  for (let at = 0.3; at < LENGTH - BOOM; at += 0.012) spark(at, 1.0, 55, 150);
+  for (const s of SHOTS) for (let i = 0; i < 34; i++) spark(s - BOOM + r() * 0.04, 1.7, 50, 150);
+  return list;
+})();
+// The summit, in pieces.
+const RUBBLE = (() => { const r = rand(3); return Array.from({ length: 16 }, () => { const lean = (r() - 0.5) * 2.4, speed = 70 + r() * 110; return { vx: Math.sin(lean) * speed, vy: Math.cos(lean) * speed, w: 2 + Math.floor(r() * 2), spin: r() }; }); })();
+const FALL = 150;                        // pixels a second, every second
+function paintFountain(t) {
+  kind = FIRE;
+  if (t >= RIM && t < BOOM) for (let k = 0; k < 7; k++) {                // the first sparks, climbing out while everything waits
+    const age = t - RIM - k * 0.045;
+    if (age > 0) set(Math.round(CX + (hash(k + 700) - 0.5) * 9 + Math.sin(age * 9 + k) * 1.5), Math.round(PEAK + 1 - age * (12 + hash(k + 710) * 22)), COOLING[1 + (k % 3)]);
+  }
+  if (t < BOOM) return;
+  const tau = t - BOOM;
+  for (const s of SPARKS) {
+    const age = tau - s.born;
+    if (age < 0 || age > s.lasts) continue;
+    const x = Math.round(CX + s.vx * age), y = Math.round(CRATER - s.vy * age + 0.5 * FALL * age * age);
+    set(x, y, COOLING[Math.floor((age / s.lasts) * COOLING.length)]);
+    if (age < 0.25) set(x, y + 1, COOLING[2]);                           // a fresh one is two pixels long
+  }
+  kind = LAND;
+  for (const piece of RUBBLE) {
+    const x = Math.round(CX + piece.vx * tau), y = Math.round(CRATER - 2 - piece.vy * tau + 0.5 * FALL * tau * tau);
+    if (y > HORIZON) continue;
+    const turned = Math.floor(tau * 12 + piece.spin * 4) % 2;
+    box(x, y, turned ? piece.w : 2, turned ? 2 : piece.w, ROCK_NIGHT[1]);
+    set(x, y, ROCK_NIGHT[6]);                                           // the side the fire lights
+  }
+}
+
+// Embers over everything, once it burns: they climb, sway and go out. The colours are the sign-in page's.
+const EMBER_INK = inks('#fff0c2 #ffd38a #ffb054 #ff8a2a');
+function paintEmbers(t) {
+  const since = t - BOOM - 0.4;
+  if (since < 0) return;
+  kind = FIRE;
+  const f = Math.round(t * FPS);
+  for (let e = 0; e < 84; e++) {
+    const every = 2.2 + hash(e * 13 + 1) * 3, local = since - hash(e * 13 + 2) * every;
+    if (local < 0) continue;
+    const turn = Math.floor(local / every), age = local - turn * every, seed = e * 977 + turn * 131;
+    if (age / every > 0.8 && f % 2) continue;                            // it flickers before it dies
+    const x = Math.round(hash(seed) * (W + 24) - 12 + (3 + hash(seed + 3) * 4) * Math.sin(hash(seed + 4) * 6.3 + age * (1 + hash(seed + 5) * 2)));
+    const y = Math.round(40 + hash(seed + 1) * 135 - (9 + hash(seed + 2) * 20) * age);
+    set(x, y, EMBER_INK[Math.floor(hash(seed + 6) * 4)]);
+  }
+}
+
+// ───────────────────────────────────────────────────────────── the count
+
+// The numerals are drawn for this: thirteen pixels wide, twenty tall, lit from above. Each gets an outline one
+// pixel around it and a hard shadow two rows under it; 'o' is a hollow the outline fills.
+function chunky(art) {
+  const rows = art.trim().split('\n'), h = rows.length, w = rows[0].length;
+  const drawn = (x, y) => (y >= 0 && y < h && x >= 0 && x < w ? rows[y][x] : '.');
+  const near = (x, y) => { for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) if (drawn(x + i, y + j) === '#') return true; return false; };
+  const cells = [];                      // x, y, and the body's row, or -1 for the outline and the shadow
+  for (let y = -1; y <= h + 2; y++) for (let x = -1; x <= w; x++) {
+    if (drawn(x, y) === '#') cells.push([x, y, y]);
+    else if (drawn(x, y) === 'o' || near(x, y) || near(x, y - 1) || near(x, y - 2)) cells.push([x, y, -1]);
+  }
+  return { w, h, cells };
+}
+const FIVE = chunky(`
+############.
+############.
+############.
+####.........
+####.........
+####.........
+####.........
+##########...
+###########..
+############.
+.......######
+.........####
+.........####
+.....ooo.####
+####.ooo.####
+####.ooo.####
+.####...####.
+.###########.
+..#########..
+...#######...
+`);
+const ZERO = chunky(`
+...#######...
+..#########..
+.###########.
+.####...####.
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+####.....####
+.####...####.
+.###########.
+..#########..
+...#######...
+`);
+const COMMA = chunky(`
+.##.
+####
+####
+.###
+..##
+.##.
+`);
+const COMMA_DROP = 16;                   // the comma hangs from row 16 and ends under the line
+// Cream, gold, amber down a numeral; and the same numeral at three heats, fresh from the fire.
+const GOLD = [inks('#fff3d0 #ffd163 #f59d38'), inks('#fffbe8 #ffe89a #ffc24c'), inks('#ffffff #fff8d8 #ffe58a'), inks('#ffffff #ffffff #ffffff')];
+const SHINE = ink('#ffffff');
+function numeral(glyph, x, y, heat, drop = 0, gleam = -99) {
+  for (const [i, j, row] of glyph.cells) {
+    if (row < 0) { set(x + i, y + j + drop, OUTLINE); continue; }
+    const line = row + drop;
+    const lit = Math.abs(i + x - gleam + (line - 10) * 0.6) < 2.2;     // a gleam crossing the row, leaning
+    set(x + i, y + j + drop, lit || (line === 0 && !heat) ? SHINE : GOLD[heat][line < 6 ? 0 : line < 13 ? 1 : 2]);
+  }
+}
+
+// The row grows a group at a time: a comma and room for three zeros. Each zero is there from the frame it lands.
+const GROWS = [...BONKS, F(SHOTS[0] - 0.2)];
+const lands = (group, i) => (group < 3 ? F(BONKS[group] + 0.2 + i * 0.0667) : SLAMS[i]);
+const rowWidth = (groups) => 15 + groups * 51 - 2;
+const groupsAt = (t) => GROWS.filter((g) => t >= g).length;
+function rowLeft(t) {                    // it slides to its new centre in five frames
+  const groups = groupsAt(t);
+  if (!groups) return CX - Math.round(rowWidth(0) / 2);
+  return Math.round(lerp(CX - rowWidth(groups - 1) / 2, CX - rowWidth(groups) / 2, easeOut(span(t, GROWS[groups - 1], GROWS[groups - 1] + 0.17))));
+}
+const rowTop = (t) => Math.round(viewTop(zoomAt(t))) + 8;   // it hangs from the top of the frame, wherever the camera stands
+const slotOf = (group, i) => 15 + group * 51 + 6 + i * 15;                // a zero's place, from the row's left
+
+function paintCount(t) {
+  kind = TEXT;
+  const left = rowLeft(t), top = rowTop(t), groups = groupsAt(t), f = Math.round(t * FPS);
+  // the whole row jumps a pixel when something lands on it, and flashes when it is whole
+  const whole = t >= TITLE && frames(t, TITLE) < 3;
+  const gleam = t >= LOCKUP + 1.3 ? left - 14 + (t - LOCKUP - 1.3) * 420 : -99;
+  const jolt = (x) => (calm ? 0 : SLAMS.some((s) => t >= s && frames(t, s) < 2) ? 1 : t >= WIND && t < DUD && hash(f * 5 + x) < 0.3 ? 1 : 0);
+  numeral(FIVE, left, top + jolt(0), whole ? 3 : 0, 0, gleam);
+  for (let g = 0; g < groups; g++) {
+    numeral(COMMA, left + 15 + g * 51, top + jolt(g), whole ? 3 : 0, COMMA_DROP, gleam);
+    for (let i = 0; i < 3; i++) {
+      const since = frames(t, lands(g, i));
+      if (since < 0) continue;
+      const x = left + slotOf(g, i);
+      // it lands white hot and a pixel low, and cools to gold
+      const heat = whole ? 3 : g < 3 ? (since < 2 ? 3 : since < 4 ? 2 : since < 6 ? 1 : 0) : since < 3 ? 3 : since < 8 ? 2 : since < 14 ? 1 : 0;
+      numeral(ZERO, x, top + (since < 2 ? 1 : 0) + jolt(x), heat, 0, gleam);
+    }
+  }
+}
+
+// What lands on the row. From the rock: a spark for every zero, arcing up. From the crater: a ball of fire.
+function paintArrivals(t) {
+  kind = FIRE;
+  for (let g = 0; g < 3; g++) for (let i = 0; i < 3; i++) {
+    const leaves = F(BONKS[g] + i / FPS), arrives = lands(g, i);
+    if (t < leaves || frames(t, arrives) > 6) continue;
+    const tx = rowLeft(arrives) + slotOf(g, i) + 6, ty = rowTop(arrives) + 10;
+    if (t >= arrives) { burst(tx, ty, frames(t, arrives), 9, 5); continue; }
+    for (let back = 5; back >= 0; back--) {                              // the spark, a little cross, and the tail behind it
+      const u = (t - (back * 0.6) / FPS - leaves) / (arrives - leaves);
+      if (u < 0) continue;
+      const x = Math.round(lerp(ROCK_TOP[0], tx, u)), y = Math.round(lerp(ROCK_TOP[1], ty, u) - 14 * 4 * u * (1 - u));
+      if (back) set(x, y, COOLING[Math.min(back, 4)]); else { box(x - 1, y, 3, 1, SHINE); box(x, y - 1, 1, 3, SHINE); }
+    }
+  }
+  SHOTS.forEach((leaves, i) => {
+    const arrives = SLAMS[i];
+    if (t < leaves || frames(t, arrives) > 9) return;
+    const tx = rowLeft(arrives) + slotOf(3, i) + 6, ty = rowTop(arrives) + 10;
+    if (t >= arrives) { burst(tx, ty, frames(t, arrives), 20, 9); return; }
+    for (let back = 7; back >= 0; back--) {                              // the ball, and the fire it leaves behind it
+      const u = (t - (back * 0.5) / FPS - leaves) / (arrives - leaves);
+      if (u < 0) continue;
+      const x = Math.round(lerp(CX, tx, u)), y = Math.round(lerp(CRATER - 4, ty, u));
+      const r = back ? 3.4 - back * 0.4 : 4.3;
+      for (let j = -4; j <= 4; j++) for (let k = -4; k <= 4; k++) {
+        const d = Math.hypot(j, k);
+        if (d <= r) set(x + k, y + j, back ? COOLING[Math.min(1 + (back >> 1) + (d > r - 1 ? 1 : 0), 5)] : d < 2.4 ? SHINE : d < 3.4 ? COOLING[0] : COOLING[1]);
+      }
+      if (back) set(x + Math.round((hash(i * 9 + back) - 0.5) * 9), y + Math.round((hash(i * 9 + back + 3) - 0.5) * 9), COOLING[2]);
+    }
+  });
+}
+// Something landed: a ring that opens, and sparks thrown from it.
+function burst(x, y, since, wide, count) {
+  if (since > 5) return;
+  const r = Math.round(lerp(wide * 0.55, wide, easeOut(since / 5)));
+  for (let a = 0; a < 48; a++) {
+    const px = Math.round(x + Math.cos(a * 0.131) * r), py = Math.round(y + Math.sin(a * 0.131) * r * 0.8);
+    if ((a + since) % (1 + since) === 0 || since < 2) set(px, py, COOLING[Math.min(since, 4)]);
+  }
+  for (let k = 0; k < count; k++) {
+    const turn = hash(x * 7 + k) * 6.3, far = (4 + hash(x * 3 + k + 50) * wide) * easeOut((since + 1) / 6);
+    set(Math.round(x + Math.cos(turn) * far), Math.round(y + Math.sin(turn) * far * 0.8 + since * since * 0.12), COOLING[Math.min(since >> 1, 3)]);
+  }
+}
+
+// The plate under the count, drawn as the launch video drew its readouts: what is counted, and once the count is
+// whole, the count in words, gold.
+const PLATE_INK = { fill: ink('#0b0812'), edge: ink('#f4eee2'), label: ink('#b9b2cc'), gold: ink('#ffcf5c') };
+const LABEL = 'TOKENS A WEEK', WORD = '5 TRILLION ';
+function paintPlate(t) {
+  kind = TEXT;
+  const whole = t >= TITLE, flipped = whole && frames(t, TITLE) < 3;      // it flashes as it turns over
+  const word = whole ? WORD : '', w = widthOf(word + LABEL) + 10, x = CX - Math.round(w / 2), y = rowTop(t) + 26;
+  box(x + 1, y, w - 2, 11, PLATE_INK.edge); box(x, y + 1, w, 9, PLATE_INK.edge);   // a frame with its corners stepped
+  box(x + 1, y + 1, w - 2, 9, flipped ? PLATE_INK.edge : PLATE_INK.fill);
+  if (whole) write(WORD, x + 5, y + 3, flipped ? PLATE_INK.fill : PLATE_INK.gold);
+  write(LABEL, x + 5 + (whole ? widthOf(WORD) + 1 : 0), y + 3, flipped ? PLATE_INK.fill : PLATE_INK.label);
+}
+
+// "processed by Caveman", under his feet: the brand's flame (ember, with its hot core) a row at a time, then the name, a
+// letter at a time. The flame is the 8x8 mark, each of its cells two pixels.
+const FLAME = ['...EE...', '..EEEE..', '..EEEE..', '.EECCEE.', '.EECCEE.', 'EECCCCEE', '.EECCEE.', '..EEEE..'];
+const FLAME_INK = { E: ink('#f36716'), C: ink('#ffcf70') };
+const NAME = Object.fromEntries(Object.entries({
+  C: '.#####.\n#######\n##...##\n##.....\n##.....\n##.....\n##...##\n#######\n.#####.',
+  A: '.#####.\n#######\n##...##\n##...##\n#######\n#######\n##...##\n##...##\n##...##',
+  V: '##...##\n##...##\n##...##\n##...##\n##...##\n##...##\n.##.##.\n.#####.\n..###..',
+  E: '#######\n#######\n##.....\n######.\n######.\n##.....\n##.....\n#######\n#######',
+  M: '##...##\n###.###\n#######\n#######\n##.#.##\n##...##\n##...##\n##...##\n##...##',
+  N: '##...##\n###..##\n####.##\n#######\n##.####\n##..###\n##...##\n##...##\n##...##',
+}).map(([letter, art]) => [letter, art.split('\n')]));
+const NAME_INK = { '#': ink('#f4eee2') }, LEAD_INK = ink('#8f86a6');
+const LEAD = 'PROCESSED BY', LEAD_W = widthOf(LEAD), LOCKUP_W = LEAD_W + 4 + 16 + 5 + 7 * 9 - 2;
+function paintLockup(t) {
+  const since = frames(t, LOCKUP);
+  if (since < 0) return;
+  kind = TEXT;
+  // "PROCESSED BY", the flame, "CAVEMAN", centred in the dark under the ledge
+  const x = CX - (LOCKUP_W >> 1), y = GROUND + 4, flameX = x + LEAD_W + 4, nameX = flameX + 16 + 5;
+  if (since >= 4) write(LEAD, x, y + 6, LEAD_INK);
+  FLAME.forEach((row, j) => { if (7 - j <= since) for (let i = 0; i < 8; i++) if (row[i] !== '.') box(flameX + i * 2, y + j * 2, 2, 2, FLAME_INK[row[i]]); });
+  [...'CAVEMAN'].forEach((letter, i) => { if (since >= 8 + i * 2) stamp(NAME[letter], nameX + i * 9, y + 4, NAME_INK); });
+}
+
+// ───────────────────────────────────────────────────────────── the small things
+
+const TUNIC = ink('#eb9e3d'), GLINT = ink('#fedbb7'), STONE = ink('#c2beb4'), BUBBLE = ink('#f4eee2');
+// A word that pops up as the app's bonk word does: it rises in two held steps, holds, blinks out.
+function popUp(text, x, y, since, c) {
+  if (since < 0 || since > 18 || since === 15 || since === 16) return;
+  shout(text, x - (widthOf(text) >> 1), y - (since < 3 ? 0 : since < 6 ? 3 : 6), c, OUTLINE);
+}
+function paintSmallThings(t) {
+  kind = FIRE;
+  const [rx, ry] = ROCK_TOP, f = Math.round(t * FPS);
+  // sparks off the rock, harder every time
+  BONKS.forEach((s, n) => {
+    const since = t - s;
+    if (since < 0 || since > 0.45) return;
+    for (let k = 0; k < 7 + n * 4; k++) {
+      const lean = (hash(n * 100 + k) - 0.5) * 2.6, speed = 30 + hash(n * 100 + k + 40) * (50 + n * 20);
+      if (since > 0.2 + hash(n * 100 + k + 80) * 0.25) continue;
+      set(Math.round(rx + Math.sin(lean) * speed * since), Math.round(ry - Math.cos(lean) * speed * since + 0.5 * 260 * since * since), since < 0.1 ? COOLING[0] : since < 0.22 ? COOLING[2] : COOLING[4]);
+    }
+    popUp('BONK!', rx - 15, ry - 15, frames(t, s), TUNIC);
+  });
+  // the wind-up: a star on the club, dust lifting off the ground around him
+  if (frames(t, WIND) >= 3 && frames(DUD, t) > 2) {
+    const big = Math.floor(f / 3) % 2, sx = GUY_X + 5, sy = GUY_Y + 2;
+    for (let k = -(1 + big); k <= 1 + big; k++) { set(sx + k, sy, SHINE); set(sx, sy + k, SHINE); }
+    for (let k = 0; k < 18; k++) {
+      const age = (t - WIND - hash(k + 300) * 0.4) % 0.45;
+      if (age < 0) continue;
+      set(Math.round(CX + (hash(k + 310) - 0.5) * 50), Math.round(GROUND - 1 - age * (16 + hash(k + 320) * 22)), age < 0.25 ? GLINT : TUNIC);
+    }
+  }
+  // the dud: one spark that hops and dies
+  const dud = frames(t, DUD);
+  if (dud >= 0 && dud < 7) set(rx - 1 - dud, ry - [1, 3, 4, 4, 3, 1, 0][dud], dud < 4 ? GLINT : TUNIC);
+  popUp('TINK', rx - 13, ry - 15, dud, STONE);
+  // he wonders: a speech bubble, as the launch video drew them
+  const wonders = frames(t, HM) - 5;
+  if (wonders >= 0 && t < BOOM) {
+    kind = TEXT;
+    const x = GUY_X + 17, y = GUY_Y - (wonders < 2 ? 10 : 12);
+    box(x + 1, y - 1, 9, 11, OUTLINE); box(x, y, 11, 9, OUTLINE); box(x + 2, y + 10, 2, 1, OUTLINE); set(x + 1, y + 11, OUTLINE);
+    box(x + 2, y, 7, 9, BUBBLE); box(x + 1, y + 1, 9, 7, BUBBLE); set(x + 2, y + 9, BUBBLE);
+    write('?', x + 3, y + 2, OUTLINE);
+  }
+  // dust the blast drives along the ledge
+  const blast = t - BOOM - 0.15;
+  if (blast >= 0 && blast < 0.6) for (let k = 0; k < 26; k++) {
+    const side = k % 2 ? 1 : -1, far = 8 + (60 + hash(k + 500) * 190) * blast;
+    set(Math.round(CX + side * far), Math.round(GROUND - 1 - hash(k + 520) * 5 * (1 - blast / 0.6) - hash(k + 540) * 3), blast < 0.3 ? LEDGE.rim[1] : LEDGE.rim[2]);
+  }
+}
+
+// The blast, in two inks: the sky white and everything solid black, then the other way round, then black on red.
+// Three pictures held five frames between them: the eye reads them as the hit.
+const FLASH = ink('#fff8e8');
+const SPIKES = (() => { const r = rand(17); return Array.from({ length: 15 }, (_, i) => [(i / 15) * 6.283 + r() * 0.3, 26 + r() * 70]); })();
+function paintImpact(t) {
+  const since = frames(t, BOOM);
+  if (calm || since < 0 || since > 4) return;
+  const [sky, solid, core] = since < 2 ? [FLASH, OUTLINE, OUTLINE] : since < 3 ? [OUTLINE, FLASH, FLASH] : [ink('#e5521c'), OUTLINE, FLASH];
+  for (let i = 0; i < pixels.length; i++) pixels[i] = kinds[i] >= LAND ? solid : sky;
+  // the burst at the crater: a ball, and spikes thrown from it
+  const r = 9 + since * 4;
+  for (let j = -r; j <= r; j++) for (let i = -r; i <= r; i++) if (i * i + j * j <= r * r) set(CX + i, CRATER + j, core);
+  for (const [turn, far] of SPIKES) for (let d = r; d < r + far * (0.5 + since * 0.2); d++) {
+    const x = Math.round(CX + Math.cos(turn) * d), y = Math.round(CRATER + Math.sin(turn) * d);
+    set(x, y, core); if (d < r + far * 0.3) set(x + 1, y, core);
+  }
+}
+
+// ───────────────────────────────────────────────────────────── filming
+
+const world = document.createElement('canvas');   // the picture, before the camera
+world.width = BW; world.height = BH;
+const worldCtx = world.getContext('2d');
+const canvas = document.getElementById('frame');
+const view = canvas.getContext('2d');
+
+// One frame of the take, at time t.
+function film(time) {
+  const t = Math.min(Math.floor(time * FPS + 1e-6), Math.round(LENGTH * FPS)) / FPS;
+  paintSky(t);
+  paintStars(t);
+  paintClouds(CLOUDS.far, t);
+  paintVolcano(t);
+  paintPlume(t);
+  paintFountain(t);
+  paintClouds(CLOUDS.near, t);
+  paintLand(t);
+  paintCrack(t);
+  kind = LAND; stamp(ROCK[1], GUY_X, GUY_Y + ROCK[0], GUY_INK);
+  kind = GUY; stamp(guyAt(t), GUY_X, GUY_Y, GUY_INK);
+  paintSmallThings(t);
+  paintEmbers(t);
+  paintPlate(t);
+  paintCount(t);
+  paintArrivals(t);
+  paintLockup(t);
+  paintImpact(t);
+
+  // the camera: the picture, every pixel of it a square of `n` screen pixels, placed so (x, y) is the frame's centre
+  const cam = cameraAt(t);
+  worldCtx.putImageData(image, 0, 0);
+  view.imageSmoothingEnabled = false;
+  view.fillStyle = '#000';
+  view.fillRect(0, 0, canvas.width, canvas.height);
+  view.drawImage(world, Math.round(canvas.width / 2 - (cam.x + PAD) * cam.n), Math.round(canvas.height / 2 - (cam.y + PAD) * cam.n), BW * cam.n, BH * cam.n);
+}
+
+// ───────────────────────────────────────────────────────────── the sound
+
+// Everything heard, scheduled on the audio clock from `start`: the club, the count, the mountain.
+function perform(ctx, start) {
+  const end = start + LENGTH, T = (s) => start + s, roll = rand(1955);
+  const amp = (level = 0) => { const g = ctx.createGain(); g.gain.value = level; return g; };
+  const filter = (type, freq, q = 0.7) => { const f = ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q; return f; };
+  // The blast is far louder than a bonk: a limiter squeezes it, then a ceiling that is straight up to half scale
+  // and bends over above it, so nothing passes full scale.
+  const master = amp(0.5), limiter = ctx.createDynamicsCompressor(), trim = amp(0.55), ceiling = ctx.createWaveShaper(), out = amp(0.76);
+  limiter.threshold.value = -12; limiter.knee.value = 6; limiter.ratio.value = 6; limiter.attack.value = 0.003; limiter.release.value = 0.25;
+  ceiling.curve = Float32Array.from({ length: 4097 }, (_, i) => { const x = Math.abs(i - 2048) / 1024; return Math.sign(i - 2048) * (x <= 0.5 ? x : 0.5 + 0.5 * Math.tanh((x - 0.5) / 0.5)); });
+  master.connect(limiter).connect(trim).connect(ceiling).connect(out).connect(ctx.destination);
+  out.gain.setValueAtTime(0.76, end - 0.7);
+  out.gain.linearRampToValueAtTime(0, end);
+
+  // two seconds of white noise: everything that hisses, cracks or rumbles is cut from it
+  const hiss = ctx.createBuffer(1, 2 * ctx.sampleRate, ctx.sampleRate), white = hiss.getChannelData(0);
+  for (let i = 0; i < white.length; i++) white[i] = roll() * 2 - 1;
+
+  // a tone that slides from one pitch to another as it dies away
+  const tone = (t, type, from, to, lasts, level) => {
+    const o = ctx.createOscillator(), g = amp();
+    o.type = type;
+    o.frequency.setValueAtTime(from, T(t));
+    o.frequency.exponentialRampToValueAtTime(to, T(t) + lasts);
+    g.gain.setValueAtTime(0, T(t));
+    g.gain.linearRampToValueAtTime(level, T(t) + 0.004);
+    g.gain.exponentialRampToValueAtTime(0.0001, T(t) + lasts);
+    o.connect(g).connect(master);
+    o.start(T(t)); o.stop(T(t) + lasts + 0.02);
+  };
+  // a burst of noise through a filter that sweeps
+  const crack = (t, type, from, to, q, lasts, level) => {
+    const n = ctx.createBufferSource(), f = filter(type, from, q), g = amp();
+    n.buffer = hiss; n.loop = true;
+    f.frequency.setValueAtTime(from, T(t));
+    f.frequency.exponentialRampToValueAtTime(to, T(t) + lasts);
+    g.gain.setValueAtTime(0, T(t));
+    g.gain.linearRampToValueAtTime(level, T(t) + 0.003);
+    g.gain.exponentialRampToValueAtTime(0.0001, T(t) + lasts);
+    n.connect(f).connect(g).connect(master);
+    n.start(T(t), roll() * 1.5); n.stop(T(t) + lasts + 0.02);
+  };
+  // a sound that lasts, its level drawn through points in time
+  const bed = (source, points) => {
+    const g = amp();
+    g.gain.setValueAtTime(points[0][1], T(points[0][0]));
+    for (const [t, level] of points.slice(1)) g.gain.linearRampToValueAtTime(level, T(t));
+    source.connect(g).connect(master);
+  };
+  const rush = (type, freq, q) => { const n = ctx.createBufferSource(), f = filter(type, freq, q); n.buffer = hiss; n.loop = true; n.start(start, roll() * 1.5); n.stop(end); n.connect(f); return f; };
+  const drone = (type, freq, cut) => { const o = ctx.createOscillator(), f = filter('lowpass', cut); o.type = type; o.frequency.value = freq; o.start(start); o.stop(end); o.connect(f); return f; };
+
+  // dusk: a little wind
+  bed(rush('lowpass', 480, 0.5), [[0, 0], [0.15, 0.12], [RIM, 0.12], [RIM + 0.04, 0]]);
+
+  // the club on the rock, harder every time; then a note for every zero that lands, climbing
+  const NOTES = [523.25, 659.25, 783.99, 659.25, 783.99, 1046.5, 783.99, 1046.5, 1318.51];
+  BONKS.forEach((s, n) => {
+    const hard = 1 + n * 0.2;
+    tone(s, 'triangle', 760, 280, 0.09, 0.1 * hard);
+    tone(s, 'sine', 190, 70, 0.2, 0.15 * hard);
+    crack(s, 'bandpass', 2600, 1700, 1.5, 0.05, 0.6 * hard);
+    crack(s, 'lowpass', 320, 110, 0.7, 0.16, 1.0 * hard);
+    tone(s + 1 / FPS, 'sine', 120, 60, 0.12, 0.1);                      // the camera steps back
+    for (let i = 0; i < 3; i++) {
+      tone(lands(n, i), 'square', NOTES[n * 3 + i], NOTES[n * 3 + i], 0.11, 0.09);
+      crack(lands(n, i), 'highpass', 5200, 5200, 0.7, 0.02, 0.2);
+    }
+  });
+
+  // the wind-up: a tone that climbs and shakes; the club through the air; and then: tink
+  const riser = ctx.createOscillator(), opens = filter('lowpass', 700, 2), swell = amp(), shaken = amp(1), shaker = ctx.createOscillator(), depth = amp(0.45);
+  riser.type = 'sawtooth';
+  riser.frequency.setValueAtTime(82, T(WIND));
+  riser.frequency.exponentialRampToValueAtTime(440, T(DUD) - 0.07);
+  opens.frequency.setValueAtTime(700, T(WIND));
+  opens.frequency.exponentialRampToValueAtTime(3600, T(DUD) - 0.07);
+  swell.gain.setValueAtTime(0, T(WIND));
+  swell.gain.linearRampToValueAtTime(0.16, T(DUD) - 0.08);
+  swell.gain.linearRampToValueAtTime(0, T(DUD) - 0.06);
+  shaker.frequency.value = 15; shaker.connect(depth).connect(shaken.gain);
+  riser.connect(opens).connect(swell).connect(shaken).connect(master);
+  riser.start(T(WIND)); riser.stop(T(DUD)); shaker.start(T(WIND)); shaker.stop(T(DUD));
+  crack(DUD - 0.07, 'bandpass', 800, 3400, 1.2, 0.08, 0.7);
+  tone(DUD, 'sine', 2637, 2637, 0.09, 0.14);
+  tone(DUD, 'triangle', 3520, 3520, 0.05, 0.07);
+  crack(DUD, 'bandpass', 4200, 4200, 3, 0.02, 0.25);
+  tone(HM + 0.15, 'square', 587.33, 587.33, 0.08, 0.09);                // "?"
+  tone(HM + 0.26, 'square', 880, 880, 0.14, 0.09);
+
+  // the crack: it ticks, faster and faster, over a rumble that grows; then nothing at all
+  for (let t = CRACK, gap = 0.13; t < RIM; t += gap, gap = Math.max(0.018, gap * 0.9)) crack(t, 'bandpass', 3200 + roll() * 3200, 2600, 4, 0.016, 0.25 + 0.65 * span(t, CRACK, RIM));
+  bed(rush('lowpass', 95, 1), [[CRACK, 0], [WIDE, 0.6], [RIM, 3], [RIM + 0.04, 0]]);
+  bed(drone('sawtooth', 46, 190), [[CRACK, 0], [WIDE, 0.04], [RIM, 0.25], [RIM + 0.04, 0]]);
+
+  // the blast: a drop into the ground, a wall of noise closing down, a crack on top; then it keeps roaring
+  tone(BOOM, 'sine', 150, 27, 1.5, 1.6);
+  tone(BOOM, 'triangle', 240, 42, 0.5, 1.1);
+  crack(BOOM, 'lowpass', 5600, 150, 0.6, 2.6, 1.5);
+  crack(BOOM, 'highpass', 2400, 2400, 0.7, 0.08, 1.2);
+  crack(BOOM + 0.06, 'lowpass', 900, 80, 0.8, 4.5, 0.9);
+  bed(rush('lowpass', 260, 0.6), [[BOOM, 2.4], [BOOM + 2, 1.0], [LOCKUP, 0.6], [LENGTH, 0.45]]);
+  bed(drone('sawtooth', 46, 170), [[BOOM, 0.4], [BOOM + 3, 0.12], [LENGTH, 0.06]]);
+  for (let k = 0; k < 16; k++) crack(BOOM + 0.3 + roll() * 1.4, 'bandpass', 700 + roll() * 1800, 500, 2, 0.04, 0.3);   // the summit coming down
+  for (let t = BOOM + 0.8; t < LENGTH - 0.3; t += 0.09 + roll() * 0.3) crack(t, 'bandpass', 3800 + roll() * 3000, 3000, 5, 0.014, 0.15);   // embers
+
+  // three shots, three zeros: a thump out of the crater, the ball through the air, the slam and its note
+  const CHORD = [329.63, 392.0, 523.25];
+  SHOTS.forEach((s, i) => {
+    tone(s, 'sine', 170, 45, 0.22, 0.7);
+    crack(s, 'lowpass', 1500, 280, 0.8, 0.2, 0.9);
+    crack(s, 'bandpass', 500, 2800, 2, FLIGHT, 0.5);
+    tone(SLAMS[i], 'sine', 115, 42, 0.3, 0.8);
+    crack(SLAMS[i], 'bandpass', 1600, 700, 1, 0.09, 0.9);
+    tone(SLAMS[i], 'square', CHORD[i], CHORD[i], 0.32, 0.14);
+    tone(SLAMS[i], 'triangle', CHORD[i] * 2, CHORD[i] * 2, 0.32, 0.2);
+  });
+
+  // the count is whole: a chord held under a run up it, and a cymbal
+  for (const note of [261.63, 329.63, 392.0, 523.25]) tone(TITLE, 'square', note, note, 1.3, 0.06);
+  [523.25, 659.25, 783.99, 1046.5, 1318.51, 1567.98].forEach((note, i) => tone(TITLE + 0.07 + i * 0.085, 'triangle', note, note, 0.3, 0.17));
+  crack(TITLE, 'highpass', 6500, 6500, 0.7, 1.0, 0.18);
+
+  // "processed by Caveman": the flame climbs, the letters tick in, a bell
+  for (let row = 0; row < 8; row++) tone(LOCKUP + row / FPS, 'triangle', 620 + row * 90, 620 + row * 90, 0.05, 0.06);
+  for (let i = 0; i < 7; i++) tone(LOCKUP + (8 + i * 2) / FPS, 'square', 1318.51, 1318.51, 0.025, 0.05);
+  for (const [note, level] of [[1046.5, 0.2], [1567.98, 0.11], [2093, 0.05]]) tone(LOCKUP + 22 / FPS, note === 1046.5 ? 'triangle' : 'sine', note, note, 1.1, level);
+
+  return out;
+}
+
+// The take's sound as a file: sixteen-bit stereo WAV, base64. render.mjs asks for it.
+async function record(rate = 48000) {
+  const ctx = new OfflineAudioContext(2, Math.ceil(LENGTH * rate), rate);
+  perform(ctx, 0);
+  const sound = await ctx.startRendering(), left = sound.getChannelData(0), right = sound.getChannelData(1);
+  const bytes = new Uint8Array(44 + left.length * 4), view = new DataView(bytes.buffer);
+  const tag = (at, text) => [...text].forEach((ch, i) => view.setUint8(at + i, ch.charCodeAt(0)));
+  tag(0, 'RIFF'); view.setUint32(4, bytes.length - 8, true); tag(8, 'WAVEfmt '); view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true); view.setUint16(22, 2, true); view.setUint32(24, rate, true); view.setUint32(28, rate * 4, true);
+  view.setUint16(32, 4, true); view.setUint16(34, 16, true); tag(36, 'data'); view.setUint32(40, left.length * 4, true);
+  for (let i = 0; i < left.length; i++) {
+    view.setInt16(44 + i * 4, Math.round(clamp(left[i], -1, 1) * 32767), true);
+    view.setInt16(46 + i * 4, Math.round(clamp(right[i], -1, 1) * 32767), true);
+  }
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text);
+}
+
+// ───────────────────────────────────────────────────────────── run
+
+// What render.mjs films through: a frame at a time, and the sound.
+window.take = { LENGTH, FPS, film, record };
+
+const play = document.getElementById('play'), meta = document.getElementById('meta');
+const clockText = (s) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const caption = (t) => { meta.textContent = t === null ? `5,000,000,000,000   ${clockText(LENGTH)}` : `5,000,000,000,000   ${clockText(t)} / ${clockText(LENGTH)}`; };
+
+// ?t=7 holds the frame at that second of the take, silent. Anything that is not a time plays as usual.
+const asked = Number.parseFloat(params.get('t'));
+if (Number.isFinite(asked)) {
+  film(clamp(asked, 0, LENGTH));
+  caption(clamp(asked, 0, LENGTH));
+} else {
+  film(0);                               // the poster: the take's first frame
+  caption(null);
+  play.hidden = false;
+
+  let sound = null, voice = null, began = 0, playing = false, shown = -1;
+  const clock = () => (sound ? sound.currentTime : performance.now() / 1000);
+  play.addEventListener('click', () => {
+    if (!sound) { try { sound = new AudioContext(); } catch { /* it plays silent */ } }
+    sound?.resume();
+    voice?.disconnect();                 // the last play's sound, if it was still ringing
+    began = clock() + 0.08;
+    if (sound) voice = perform(sound, began);
+    shown = -1; playing = true; play.hidden = true;
+  });
+  // A hidden tab stops drawing; stop the sound's clock with it, so the two stay together.
+  document.addEventListener('visibilitychange', () => { if (sound && playing) { if (document.hidden) sound.suspend(); else sound.resume(); } });
+
+  const tick = () => {
+    requestAnimationFrame(tick);
+    if (!playing) return;
+    const t = Math.max(clock() - began, 0);
+    if (t >= LENGTH) {                   // over: the last frame stays, the button comes back in the corner
+      playing = false;
+      film(LENGTH); caption(null);
+      play.classList.add('again'); play.setAttribute('aria-label', 'Play again, with sound'); play.hidden = false;
+      return;
+    }
+    const frame = Math.floor(t * FPS);
+    if (frame === shown) return;
+    shown = frame;
+    film(t);
+    caption(t);
+  };
+  requestAnimationFrame(tick);
+}
+</script>
+</body>
+</html>

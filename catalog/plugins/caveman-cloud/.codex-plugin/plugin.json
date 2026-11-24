@@ -1,0 +1,38 @@
+{
+  "name": "caveman-cloud",
+  "version": "1.0.0",
+  "description": "Read traces, evals and LLM spend for the agents and apps you build from Caveman Cloud, and find what to fix. Needs a Caveman Cloud sign-in on this computer (cvm setup).",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://caveman.so/",
+  "keywords": [
+    "observability",
+    "evals",
+    "traces",
+    "llm cost"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Caveman Cloud",
+    "shortDescription": "Traces, evals and LLM spend",
+    "longDescription": "Read traces, evals and LLM spend for the agents and apps you build from Caveman Cloud, and find what to fix. Needs a Caveman Cloud sign-in on this computer (cvm setup).",
+    "developerName": "Caveman",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://caveman.so/",
+    "privacyPolicyURL": "https://caveman.so/privacy",
+    "termsOfServiceURL": "https://caveman.so/terms",
+    "defaultPrompt": [
+      "Where did our LLM spend go this week?",
+      "Find the failing trace for this agent and explain it"
+    ],
+    "brandColor": "#0A0A0A",
+    "brandColorDark": "#FFFFFF",
+    "logo": "./assets/logo.svg"
+  }
+}

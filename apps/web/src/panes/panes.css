@@ -1,0 +1,129 @@
+/* Split view. Geometry is written inline (fractions of the host); this file
+   holds what CSS does better than JS: the drag visuals, the landing flash,
+   the header's container-query collapse. Reduced motion (pixel.css) drops every
+   animation here; each one starts from its resting state so nothing is lost. */
+
+/* ------------------------------------------------------------ drag layer */
+
+/* Nothing here restyles the document at drag start: a universal selector or
+   an inherited property (user-select) on <html> recalculated every element
+   (9 to 15ms with four panes). The drag layer covers the window and carries
+   the grabbing cursor, so nothing underneath hovers; the sources prevent
+   text selection on pointerdown. */
+html[data-pane-resize] iframe { pointer-events: none; }
+
+[data-drag-source] { opacity: 0.45; }
+
+/* The region a drop will fill: its content blurs and dims behind the outline.
+   One element, so only the hovered region pays for the blur, only while dragging. */
+.pane-zone {
+  -webkit-backdrop-filter: blur(6px) brightness(0.6);
+  backdrop-filter: blur(6px) brightness(0.6);
+  animation: pane-fade-in 120ms var(--ease-snap);
+}
+/* The hint sits on the side of the region away from the pointer (drag.ts sets data-hint on the layer). */
+.pane-hint { right: 20px; }
+[data-hint="left"] .pane-hint { right: auto; left: 20px; }
+
+/* Follows the pointer on its own compositor layer (transform only). */
+.pane-float {
+  will-change: transform;
+  /* No paint containment: flipped, the box is 0x0 and would clip the preview. */
+  contain: layout style;
+}
+.pane-float-inner { animation: pane-float-in 150ms var(--ease-snap); }
+.pane-float[data-flip*="x"] .pane-float-inner { position: absolute; right: 0; align-items: flex-end; padding: 14px 12px 0 0; }
+.pane-float[data-flip*="x"] .pane-float-inner > div { transform-origin: top right; }
+.pane-float[data-flip*="y"] .pane-float-inner { position: absolute; bottom: 0; flex-direction: column-reverse; padding-top: 0; padding-bottom: 14px; }
+
+@keyframes pane-fade-in { from { opacity: 0; } }
+@keyframes pane-float-in { from { opacity: 0; transform: scale(0.96); } }
+
+/* ----------------------------------------------------------------- panes */
+
+.pane-slot {
+  /* Each pane lays out on its own: resizing one never reflows the others. */
+  contain: strict;
+  /* Already size-contained: as a container, what is inside can follow the pane's height (the chat box below). */
+  container: pane / size;
+}
+
+.pane-landed {
+  outline: 2px solid hsl(var(--target));
+  outline-offset: -2px;
+  opacity: 0;
+  animation: pane-landed 900ms ease-out;
+}
+/* Worn for 600ms, then faded. */
+@keyframes pane-landed {
+  0%, 66% { opacity: 1; }
+  100% { opacity: 0; }
+}
+/* A pane that just landed fades in where it stands: no scale. */
+.pane-enter { animation: pane-enter 150ms var(--ease-snap); }
+@keyframes pane-enter { from { opacity: 0; } }
+
+/* The gap between two panes' cards is the divider: nothing drawn at rest, a
+   rounded handle down the middle of the gap while hovered, dragged or focused. */
+.pane-divider { touch-action: none; }
+.pane-divider::after {
+  content: "";
+  position: absolute;
+  border-radius: 9999px;
+  background: transparent;
+  transition: background-color 75ms ease-out;
+}
+.pane-divider[aria-orientation="vertical"]::after { left: 50%; top: 12px; bottom: 12px; width: 2px; margin-left: -1px; }
+.pane-divider[aria-orientation="horizontal"]::after { top: 50%; left: 12px; right: 12px; height: 2px; margin-top: -1px; }
+.pane-divider:hover::after,
+.pane-divider[data-active]::after { background: hsl(var(--muted-foreground) / 0.5); }
+.pane-divider:focus-visible { outline: none; }
+.pane-divider:focus-visible::after { background: hsl(var(--ring)); }
+
+/* ------------------------------------------------------------ pane header */
+
+.pane-chat { container: chat / inline-size; }
+/* The conversation runs under the floating header (PaneFrame.tsx sets --pane-top)
+   and fades out at both edges instead of cutting off. */
+.pane-conversation > [data-slot="conversation-viewport"] {
+  scroll-padding-top: calc(var(--pane-top) + 12px);
+  mask-image: linear-gradient(to bottom, transparent calc(var(--pane-top) - 16px), #000 calc(var(--pane-top) + 16px), #000 calc(100% - 24px), transparent);
+}
+/* The composer's bar keeps its controls on one line: the model's name gives way first (it truncates). */
+@container chat (max-width: 599px) {
+  /* Where it runs gives way before the chat's name and the header's buttons do. */
+  .pane-chat .pane-meta { display: none; }
+}
+@container chat (max-width: 479px) {
+  /* Then the chips drop their words and keep their icons, and the model chip its effort (still set in the picker). */
+  .pane-chat [data-compact-hide] { display: none; }
+}
+/* The empty chat box holds three lines in a tall pane, two in a shorter one and one in a short one (a split, a small
+   window): the conversation keeps the room. Words grow it to its max-h-60, or less in a short pane: a third of the
+   pane, never under three lines. A chat's pane and a new chat's alike, and the New chat page's box once it docks as
+   its chat opens (NewChat.tsx), so it lands on the chat's box. */
+.new-chat-docked { container: pane / size; }
+:is(.pane-slot, .new-chat-docked) .composer-field { max-height: min(15rem, max(3lh, 30cqh)); }
+@container pane (max-height: 799px) {
+  :is(.pane-slot, .new-chat-docked) .composer-field { min-height: 2lh; }
+}
+@container pane (max-height: 599px) {
+  :is(.pane-slot, .new-chat-docked) .composer-field { min-height: 1lh; }
+}
+
+/* "Loading the session…" waits before it shows: most chats open before it would. A chat its pane held back that long
+   already (PaneFrame HOLD_MS) has been waited for: its line shows at once. */
+.pane-loading {
+  animation: pane-late 120ms ease-out 400ms both;
+}
+.pane-loading[data-late] {
+  animation-delay: 0ms;
+}
+@keyframes pane-late {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}

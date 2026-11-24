@@ -1,0 +1,21 @@
+morning-digest · Me                                      .caveman/local/automations/morning-digest.yaml
+  Weekday mornings, a short digest of what changed in this repo since the last working day
+  triggers     Weekdays at 09:00 (Europe/Amsterdam) · By hand
+  runs on      This Mac
+               Triggers fire in Caveman Code once you turn it on, and stop if the file later changes what it may do.
+  budget       $0.50 per run, all attempts               line 8
+  worst case   $0.50 or 10m, whichever comes first
+               At most 1 attempt across 1 step.
+  levers       Caveman harness: on                       vs the classic engine: Opus 5.5 at 0.47x the cost over three working days, 48/48 steps done against 44/48 (measured in the app's own runner, one run)
+
+digest                                                   local/automations/morning-digest.yaml:11
+  agent        inline prompt                             line 12
+               "Summarise what changed in this repository since the start of the la..."
+  engine       caveman                                   the new-chat default
+  model        fast · deepseek/deepseek-v4.1-flash       class map: Models & keys
+  effort       engine default
+  computer     readonly: a copy at the run's commit; changes are discarded  default
+               On This Mac, which is not isolated.
+  attempts     1, at most 10m each                       default
+  sees         the schedule tick
+               As data blocks after its instructions, never as instructions.

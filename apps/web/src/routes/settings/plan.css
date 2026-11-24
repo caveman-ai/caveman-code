@@ -1,0 +1,81 @@
+/* Settings > Plan: the plans side by side (Plan.tsx PlansCard), after the website's pricing page.
+   One hairline grid: the gaps show the line colour, and subgrid lines every row up across the cards. */
+.plan-cards { container: plan-cards / inline-size; }
+.plan-grid {
+  display: grid;
+  grid-template-columns: repeat(var(--plans, 5), minmax(0, 1fr));
+  gap: 1px;
+  background: hsl(var(--border) / 0.6);
+}
+.plan-card {
+  position: relative;
+  grid-row: span 6;
+  display: grid;
+  grid-template-rows: subgrid;
+  background-color: hsl(var(--background));
+}
+/* The raised card: a flat tint and a ring, never a glow. */
+.plan-card[data-raised] {
+  background-image: linear-gradient(hsl(var(--foreground) / 0.035), hsl(var(--foreground) / 0.035));
+  box-shadow: inset 0 0 0 1px hsl(var(--foreground) / 0.26);
+}
+
+/* The pixel face on a card (a plan's name, the ribbon, what its people say): the website's hairline stroke gives its
+   dots the weight to read at these sizes. */
+.plan-pixel { font-family: var(--font-pixel), ui-monospace, monospace; -webkit-text-stroke: 0.024em currentColor; }
+
+/* Where a plan's people stand: a dot grid and a ground line. Free's is empty. */
+.plan-stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  height: 132px;
+  padding: 0 16px;
+  overflow: hidden;
+  border-bottom: 1px solid hsl(var(--border) / 0.6);
+  background: radial-gradient(circle at 1px 1px, hsl(var(--foreground) / 0.09) 1px, transparent 1.4px) 5px 5px / 12px 12px;
+}
+/* Each of them but the last gives up part of their box, so a row overlaps and closes up further on a narrow card. */
+.plan-member { display: flex; flex: 0 1 34px; min-width: 0; }
+.plan-member:last-child { flex: none; }
+/* Each starts their loop a beat after the one before, so a row never moves as one. */
+.plan-member .px-strip[data-play="loop"] > .px-strip-track { animation-delay: calc(var(--i, 0) * -130ms); }
+/* Pointed at, they hop one after another: three held steps, whole pixels. */
+.plan-card[data-live] .plan-member { animation: plan-hop 360ms steps(1, end) calc(var(--i, 0) * 70ms) both; }
+@keyframes plan-hop {
+  0%, 100% { transform: none; }
+  25%, 75% { transform: translateY(-4px); }
+  50% { transform: translateY(-6px); }
+}
+
+/* The speech bubble's tail: two stepped pixels under its left end. */
+.plan-say { position: relative; display: inline-block; max-width: 100%; }
+.plan-say::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 100%;
+  width: 4px;
+  height: 2px;
+  background: hsl(var(--foreground));
+  box-shadow: -2px 2px 0 hsl(var(--foreground));
+}
+
+/* A pane too narrow for every plan in a row (a card needs about 168px for its button): two a row, an odd one out
+   (Free) across both; then one. Six plans, when a plan no longer sold is still held, need the room sooner. */
+@container plan-cards (max-width: 848px) {
+  .plan-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .plan-card:first-child:nth-last-child(odd) { grid-column: 1 / -1; }
+  .plan-stage:empty { display: none; }
+}
+@container plan-cards (max-width: 1016px) {
+  .plan-grid:has(> .plan-card:nth-child(6)) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@container plan-cards (max-width: 420px) {
+  .plan-grid, .plan-grid:has(> .plan-card:nth-child(6)) { grid-template-columns: minmax(0, 1fr); }
+  .plan-card:first-child:nth-last-child(odd) { grid-column: auto; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .plan-card[data-live] .plan-member { animation: none; }
+}

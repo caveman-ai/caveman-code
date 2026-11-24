@@ -1,0 +1,15 @@
+{
+  "name": "figma",
+  "version": "1.0.0",
+  "description": "Read a Figma frame's layout, variables and screenshot, and build it with this project's own components and tokens.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.figma.com/",
+  "keywords": [
+    "design",
+    "ui",
+    "tokens"
+  ]
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en" data-surface="deck">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- On a phone: the page reaches under the notch and home bar (styles.css pads #root by the safe areas), and on
+         Android the keyboard shrinks the page, so the composer stays above it (iOS scrolls the field into view). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content" />
+    <meta name="color-scheme" content="dark light" />
+    <!-- The browser's bars and a phone's status bar wear the page's colour; state/appearance.ts keeps it on the theme. -->
+    <meta name="theme-color" content="#ffffff" />
+    <!-- Saved to a phone's home screen (#/call for the Chief), it opens as its own app, without the browser's bars, under
+         the app's own icon (public/: the desktop icon's tile, full bleed, for the home screen to round). -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Caveman" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
+    <title>Caveman Code</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

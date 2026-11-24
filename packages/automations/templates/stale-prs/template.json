@@ -1,0 +1,6 @@
+{
+  "title": "Stale PR cleanup",
+  "category": "Issues and PRs",
+  "summary": "Every Monday, lists stalled pull requests with the next step and who owns it. The list lands in the run.",
+  "scope": "project"
+}

@@ -1,0 +1,38 @@
+{
+  "name": "supabase",
+  "version": "1.0.0",
+  "description": "Plan and apply Supabase schema changes as migrations, check row-level security and advisors, and read logs when something fails.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://supabase.com/",
+  "keywords": [
+    "postgres",
+    "database",
+    "auth",
+    "backend"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Supabase",
+    "shortDescription": "Postgres, auth and edge functions",
+    "longDescription": "Plan and apply Supabase schema changes as migrations, check row-level security and advisors, and read logs when something fails.",
+    "developerName": "Supabase",
+    "category": "Data",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://supabase.com/",
+    "privacyPolicyURL": "https://supabase.com/privacy",
+    "termsOfServiceURL": "https://supabase.com/terms",
+    "defaultPrompt": [
+      "Add a table for this feature as a Supabase migration",
+      "Check my Supabase project for security advisors"
+    ],
+    "brandColor": "#3FCF8E",
+    "logo": "./assets/logo.svg"
+  }
+}

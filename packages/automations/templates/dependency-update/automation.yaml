@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Every Monday, update dependencies within their ranges and open a draft PR the reviewer approved
+
+on:
+  schedule: { at: "07:00", timezone: Europe/Amsterdam, weekdays: [mon] }   # your time zone
+
+budget: $4
+
+steps:
+  update:
+    agent: dependency-updater
+    model: base
+    escalate: frontier
+    computer: full
+    checks:
+      # Add your install and test commands here, so an update must pass them before the reviewer reads it:
+      # - pnpm install --frozen-lockfile
+      # - pnpm test
+      - agent: reviewer
+    retries: 1
+    timeout: 45m
+
+outputs:
+  github.pull_request: { from: update, draft: true }

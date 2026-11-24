@@ -1,0 +1,6 @@
+{
+  "title": "Security review on sensitive paths",
+  "category": "Review",
+  "summary": "Reviews pull requests that touch auth, crypto, secrets, migrations or CI, and keeps one comment up to date.",
+  "scope": "project"
+}

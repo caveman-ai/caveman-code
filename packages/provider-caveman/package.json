@@ -1,0 +1,55 @@
+{
+  "name": "@caveman-app/provider-caveman",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./client": {
+      "types": "./src/client.ts",
+      "import": "./src/client.ts"
+    },
+    "./settings": {
+      "types": "./src/settings.ts",
+      "import": "./src/settings.ts"
+    },
+    "./server": {
+      "types": "./src/server.ts",
+      "import": "./src/server.ts"
+    },
+    "./levers": {
+      "types": "./src/server/levers.ts",
+      "import": "./src/server/levers.ts"
+    },
+    "./exec": {
+      "types": "./src/exec.ts",
+      "import": "./src/exec.ts"
+    },
+    "./testing": {
+      "types": "./src/testing.ts",
+      "import": "./src/testing.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts --dir ."
+  },
+  "dependencies": {
+    "@caveman-ai/agent": "^1.0.0",
+    "@caveman-ai/harness": "^1.0.0",
+    "@caveman-app/engine-core": "workspace:*",
+    "@caveman-app/protocol": "workspace:*",
+    "@caveman-app/shared": "workspace:*",
+    "@earendil-works/pi-ai": "1.4.0",
+    "effect": "catalog:",
+    "undici": "7.30.1"
+  },
+  "devDependencies": {
+    "@caveman-app/engine-testing": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

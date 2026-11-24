@@ -1,0 +1,56 @@
+{
+  "name": "@caveman-app/source-control-forgejo",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./client/definition": {
+      "types": "./src/client/definition.ts",
+      "import": "./src/client/definition.ts"
+    },
+    "./server/driver": {
+      "types": "./src/server/driver.ts",
+      "import": "./src/server/driver.ts"
+    },
+    "./server/ForgejoCli": {
+      "types": "./src/server/ForgejoCli.ts",
+      "import": "./src/server/ForgejoCli.ts"
+    },
+    "./server/forgejoPullRequestJson": {
+      "types": "./src/server/forgejoPullRequestJson.ts",
+      "import": "./src/server/forgejoPullRequestJson.ts"
+    },
+    "./server/ForgejoPullRequestProvider": {
+      "types": "./src/server/ForgejoPullRequestProvider.ts",
+      "import": "./src/server/ForgejoPullRequestProvider.ts"
+    },
+    "./server/forgejoPullRequests": {
+      "types": "./src/server/forgejoPullRequests.ts",
+      "import": "./src/server/forgejoPullRequests.ts"
+    },
+    "./server/ForgejoSourceControlProvider": {
+      "types": "./src/server/ForgejoSourceControlProvider.ts",
+      "import": "./src/server/ForgejoSourceControlProvider.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts --dir ."
+  },
+  "dependencies": {
+    "@caveman-app/protocol": "workspace:*",
+    "@caveman-app/engine-core": "workspace:*",
+    "@caveman-app/shared": "workspace:*",
+    "@caveman-app/source-control-core": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@caveman-app/source-control-testing": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

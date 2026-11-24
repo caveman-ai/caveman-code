@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="en" data-surface="deck" class="dark" style="height:100%">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Review from Cloud</title>
+  <body class="dashboard-scope" style="height:100%;margin:0">
+    <div id="review" style="height:100%"></div>
+    <pre id="result" role="status" style="position:fixed;right:8px;bottom:6px;margin:0;font-size:11px;opacity:.55;pointer-events:none;z-index:100">Running…</pre>
+    <script>
+      // ?frame=480: the same view in a frame that wide, so the page lays out as on a phone (its media queries included).
+      const q = new URLSearchParams(location.search);
+      const w = q.get("frame");
+      if (w) {
+        q.delete("frame");
+        document.body.innerHTML = `<iframe id="frame" src="${location.pathname}?${q}" style="width:${Number(w)}px;height:900px;border:0;display:block"></iframe>`;
+      }
+    </script>
+    <script type="module" src="./review-cloud.browser.tsx"></script>
+  </body>
+</html>

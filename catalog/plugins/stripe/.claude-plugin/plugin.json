@@ -1,0 +1,15 @@
+{
+  "name": "stripe",
+  "version": "1.0.0",
+  "description": "Build Stripe integrations against current Stripe docs and inspect customers, payments and subscriptions in a sandbox or live account.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://stripe.com/",
+  "keywords": [
+    "payments",
+    "billing",
+    "subscriptions"
+  ]
+}

@@ -1,0 +1,24 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: A security review on pull requests that touch sensitive code
+
+on:
+  github:
+    event: [pull_request.opened, pull_request.synchronize]
+    paths:                        # where your sensitive code lives
+      - "**/auth/**"
+      - "**/*crypto*"
+      - "**/*secret*"
+      - "**/migrations/**"
+      - ".github/workflows/**"
+      - "**/Dockerfile"
+
+budget: $3
+
+steps:
+  review:
+    agent: security-reviewer
+    model: frontier
+
+outputs:
+  github.comment: review.summary

@@ -1,0 +1,127 @@
+packages:
+  - apps/*
+  - packages/*
+  - oxlint-plugin-caveman
+
+# Versions , with Effect and every
+# @effect/* package at upstream 4.1.2 (57cd05904d).
+catalog:
+  "@anthropic-ai/claude-agent-sdk": ^0.3.300
+  "@effect/openapi-generator": 4.1.2
+  "@effect/platform-node": 4.1.2
+  "@effect/platform-node-shared": 4.1.2
+  "@effect/vitest": 4.1.2
+  "@types/node": 24.12.4
+  "@types/ws": 8.18.2
+  effect: 4.1.2
+  node-pty: 1.2.0-beta.15
+  react: 19.3.0
+  react-dom: 19.3.0
+  typescript: 7.0.2
+  undici: 8.12.3
+  vite: ^8.3.4
+  vitest: ^5.0.5
+  ws: 8.22.0
+  yaml: ^2.9.0
+  # Ported shared packages (T3 catalog at ab3a3cd1).
+  "@noble/curves": 1.9.1
+  "@noble/hashes": 1.8.0
+  mdast-util-directive: 3.1.0
+  micromark-extension-directive: 4.0.0
+  micromark-util-character: 2.1.1
+  micromark-util-types: 2.0.3
+  rehype-raw: 7.0.0
+  rehype-sanitize: 6.0.0
+  remark-breaks: 4.0.0
+  remark-gfm: 4.0.1
+  remark-parse: 11.0.0
+  remark-rehype: 11.1.2
+  unified: 11.0.5
+  # Runtime (T3 apps/server deps at ab3a3cd1).
+  "@ff-labs/fff-node": 0.11.0
+  # The engine SDK's own version, one copy; 1.29.0 carries CVE-2026-104850, CVE-2026-111767 and CVE-2026-111768.
+  "@modelcontextprotocol/sdk": 1.32.1
+  # Crash reports (docs/): @sentry/electron pins its @sentry/* to one version; the runtime's
+  # @sentry/core must be that same version. The CLI injects debug ids and uploads source maps at release.
+  "@sentry/electron": 8.4.0
+  "@sentry/core": 11.10.0
+  "@sentry/cli": 3.8.2
+ # The OS keychain: native sign-in token (packages/provider-cursor/src/server/CursorKeychain.ts), and the runtime's
+  # self-check loads the native module (packages/runtime/src/selfCheck.ts).
+  "@napi-rs/keyring": 1.3.0
+  # On-device embeddings for chat search (packages/runtime/src/search/Embedder.ts).
+  onnxruntime-node: 1.22.0
+  # The runtime's MCP hub and OAuth client (packages/runtime/src/plugins/McpHub.ts), the same version the engine SDK uses.
+  "@earendil-works/pi-mcp": 1.4.0
+  "@types/yauzl": ^3.4.0
+  playwright-core: 1.60.0
+  # Codex's config.toml read as TOML 1.0 for Bring my setup (packages/runtime/src/session-protocol/setupScan.ts).
+  smol-toml: 1.9.0
+  stream-chain: ^4.2.5
+  stream-json: 3.7.0
+  yauzl: ^3.4.0
+  # @cursor/sdk's zod peer (provider-cursor, runtime): zod before 4.6.6 carries GHSA-mrhx-c7xc-m3w5, with no 3.x fix.
+  zod: 4.6.7
+ # Runtime bundle (packages/runtime/scripts/bundle.ts): the bundler under upstream tsdown, as installed with vite 8.
+  rolldown: 1.2.14
+ # ACP schema generator (packages/effect-acp/scripts/generate.ts): the formatter under upstream `vp fmt` at ab3a3cd1.
+  # Also the repo's formatter (root package.json fmt, check:changed); one version so generated code matches.
+  oxfmt: 0.70.0
+  # Cron schedules (packages/runtime scheduledTasks/Schedule.ts, packages/automations check): no dependencies, IANA zones
+  # through Intl, L for a month's last day. 10.0.1, not the ten-day-old 11 major.
+  croner: 10.0.1
+ # Lint and dead-code checks (root package.json: lint, knip, check:changed), .
+  "@oxlint/plugins": 1.93.0
+  knip: 6.44.2
+  oxlint: 1.93.0
+
+onlyBuiltDependencies:
+  - electron
+  - esbuild
+  - node-pty
+
+overrides:
+  "@effect/platform-node-shared": 4.1.2
+  # Published packages from caveman-ai/agent-sdk and caveman-ai/cloud-sdk.
+  "@caveman-ai/agent": "^1.0.0"
+  "@caveman-ai/harness": "^1.0.0"
+  "@caveman-ai/protocol": "^1.0.0"
+  "@caveman-ai/evals": "^1.0.0"
+  "@caveman-ai/sdk": "^2.0.0"
+  "@pebble-agent/protocol": "npm:@caveman-ai/protocol@^1.0.0"
+  # OpenCode 2's protocol and schema packages hard-pin an exact Effect version and
+ # fail to decode under a second copy (upstream override, provider-opencode).
+  "@opencode/protocol>effect": "catalog:"
+  "@opencode/schema>effect": "catalog:"
+  # Every undici 7 (pi-ai's peer through provider-caveman, the engine SDK's own, Electron's
+  # downloader) on one patched version: 7.29.0 carries GHSA-w293-vg96-wgc3 and
+  # GHSA-rfgv-xxqx-mfg5, 7.30.0 GHSA-xjj6-f33q-929c, and one version keeps pi-ai a single copy.
+  "undici@7": 7.30.1
+  # onnxruntime-node 1.22 pins adm-zip 0.5.18 (CVE-2026-102282, CVE-2026-39244, CVE-2026-77301);
+  # only its install script reads it, and the Cloud computer image's release scan refuses it.
+  adm-zip: ^0.6.1
+ # LaTeX in markdown (upstream, #18735): remark-math reads the four delimiters models write
+  # (`$x$`, `$$x$$`, `\(x\)`, `\[x\]`) with llm-math's tokenizer, which keeps prices and `$HOME` as prose.
+  "remark-math>micromark-extension-math": npm:micromark-extension-llm-math@3.1.0
+  # Patched below so a `|` inside a formula stays in its table cell.
+  micromark-extension-gfm-table: 2.1.1
+  # Security overrides for transitive advisory fixes (glob, minimatch, katex).
+  glob: ">=14.0.2"
+  minimatch: ">=11.0.1"
+  katex: ">=0.18.2"
+
+# upstream patches (MIT). fff-node (@ 6e5322b6cf): one module instance for import
+# and require, asar-unpacked binary lookup, and less FFI marshaling on large
+# workspaces. node-pty (@ 13aa882c22): Windows console listing that never waits
+# out its timeout on kill. mdast-util-math and micromark-extension-llm-math
+# (@ cb0553ea39): `$$x$$` and `\[x\]` inline are display math; same-line display
+# fences, escapes and prices read as upstream tests expect. micromark-extension-gfm-table
+# (@ cb0553ea39): a formula's pipes stay inside its cell.
+patchedDependencies:
+  mdast-util-math@3.0.0: patches/mdast-util-math@3.0.0.patch
+  micromark-extension-llm-math@3.1.0: patches/micromark-extension-llm-math@3.1.0.patch
+  micromark-extension-gfm-table@2.1.1: patches/micromark-extension-gfm-table@2.1.1.patch
+  "@ff-labs/fff-node@0.11.0": patches/@ff-labs__fff-node@0.11.0.patch
+  node-pty@1.2.0-beta.15: patches/node-pty@1.2.0-beta.15.patch
+  # A home-screen shortcut that cold-starts the app reaches JavaScript under the scene lifecycle (apps/mobile).
+  expo-quick-actions@6.0.2: patches/expo-quick-actions@6.0.2.patch

@@ -1,0 +1,74 @@
+# Makes a staged desktop release current on https://download.caveman.so/code/mac
+# and /code/win: installed apps update to it and the Download buttons on
+# caveman.so serve it. A release staged without a Windows build (desktop-release.yml
+# skips it while Windows signing is not set up) leaves code/win as it was.
+# Runs when a person publishes the draft desktop-release.yml made (which also
+# creates its desktop-v tag), or by hand with the version of an earlier staged
+# release, to send new downloads back to it (installed apps never downgrade).
+#
+# Needs the R2 secrets desktop-release.yml lists. No checkout: it only copies
+# objects inside the bucket.
+name: Desktop publish
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: A staged version to make current, for example 0.1.0
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Make ${{ inputs.version || github.event.release.tag_name }} current
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.event.release.tag_name, 'desktop-v')
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Point the feed and the downloads at it
+        env:
+          VERSION: ${{ inputs.version || github.event.release.tag_name }}
+          R2_ACCOUNT_ID: ${{ secrets.R2_ACCOUNT_ID }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+          AWS_REQUEST_CHECKSUM_CALCULATION: WHEN_REQUIRED
+          AWS_RESPONSE_CHECKSUM_VALIDATION: WHEN_REQUIRED
+        run: |
+          # The input never reaches the script text.
+          VERSION="${VERSION#desktop-v}"
+          VERSION="${VERSION#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::$VERSION is not a version"; exit 1; }
+          [[ -n "$R2_ACCOUNT_ID" && -n "$AWS_ACCESS_KEY_ID" && -n "$AWS_SECRET_ACCESS_KEY" ]] || { echo "::error::R2_ACCOUNT_ID, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY must be repository secrets"; exit 1; }
+          s3() { aws s3 --endpoint-url "https://$R2_ACCOUNT_ID.r2.cloudflarestorage.com" "$@"; }
+          bucket=s3://caveman-downloads/code/mac
+          winbucket=s3://caveman-downloads/code/win
+          windows=false
+          if s3 ls "$winbucket/$VERSION/latest.yml" > /dev/null; then windows=true; fi
+          # Stable names for the site's links; a short cache so a new release reaches them within minutes.
+          for arch in arm64 x64; do
+            s3 cp "$bucket/Caveman-Code-$VERSION-$arch.dmg" "$bucket/Caveman-Code-$arch.dmg" \
+              --metadata-directive REPLACE --content-type application/x-apple-diskimage --cache-control "public, max-age=300"
+          done
+          if [ "$windows" = true ]; then
+            s3 cp "$winbucket/Caveman-Code-Setup-$VERSION-x64.exe" "$winbucket/Caveman-Code-Setup-x64.exe" \
+              --metadata-directive REPLACE --content-type application/vnd.microsoft.portable-executable --cache-control "public, max-age=300"
+          fi
+          # Last: installed apps act on these.
+          s3 cp "$bucket/$VERSION/latest-mac.yml" "$bucket/latest-mac.yml" \
+            --metadata-directive REPLACE --content-type text/yaml --cache-control "no-cache"
+          echo "Caveman Code $VERSION is current: https://download.caveman.so/code/mac/latest-mac.yml" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$windows" = true ]; then
+            s3 cp "$winbucket/$VERSION/latest.yml" "$winbucket/latest.yml" \
+              --metadata-directive REPLACE --content-type text/yaml --cache-control "no-cache"
+            echo "and https://download.caveman.so/code/win/latest.yml" >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "$VERSION has no Windows build: code/win stays as it was" >> "$GITHUB_STEP_SUMMARY"
+          fi

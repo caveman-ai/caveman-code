@@ -1,0 +1,25 @@
+// ), apps/server/src/observability/BrowserTraceCollector.ts @ ab3a3cd1.
+import type { TraceRecord, TraceSink } from "@caveman-app/shared/observability";
+import * as Context from "effect/Context";
+import * as Effect from "effect/Effect";
+import * as Layer from "effect/Layer";
+
+export class BrowserTraceCollector extends Context.Service<
+  BrowserTraceCollector,
+  {
+    readonly record: (records: ReadonlyArray<TraceRecord>) => Effect.Effect<void>;
+  }
+>()("t3/observability/BrowserTraceCollector") {}
+
+/** @public Service construction is part of the canonical Effect module API. */
+export const make = (sink: TraceSink): BrowserTraceCollector["Service"] =>
+  BrowserTraceCollector.of({
+    record: (records) =>
+      Effect.sync(() => {
+        for (const record of records) {
+          sink.push(record);
+        }
+      }),
+  });
+
+export const layer = (sink: TraceSink) => Layer.succeed(BrowserTraceCollector, make(sink));

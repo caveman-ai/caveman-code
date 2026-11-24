@@ -1,0 +1,36 @@
+{
+  "name": "hugging-face",
+  "version": "1.0.0",
+  "description": "Search the Hugging Face Hub for models, datasets, Spaces and papers, and check licence, size and usage before you build on one.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://huggingface.co/",
+  "keywords": [
+    "models",
+    "datasets",
+    "ml"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Hugging Face",
+    "shortDescription": "Models, datasets and papers",
+    "longDescription": "Search the Hugging Face Hub for models, datasets, Spaces and papers, and check licence, size and usage before you build on one.",
+    "developerName": "Hugging Face",
+    "category": "Data",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://huggingface.co/",
+    "privacyPolicyURL": "https://huggingface.co/privacy",
+    "termsOfServiceURL": "https://huggingface.co/terms-of-service",
+    "defaultPrompt": [
+      "Find a small open model for text classification",
+      "Find a dataset of labelled support tickets"
+    ],
+    "brandColor": "#FFD21E",
+    "logo": "./assets/logo.svg"
+  }
+}

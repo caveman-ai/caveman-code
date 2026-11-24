@@ -1,0 +1,149 @@
+// ), apps/server/src/provider/providerCompatibility.ts @ ab3a3cd1.
+import {
+  TrimmedNonEmptyString,
+  ServerProviderCompatibilityStatus,
+  type ProviderDriverKind,
+  type ServerProvider,
+  type ServerProviderCompatibilityAdvisory,
+} from "@caveman-app/protocol";
+import { satisfiesSemverRange } from "@caveman-app/shared/semver";
+import * as Schema from "effect/Schema";
+
+import { RUNTIME_VERSION } from "../runtimeVersion.ts";
+
+// Deliberately uses the shared CLI gate syntax: comparator groups joined by ||.
+// Prereleases and unrecognized release tags remain unknown.
+const StableVersion = TrimmedNonEmptyString.pipe(
+  Schema.check(Schema.makeFilter((value) => /^\d+\.\d+\.\d+$/.test(value))),
+);
+const VersionRange = TrimmedNonEmptyString.pipe(
+  Schema.check(
+    Schema.makeFilter((value) =>
+      value.split("||").every((group) => {
+        const tokens = group.trim().split(/\s+/);
+        return tokens.every((token) => /^(?:\^|>=|>|<=|<|=)?v?\d+(?:\.\d+){0,2}$/.test(token));
+      }),
+    ),
+  ),
+);
+const Policy = Schema.Struct({
+  driver: TrimmedNonEmptyString,
+  /** The Caveman Code runtime versions the policy applies to. */
+  cavemanCodeRange: VersionRange,
+  recommendedRange: Schema.optionalKey(VersionRange),
+  recommendedVersion: Schema.optionalKey(StableVersion),
+  ranges: Schema.Array(
+    Schema.Struct({
+      range: VersionRange,
+      status: ServerProviderCompatibilityStatus,
+    }),
+  ),
+});
+
+export const ProviderCompatibilityPolicy = Policy.pipe(
+  Schema.check(
+    Schema.makeFilter(
+      (policy) => {
+        const version = policy.recommendedVersion;
+        if (version === undefined) return true;
+        return (
+          (policy.recommendedRange === undefined ||
+            satisfiesSemverRange(version, policy.recommendedRange)) &&
+          policy.ranges.find((entry) => satisfiesSemverRange(version, entry.range))?.status ===
+            "supported"
+        );
+      },
+      { expected: "a recommended version in a supported range" },
+    ),
+  ),
+);
+export type ProviderCompatibilityPolicy = typeof ProviderCompatibilityPolicy.Type;
+
+/**
+ * Compatibility policies (the bundled `model-manifest.json`, which Caveman
+ * Code owns, and an opt-in remote copy) key `cavemanCodeRange` on this
+ * runtime's own version, so a remote manifest can carry a policy per release.
+ */
+export const CAVEMAN_CODE_VERSION = RUNTIME_VERSION;
+
+export function resolveProviderCompatibility(
+  policies: ReadonlyArray<ProviderCompatibilityPolicy> | undefined,
+  driver: ProviderDriverKind,
+  version: string | null,
+  appVersion = CAVEMAN_CODE_VERSION,
+): ServerProviderCompatibilityAdvisory | undefined {
+  const policy = policies?.find(
+    (entry) => entry.driver === driver && satisfiesSemverRange(appVersion, entry.cavemanCodeRange),
+  );
+  if (!policy) return undefined;
+  // Semver prereleases and other tags stay unknown. Cursor appends a build hash to its date,
+ // Google's ACP runtime uses a release prefix and Muse a release revision (upstream
+  // normalization); only those forms are stripped.
+  const unprefixed = version?.replace(/^v/, "");
+  const stable =
+    driver === "cursor"
+      ? unprefixed?.replace(/^(\d{4}\.\d{2}\.\d{2})-[a-f0-9]+$/, "$1")
+      : driver === "antigravity"
+        ? unprefixed?.replace(/^agy_acp_server_(\d+\.\d+\.\d+)$/, "$1")
+        : driver === "muse"
+          ? unprefixed?.replace(/^(\d+\.\d+\.\d+)-R\d+(?:\.\d+)?$/, "$1")
+          : unprefixed;
+  const status =
+    stable && /^\d+\.\d+\.\d+$/.test(stable)
+      ? (policy.ranges.find((entry) => satisfiesSemverRange(stable, entry.range))?.status ??
+        "unknown")
+      : "unknown";
+  const message =
+    status === "broken"
+      ? "This provider version is known to be incompatible with this Caveman Code release."
+      : status === "unsupported"
+        ? "This provider version is outside the supported range for this Caveman Code release."
+        : status === "graceful"
+          ? "This provider version has limited compatibility with this Caveman Code release."
+          : null;
+  const recommendedVersion = policy.recommendedVersion ?? null;
+  const recommendedRange = policy.recommendedRange ?? null;
+  const recommendation = recommendedVersion ?? recommendedRange;
+  return {
+    status,
+    message: message && recommendation ? `${message} Use ${recommendation}.` : message,
+    recommendedVersion,
+    recommendedRange,
+  };
+}
+
+/** A remote policy replaces its matching bundled policy; omission keeps the bundle. */
+export function applyProviderCompatibility(
+  snapshot: ServerProvider,
+  policies: ReadonlyArray<ProviderCompatibilityPolicy> | undefined,
+  fallback: ReadonlyArray<ProviderCompatibilityPolicy> | undefined,
+): ServerProvider {
+  const { compatibilityAdvisory: _previous, ...base } = snapshot;
+  if (!snapshot.enabled || !snapshot.installed) return base;
+  const advisory =
+    resolveProviderCompatibility(policies, snapshot.driver, snapshot.version) ??
+    resolveProviderCompatibility(fallback, snapshot.driver, snapshot.version);
+  const latestVersion = snapshot.versionAdvisory?.latestVersion;
+  const latestAdvisory = latestVersion
+    ? (resolveProviderCompatibility(policies, snapshot.driver, latestVersion) ??
+      resolveProviderCompatibility(fallback, snapshot.driver, latestVersion))
+    : undefined;
+  const updateCommand = snapshot.versionAdvisory?.updateCommand;
+  // The maintenance resolver emits this command only for confirmed Homebrew installs.
+  const needsHomebrewRefresh =
+    updateCommand?.startsWith("brew upgrade ") &&
+    (advisory?.status === "unsupported" || advisory?.status === "broken") &&
+    (latestAdvisory?.status === "unsupported" || latestAdvisory?.status === "broken");
+  return advisory
+    ? {
+        ...base,
+        compatibilityAdvisory: {
+          ...advisory,
+          message: needsHomebrewRefresh
+            ? `${advisory.message} Homebrew's local package metadata may be stale. Run brew update && ${updateCommand} on this environment's host, then refresh provider status.`
+            : advisory.message,
+          ...(latestAdvisory ? { latestVersionStatus: latestAdvisory.status } : {}),
+        },
+      }
+    : base;
+}

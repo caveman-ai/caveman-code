@@ -1,0 +1,38 @@
+{
+  "name": "atlassian",
+  "version": "1.0.0",
+  "description": "Work from Jira issues and Confluence pages: pick up a ticket, implement it here, and update the ticket and docs as you go.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.atlassian.com/",
+  "keywords": [
+    "jira",
+    "confluence",
+    "tickets",
+    "wiki"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Atlassian",
+    "shortDescription": "Jira issues and Confluence pages",
+    "longDescription": "Work from Jira issues and Confluence pages: pick up a ticket, implement it here, and update the ticket and docs as you go.",
+    "developerName": "Atlassian",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://www.atlassian.com/",
+    "privacyPolicyURL": "https://www.atlassian.com/legal/privacy-policy",
+    "termsOfServiceURL": "https://www.atlassian.com/legal/cloud-terms-of-service",
+    "defaultPrompt": [
+      "Start on the Jira ticket assigned to me",
+      "Summarize the Confluence page for this service"
+    ],
+    "brandColor": "#0052CC",
+    "logo": "./assets/logo.svg"
+  }
+}

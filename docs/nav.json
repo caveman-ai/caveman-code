@@ -1,0 +1,49 @@
+{
+  "product": "caveman-code",
+  "label": "Caveman Code",
+  "repo": "caveman-ai/caveman-code",
+  "visibility": "public-ready",
+  "groups": [
+    {
+      "title": "Caveman Code",
+      "items": [
+        {
+          "slug": "code/overview",
+          "title": "Overview",
+          "file": "index.mdx",
+          "blurb": "Desktop, CLI, Web, and Mobile coding agent powered by Harness v4."
+        },
+        {
+          "slug": "code/desktop",
+          "title": "Desktop App",
+          "file": "desktop.mdx",
+          "blurb": "Parallel coding threads, structured transcripts, diffs, and approval controls."
+        },
+        {
+          "slug": "code/cli",
+          "title": "CLI & Daemon",
+          "file": "cli.mdx",
+          "blurb": "Run caveman-code from the terminal on the exact same runtime as Desktop."
+        },
+        {
+          "slug": "code/cloud-computers",
+          "title": "Cloud Computers",
+          "file": "cloud-computers.mdx",
+          "blurb": "Persistent Firecracker computers that keep running with your laptop closed."
+        },
+        {
+          "slug": "code/mcp-plugins",
+          "title": "MCP & Plugins",
+          "file": "mcp-plugins.mdx",
+          "blurb": "Configure MCP servers, skills, and workspace plugins with allowlisted environments."
+        },
+        {
+          "slug": "code/architecture",
+          "title": "Architecture",
+          "file": "architecture.mdx",
+          "blurb": "How Desktop, CLI, packages/runtime, and @caveman-ai/harness connect."
+        }
+      ]
+    }
+  ]
+}

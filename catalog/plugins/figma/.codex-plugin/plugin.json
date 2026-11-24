@@ -1,0 +1,36 @@
+{
+  "name": "figma",
+  "version": "1.0.0",
+  "description": "Read a Figma frame's layout, variables and screenshot, and build it with this project's own components and tokens.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.figma.com/",
+  "keywords": [
+    "design",
+    "ui",
+    "tokens"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Figma",
+    "shortDescription": "Build UI from Figma frames",
+    "longDescription": "Read a Figma frame's layout, variables and screenshot, and build it with this project's own components and tokens.",
+    "developerName": "Figma",
+    "category": "Design",
+    "capabilities": [
+      "Read"
+    ],
+    "websiteURL": "https://www.figma.com/",
+    "privacyPolicyURL": "https://www.figma.com/legal/privacy/",
+    "termsOfServiceURL": "https://www.figma.com/legal/developer-terms/",
+    "defaultPrompt": [
+      "Build this Figma frame with our components",
+      "Compare this screen with its Figma design"
+    ],
+    "brandColor": "#F24E1E",
+    "logo": "./assets/logo.svg"
+  }
+}

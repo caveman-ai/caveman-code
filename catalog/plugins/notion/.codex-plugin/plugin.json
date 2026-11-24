@@ -1,0 +1,39 @@
+{
+  "name": "notion",
+  "version": "1.0.0",
+  "description": "Turn Notion specs into a plan for this repository and publish design notes and release notes back to Notion.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.notion.com/",
+  "keywords": [
+    "docs",
+    "wiki",
+    "specs"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Notion",
+    "shortDescription": "Specs, docs and databases",
+    "longDescription": "Turn Notion specs into a plan for this repository and publish design notes and release notes back to Notion.",
+    "developerName": "Notion",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://www.notion.com/",
+    "privacyPolicyURL": "https://www.notion.com/help/privacy",
+    "termsOfServiceURL": "https://notion.notion.site/Terms-and-Privacy-28ffdd083dc3473e9c2da6ec011b58ac",
+    "defaultPrompt": [
+      "Read the spec in Notion and plan the work",
+      "Write up this change as a Notion page"
+    ],
+    "brandColor": "#000000",
+    "brandColorDark": "#FFFFFF",
+    "logo": "./assets/logo.svg",
+    "logoDark": "./assets/logo-dark.svg"
+  }
+}

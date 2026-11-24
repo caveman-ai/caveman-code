@@ -1,0 +1,604 @@
+@import "@caveman-app/ui/styles.css";
+
+@layer utilities {
+  /* The Rock at work (Rock.tsx): rests, hops 2 then 3 whole pixels, comes down, rests. Held frames, no rotation. */
+  @keyframes rock-hop {
+    0%, 50% { transform: none; }
+    58% { transform: translateY(-2px); }
+    67%, 75% { transform: translateY(-3px); }
+    83% { transform: translateY(-2px); }
+    92%, 100% { transform: none; }
+  }
+  .animate-rock-hop { animation: rock-hop 720ms steps(1, jump-end) infinite; }
+}
+
+html, body, #root { height: 100%; }
+/* The app scrolls inside its panes, never as a page: no pull-to-refresh reloading it mid-chat. Sideways stays the
+   browser's, so a swipe still goes back. */
+html, body { overscroll-behavior-y: none; }
+body { overflow: hidden; }
+
+/* A phone (lib/screen.ts): the page fills what the browser's bars leave (dvh) and keeps clear of the notch and home
+   bar (index.html viewport-fit=cover). Text fields are 16px: iOS zooms the page into any smaller one it focuses. The
+   composer's pill layer follows its field (Composer.tsx FIELD). */
+@media (max-width: 767px) {
+  #root {
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background: hsl(var(--background));
+  }
+  :is(input:not([type="checkbox"], [type="radio"], [type="range"], [type="color"]), select, textarea) { font-size: 16px !important; }
+  /* The composer's buttons (+, settings, model, mic, send) are 36px tall for a thumb, not the desktop's 28. */
+  .composer-controls button { min-height: 2.25rem; min-width: 2.25rem; }
+  /* A menu or picker drawn for a wide window stays on the screen; one that sets its own cap keeps it. */
+  :where([data-radix-popper-content-wrapper]) > * { max-width: calc(100vw - 16px); }
+  /* The drawer's rows (shell/Sidebar.tsx) are a thumb's height, 40px where the panel's are 32 to 34; holding one opens
+     its menu (lib/long-press.ts), not the system's callout. */
+  [data-sidebar] :is(.chat-row, button.folder-row, .folder-foot, .nav-row) { height: 40px; }
+  [data-sidebar] { -webkit-touch-callout: none; }
+}
+/* A touch screen. A tap is a tap: no grey flash, no double-tap zoom (pinch still zooms). A key's hint beside a field or
+   a button (a decorative <kbd>, hidden from screen readers) goes, as the kit's keycaps do (menu.tsx). */
+@media (hover: none) {
+  html { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+  kbd[aria-hidden="true"] { display: none; }
+}
+
+/* The desktop title bar (shell/TitleBar.tsx) and other window-drag areas move
+   the window; their controls still click. The bar leaves the traffic lights
+   80pt at any zoom (apps/desktop main.ts places them, preload.ts sets --zoom). Full screen hides the lights, so
+   their inset goes, and an empty bar with them. */
+.title-bar, .window-drag { -webkit-app-region: drag; }
+:is(.title-bar, .window-drag) :is(button, a, input, [role="button"], [role="tab"]) { -webkit-app-region: no-drag; }
+/* What floats over the window takes its own clicks where it covers a drag
+   area (the tab strip makes the whole top band one): a dialog such as the
+   image viewer, whose bar sits in that band, a menu, a toast's buttons. */
+:is([role="dialog"], [role="alertdialog"], [data-radix-popper-content-wrapper], [role="status"] :is(button, a)) { -webkit-app-region: no-drag; }
+.title-bar { padding-left: calc(80px / var(--zoom, 1)); }
+html[data-fullscreen] .title-bar { padding-left: 12px; }
+html[data-fullscreen] .title-bar:empty { display: none; }
+/* The sidebar's toggle (shell/SidebarToggle.tsx) keeps one place, the band's
+   start, open or tucked away. Tucked away the sidebar is gone, so the tab
+   strip starts where it did: after a Mac's traffic lights, or 12px in where
+   the band does (Windows, full screen). */
+.tab-strip[data-sidebar-hidden] { padding-left: calc(76px / var(--zoom, 1)); }
+html:is([data-wco], [data-fullscreen]) .tab-strip[data-sidebar-hidden] { padding-left: 8px; }
+
+/* Windows: no traffic lights at the left; its minimize, maximize and close
+   buttons are drawn over the right end of the title band instead (apps/desktop
+   main.ts titleBarOverlay, main.tsx sets data-wco). The band above the panel
+   grows to their height and the panel starts below it, so they sit in the
+   band, never over a page. Full screen hides them, and the band goes back. */
+html[data-wco] .title-bar { padding-left: 12px; }
+html[data-wco] .panel-frame { padding-top: env(titlebar-area-height, 40px); }
+html[data-wco] .panel-title-bar { height: env(titlebar-area-height, 40px); }
+html[data-wco] .tab-strip {
+  height: env(titlebar-area-height, 40px);
+  padding-right: calc(100vw - env(titlebar-area-x, 0px) - env(titlebar-area-width, 100vw) + 8px);
+}
+
+/* The inset card a page sits on (shell/AppShell.tsx), and each pane of a split
+   (panes/PaneHost.tsx): a page shows the shell around one card, a split shows
+   it between its panes. A phone has it edge to edge. */
+.panel-card {
+  border-radius: 12px;
+  border: 0.5px solid hsl(var(--border));
+  background: hsl(var(--background));
+  box-shadow: var(--shadow-frame);
+}
+@media (max-width: 767px) {
+  .panel-card { border-radius: 0; border-width: 0; box-shadow: none; }
+}
+
+/* The window's tabs (shell/TabStrip.tsx). A title fades at its edge rather than
+   ending in "…", further while the ✕ or the number sits over its end. Holding ⌘
+   shows each tab's number (html[data-tab-keys], set without a render). The
+   strip fades at an edge while there is more to scroll to. */
+.tab-title { mask-image: linear-gradient(to right, black calc(100% - 16px), transparent); }
+.tab:hover .tab-title, html[data-tab-keys] .tab-title { mask-image: linear-gradient(to right, black calc(100% - 36px), transparent calc(100% - 20px)); }
+html[data-tab-keys] .tab-key { opacity: 1; }
+html[data-tab-keys] .tab-close { opacity: 0 !important; }
+.tab[data-dragging] { z-index: 1; transition: none; }
+.tab-list[data-fade-start] { mask-image: linear-gradient(to right, transparent, black 24px); }
+.tab-list[data-fade-end] { mask-image: linear-gradient(to left, transparent, black 24px); }
+.tab-list[data-fade-start][data-fade-end] { mask-image: linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent); }
+
+/* The macOS desktop window is the sidebar material (apps/desktop main.ts):
+   in dark the shell (window-shell) lets a little of it through, the panel
+   stays solid. Light stays opaque: the material washes its greys out. */
+html.dark[data-desktop] body { background: transparent; }
+html.dark[data-desktop] .window-shell { background-color: hsl(var(--sidebar) / 0.8); }
+
+/* Assistant markdown in the transcript: Tailwind's reset strips list markers
+   and spacing, so the transcript sets its own, on the deck's tokens. */
+.prose-transcript > :first-child { margin-top: 0; }
+.prose-transcript > :last-child { margin-bottom: 0; }
+.prose-transcript p { margin: 0 0 10px; }
+.prose-transcript ol, .prose-transcript ul { margin: 4px 0 10px; padding-left: 22px; }
+.prose-transcript ol { list-style: decimal; }
+.prose-transcript ul { list-style: disc; }
+.prose-transcript li { margin: 3px 0; padding-left: 2px; }
+.prose-transcript li::marker { color: hsl(var(--muted-foreground)); }
+.prose-transcript :not(pre) > code {
+  font-family: var(--font-jetbrains); font-size: 12.5px;
+  background: hsl(var(--foreground) / 0.07); border-radius: 4px; padding: 1px 4px;
+}
+.prose-transcript pre {
+  margin: 6px 0 10px; padding: 10px 12px; overflow-x: auto;
+  background: hsl(var(--card)); border: 1px solid hsl(var(--border)); border-radius: 8px;
+  font: 12.5px/19px var(--font-jetbrains);
+}
+.prose-transcript a { text-decoration: underline; text-underline-offset: 2px; }
+.prose-transcript h1, .prose-transcript h2, .prose-transcript h3 { font-weight: 600; margin: 14px 0 6px; font-size: 14px; }
+.prose-transcript blockquote { border-left: 2px solid hsl(var(--border)); padding-left: 10px; color: hsl(var(--muted-foreground)); }
+.prose-transcript table { margin: 6px 0 10px; border-collapse: collapse; font-size: 13px; }
+.prose-transcript th, .prose-transcript td { border: 1px solid hsl(var(--border)); padding: 4px 8px; text-align: left; }
+
+/* Settings > Appearance > Density: compact tightens the sidebar's rows and the transcript's prose. A folder's
+   "Show more", "Show less" and "Start a chat" only: a chat's own .folder-row also holds its agents and grows with them. */
+html[data-density="compact"] .chat-row { height: 26px; }
+html[data-density="compact"] .chat-row.agent-row { height: 22px; }
+html[data-density="compact"] :is(button.folder-row, .folder-foot) { height: 26px; }
+html[data-density="compact"] .prose-transcript p { margin-bottom: 6px; }
+html[data-density="compact"] .prose-transcript li { margin: 1px 0; }
+html[data-density="compact"] .prose-transcript pre { margin: 4px 0 6px; padding: 6px 10px; }
+
+/* A turn's Changes card arriving while you watch (transcript/TurnChanges.tsx):
+   its height opens from nothing as it fades in, so the footer under it glides
+   down instead of jumping. ease-snap never overshoots: nothing bounces.
+   Reduced motion: it is simply there. */
+@keyframes turn-changes-open {
+  from { grid-template-rows: 0fr; opacity: 0; }
+  to { grid-template-rows: 1fr; opacity: 1; }
+}
+.turn-changes-open { display: grid; animation: turn-changes-open 300ms var(--ease-snap) both; }
+/* Keep folds it shut the same way before it goes. */
+@keyframes turn-changes-close {
+  from { grid-template-rows: 1fr; opacity: 1; }
+  to { grid-template-rows: 0fr; opacity: 0; }
+}
+.turn-changes-close { display: grid; animation: turn-changes-close 200ms var(--ease-snap) forwards; }
+@media (prefers-reduced-motion: reduce) { .turn-changes-open { animation: none; } }
+
+/* A sidebar project folder's chats (Sidebar.tsx ProjectFolder): the height
+   opens on a 0fr -> 1fr grid row, the rows drop in on a short stagger and
+   leave at once. Reduced motion resolves both instantly (pixel.css). */
+.folder-body {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 240ms var(--ease-snap);
+}
+.folder-body[data-open] { grid-template-rows: 1fr; }
+.folder-body > div { min-height: 0; overflow: hidden; }
+.folder-row {
+  opacity: 0;
+  transform: translateY(-4px);
+  transition: opacity 100ms ease-out, transform 200ms var(--ease-snap);
+}
+.folder-body[data-open] .folder-row {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(min(var(--i, 0), 8) * 22ms);
+}
+
+/* A project folder's rule (Sidebar.tsx ProjectFolder): a hairline down its chats, drawn a row at a time. A chat with a
+   pull request wears its glyph on the rule (prOnRule), and the rule parts 2px clear of it, around the chat row's
+   middle (30px rows, 26 compact, 40 on a phone), never painting over the sidebar's see-through material. It runs 13px
+   left of each row (the folder's pl-[13px]), down from the middle of the project row's 28px mark. */
+.folder-rule {
+  --rule: hsl(var(--sidebar-foreground) / 0.2);
+  --mid: 15px;
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -13px;
+  width: 1px;
+  pointer-events: none;
+  background: var(--rule);
+}
+.folder-row:last-child > .folder-rule { bottom: 4px; }
+
+/* A project row's name (Sidebar.tsx ProjectFolder) runs to the row's right edge and fades out where the row's marks
+   begin, never an ellipsis: --cut is how far in they reach. At rest, folded, its chats' state (--rest-cut); hovered,
+   + (--hover-cut). The chevron takes the mark's place on hover, not the name's end. Only the fade moves; the name never does. */
+/* Keep the mark's slot throughout the swap. Only opacity and transforms animate, like the composer key.
+   Visibility removes the fold key from tab order at rest; keyboard focus on the row reveals it. */
+.project-mark { transition: opacity 150ms var(--ease-snap); }
+.project-fold { visibility: hidden; opacity: 0; pointer-events: none; }
+.project-row:is(:hover, :has(:focus-visible), :has([data-state="open"]), [data-arranging]) .project-mark { opacity: 0; }
+.project-row:is(:hover, :has(:focus-visible), :has([data-state="open"]), [data-arranging]) .project-fold {
+  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
+  animation: composer-key-in 220ms var(--ease-snap) backwards;
+}
+/* The fold key becomes a six-dot grip during an arrangement; chrome fades, never the pixel art's scale. */
+.project-fold { position: relative; }
+.project-fold-glyph { display: grid; width: 16px; height: 16px; opacity: 1; scale: 1; }
+.sidebar-drag-dots {
+  position: absolute;
+  display: grid;
+  grid-template-columns: repeat(2, 2px);
+  gap: 2px;
+  opacity: 0;
+  scale: 0.6;
+  transition: opacity 150ms var(--ease-snap), scale 200ms var(--ease-drawer);
+}
+.sidebar-drag-dots > span { width: 2px; height: 2px; border-radius: 50%; background: currentColor; }
+[data-arranging] .project-fold-glyph { opacity: 0; scale: 0.6; }
+[data-arranging] .sidebar-drag-dots { opacity: 1; scale: 1; }
+.sidebar-order-row[data-arranging] { cursor: grabbing; }
+.sidebar-order-row[data-order-drop]::after {
+  content: "";
+  position: absolute;
+  left: 0; right: 0;
+  height: 2px;
+  border-radius: 1px;
+  background: hsl(var(--target));
+  pointer-events: none;
+}
+.sidebar-order-row[data-order-drop="before"]::after { top: -2px; }
+.sidebar-order-row[data-order-drop="after"]::after { bottom: -2px; }
+@media (prefers-reduced-motion: reduce) {
+  .project-mark, .project-fold, .project-fold-glyph, .sidebar-drag-dots { transition: none !important; animation: none !important; }
+}
+
+.project-fold-glyph { rotate: 90deg; transition: rotate 200ms var(--ease-drawer), opacity 150ms var(--ease-snap), scale 200ms var(--ease-drawer); }
+.project-fold-glyph[data-open="true"] { rotate: 180deg; }
+
+.project-row { --cut: var(--rest-cut, 0px); }
+.project-row:hover,
+.project-row:has(:focus-visible),
+.project-row:has([data-state="open"]) { --cut: var(--hover-cut, 0px); }
+.project-name { mask-image: linear-gradient(to right, #000 calc(100% - var(--cut) - 24px), transparent calc(100% - var(--cut))); }
+.folder-rule[data-gap] { background: linear-gradient(to bottom, var(--rule) calc(var(--mid) - 10px), transparent 0 calc(var(--mid) + 10px), var(--rule) 0); }
+html[data-density="compact"] .folder-rule { --mid: 13px; }
+@media (max-width: 767px) { [data-sidebar] .folder-rule { --mid: 20px; } }
+
+/* A lead's agents (Sidebar.tsx Builders), and the finished ones under their
+   "N done" line: the same 0fr -> 1fr unfold as a folder, its own class so an
+   open folder around it can't show them early. */
+.agent-rows {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease-snap);
+}
+.agent-rows[data-open] { grid-template-rows: 1fr; }
+.agent-rows > div { min-height: 0; overflow: hidden; }
+.agent-rows > div > * {
+  opacity: 0;
+  transform: translateY(-3px);
+  transition: opacity 100ms ease-out, transform 200ms var(--ease-snap);
+}
+.agent-rows[data-open] > div > * {
+  opacity: 1;
+  transform: none;
+  transition-delay: calc(min(var(--i, 0), 8) * 22ms);
+}
+
+/* The side panel's Overview (components/pane/cards): a card unfolds on the
+   same 0fr -> 1fr grid row as a sidebar folder, its content fading in where
+   it stands (no travel). Reduced motion resolves it at once (pixel.css). */
+.overview-fold {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease-snap);
+}
+.overview-fold[data-open] { grid-template-rows: 1fr; }
+.overview-fold > div { min-height: 0; overflow: hidden; }
+.overview-fold > div > * {
+  opacity: 0;
+  transition: opacity 150ms var(--ease-snap);
+}
+.overview-fold[data-open] > div > * { opacity: 1; }
+
+/* Caveman night (STYLE.md "Caveman night"): the launch video's indigo night
+   lit by a tunic-orange fire low right, in the sprite palette, with a little
+   grain. The same in both themes.
+   Its holder positions it (relative or absolute); the grain sits in ::before. */
+.caveman-night {
+  isolation: isolate;
+  background:
+    radial-gradient(55% 75% at 100% 100%, hsl(var(--id-tunic)) 0%, hsl(var(--id-tunic-shade) / 0.8) 35%, hsl(var(--id-tunic-shade) / 0) 75%),
+    radial-gradient(50% 60% at 0% 0%, hsl(var(--id-dino-shade)) 0%, hsl(var(--id-dino-shade) / 0) 100%),
+    radial-gradient(60% 60% at 30% 70%, hsl(var(--id-dino) / 0.55) 0%, hsl(var(--id-dino) / 0) 100%),
+    linear-gradient(180deg, hsl(var(--id-outline)), hsl(var(--id-dino-shade)));
+}
+.caveman-night::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  opacity: 0.3;
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+/* A wallpaper (wallpaper/Wallpaper.tsx), behind a new chat. Words on it wear the ink that reads on the picture, light
+   or dark, whatever the theme (look.ts INKS), and never grey: the picture is held to 4.5:1 against that ink under
+   them and to nothing fainter. A chip's hover fill turns with the ink, so its words still read on it. */
+.wallpaper-stage[data-ink="light"] [data-wallpaper-reads] {
+  --foreground: 240 2% 98%;
+  --muted-foreground: 240 2% 98%;
+  --subtle-foreground: 240 2% 98%;
+  --accent: 240 4% 16%;
+  color: hsl(var(--foreground));
+}
+.wallpaper-stage[data-ink="dark"] [data-wallpaper-reads] {
+  --foreground: 240 5% 10%;
+  --muted-foreground: 240 5% 10%;
+  --subtle-foreground: 240 5% 10%;
+  --accent: 240 5% 90%;
+  color: hsl(var(--foreground));
+}
+/* The new chat's box on its wallpaper: glass as solid as the person set it, lit along its top edge with no shadow
+   under it, and a hairline that brightens while it holds the caret. */
+.glass.composer-glass { background-color: hsl(var(--popover) / var(--wallpaper-box, 0.72)); box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.6); }
+:where(.dark) .glass.composer-glass { box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.07); }
+/* A chat's box is the card, edged like the glass box with a hairline of ink, never a form field's 3:1 edge (a grey
+   outline in light). Either box's hairline brightens while it holds the caret. Components, so a box a thread is held
+   over still takes the blue (Composer.tsx dropHere). */
+@layer components {
+  .composer-card { border: 1px solid hsl(var(--foreground) / 0.1); background-color: hsl(var(--card)); }
+  .composer-card:focus-within, .composer-glass:focus-within { border-color: hsl(var(--foreground) / 0.22); }
+}
+/* A dial (Settings > Appearance > Wallpaper): a hairline track filled up to the thumb (--at), a round ink thumb. */
+.range { appearance: none; height: 16px; background: transparent; cursor: pointer; outline: none; }
+.range:disabled { cursor: default; opacity: 0.4; }
+.range::-webkit-slider-runnable-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, hsl(var(--foreground) / 0.8) var(--at), hsl(var(--foreground) / 0.12) var(--at)); }
+.range::-moz-range-track { height: 4px; border-radius: 2px; background: linear-gradient(to right, hsl(var(--foreground) / 0.8) var(--at), hsl(var(--foreground) / 0.12) var(--at)); }
+.range::-webkit-slider-thumb { appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%; background: hsl(var(--foreground)); box-shadow: 0 0 0 0.5px hsl(0 0% 0% / 0.32); }
+.range::-moz-range-thumb { width: 14px; height: 14px; border: 0; border-radius: 50%; background: hsl(var(--foreground)); box-shadow: 0 0 0 0.5px hsl(0 0% 0% / 0.32); }
+.range:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring)); }
+.range:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--ring)); }
+
+/* A screen thumbnail's page load (ScreenCard): a short bar runs across its top edge. */
+@keyframes screen-load {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+
+/* A thread reference (Composer.tsx, Transcript.tsx): a pill in running text,
+   tinted the one blue because it points somewhere ("there": it opens that
+   thread). Paint only, never padding, margin or spacing: the composer's pill
+   layer has to line up glyph for glyph with the textarea above it. The spread
+   shadow gives the tint room around the letters, the outline is the ring, and
+   each line of a wrapped pill gets its own ends. */
+.thread-pill {
+  border-radius: 3px;
+  color: color-mix(in oklab, hsl(var(--target)) 38%, hsl(var(--foreground)));
+  background-image: linear-gradient(180deg, hsl(var(--target) / 0.25), hsl(var(--target) / 0.15));
+  box-shadow: 0 0 0 2px hsl(var(--target) / 0.18);
+  outline: 1px solid hsl(var(--target) / 0.3);
+  outline-offset: 2px;
+  transition: outline-color 75ms ease-out;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.thread-pill-at { opacity: 0.6; }
+a.thread-pill:hover { outline-color: hsl(var(--target) / 0.6); }
+/* Names a thread it cannot open: neutral; dashed when the thread is not on this runtime. */
+.thread-pill-quiet {
+  color: hsl(var(--muted-foreground));
+  background-image: none;
+  background-color: hsl(var(--foreground) / 0.06);
+  box-shadow: 0 0 0 2px hsl(var(--foreground) / 0.06);
+  outline: 1px solid hsl(var(--foreground) / 0.12);
+}
+.thread-pill-missing { outline-style: dashed; outline-color: hsl(var(--foreground) / 0.16); }
+/* A piece of work or a document named in the Chief's words (routes/chief/refs.tsx): the blue alone, no box, its
+   mark in front; a tint only under the pointer. Reads as part of the sentence. Kept on one line, a long title stops
+   at the column's edge with an ellipsis (its title attribute holds the whole name), so the transcript never scrolls
+   sideways; the mark comes first, so it always shows. */
+.work-link {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: bottom;
+  color: color-mix(in oklab, hsl(var(--target)) 62%, hsl(var(--foreground)));
+  border-radius: 4px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 75ms ease-out;
+}
+.work-link:hover, .work-link:focus-visible { background-color: hsl(var(--target) / 0.14); outline: none; }
+.work-link-quiet { color: hsl(var(--muted-foreground)); cursor: default; }
+.work-link-quiet:hover { background-color: transparent; }
+/* A skill picked from "/" or "@": the same pill in ink, not the blue (that means another thread). */
+.skill-pill {
+  color: hsl(var(--foreground));
+  background-image: linear-gradient(180deg, hsl(var(--foreground) / 0.13), hsl(var(--foreground) / 0.07));
+  box-shadow: 0 0 0 2px hsl(var(--foreground) / 0.07);
+  outline-color: hsl(var(--foreground) / 0.18);
+}
+/* A command opening the message ("/rename"): a quiet key-cap fill, so it reads as something that runs. */
+.command-token {
+  border-radius: 3px;
+  color: hsl(var(--foreground));
+  background-color: hsl(var(--foreground) / 0.08);
+  box-shadow: 0 0 0 2px hsl(var(--foreground) / 0.08);
+}
+/* The rest of the top row's name after the caret, and a command's argument hint: Tab or → takes the first. */
+.composer-ghost { color: hsl(var(--subtle-foreground)); }
+
+/* The composer's keys (components/SendKey.tsx, dictation/MicButton.tsx; STYLE.md "Composer keys") wear the kit's
+   `.key` (globals.css); here Send's width also eases as it morphs between the squircle and the worded key, on
+   ease-drawer: it answers in the first frame and spreads the rest over a long settle. */
+.composer-key {
+  position: relative;
+  transition:
+    width 300ms var(--ease-drawer),
+    background-color 150ms var(--ease-snap),
+    color 150ms var(--ease-snap),
+    box-shadow 120ms var(--ease-snap),
+    transform 120ms var(--ease-snap),
+    filter 120ms var(--ease-snap);
+}
+.composer-key:active { transition-duration: 300ms, 150ms, 150ms, 60ms, 60ms, 60ms; }
+/* Send's glyph morphs between the chevron and Stop's square (SendKey.tsx). Two bars, each half of the 9px square
+   (4.75px wide, overlapping by half a pixel so no seam shows), rounded on their outer corners. As the chevron each is
+   squeezed to the stroke (1.75px) and the arm's length, tilted 45 degrees and centred on its arm of the chevron through
+   (4,10), (8,6), (12,10). Into Stop the arms swing upright while still thin, then fill out into the square; back to
+   the chevron the square splits into two thin bars first, then they tilt into the arms. Transform properties only, so
+   it runs on the compositor and a new mode retargets it mid-way. */
+.send-glyph {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.send-glyph > span {
+  position: absolute;
+  top: 3.5px;
+  width: 4.75px;
+  height: 9px;
+  background: currentColor;
+  transition:
+    rotate 180ms var(--ease-drawer),
+    translate 180ms var(--ease-drawer),
+    scale 200ms var(--ease-drawer) 100ms;
+}
+.send-glyph > span:first-child { left: 3.5px; border-radius: 2px 0 0 2px; }
+.send-glyph > span:last-child { left: 7.75px; border-radius: 0 2px 2px 0; }
+.send-glyph[data-glyph="send"] > span {
+  scale: 0.368 0.82;
+  transition:
+    scale 150ms var(--ease-drawer),
+    rotate 200ms var(--ease-drawer) 80ms,
+    translate 200ms var(--ease-drawer) 80ms;
+}
+.send-glyph[data-glyph="send"] > span:first-child { translate: 0.125px 0; rotate: 45deg; }
+.send-glyph[data-glyph="send"] > span:last-child { translate: -0.125px 0; rotate: -45deg; }
+.composer-key-word { transition: opacity 120ms var(--ease-snap); }
+.composer-key-word[data-on="false"] { opacity: 0; }
+.composer-key-word[data-on="true"] { animation: composer-key-word-in 220ms var(--ease-snap) backwards; }
+@keyframes composer-key-word-in { from { opacity: 0; filter: blur(3px); transform: translateX(-3px); } }
+.composer-key-in { animation: composer-key-in 220ms var(--ease-snap) backwards; }
+@keyframes composer-key-in { from { opacity: 0; transform: scale(0.6); filter: blur(3px); } }
+
+/* Plugins' Recommended cards (routes/plugins/Recommended.tsx): raised tiles lit from above, like the composer keys.
+   Hovered, a card lifts and its dither brightens; pressed, it sinks. Pressing its Install key sinks only the key. */
+.pick-card {
+  background-color: hsl(var(--card));
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.7), inset 0 0 0 0.5px hsl(var(--foreground) / 0.12), 0 1px 1px hsl(0 0% 0% / 0.05);
+  transition: transform 160ms var(--ease-snap), box-shadow 160ms var(--ease-snap);
+}
+.dark .pick-card {
+  box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.07), inset 0 0 0 0.5px hsl(var(--foreground) / 0.09), 0 1px 1px hsl(0 0% 0% / 0.3);
+}
+.pick-card:hover {
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.7), inset 0 0 0 0.5px hsl(var(--foreground) / 0.2), 0 1px 1px hsl(0 0% 0% / 0.05);
+}
+.dark .pick-card:hover {
+  box-shadow: inset 0 1px 0 hsl(var(--foreground) / 0.1), inset 0 0 0 0.5px hsl(var(--foreground) / 0.16), 0 1px 1px hsl(0 0% 0% / 0.3);
+}
+.pick-dither { opacity: 0.5; transition: opacity 200ms var(--ease-snap); }
+.dark .pick-dither { opacity: 0.42; }
+.pick-card:hover .pick-dither { opacity: 0.85; }
+.pick-logo {
+  box-shadow: inset 0 1px 0 hsl(0 0% 100% / 0.12), 0 1px 1px hsl(0 0% 0% / 0.2);
+  transition: transform 160ms var(--ease-snap);
+}
+/* Only where motion is welcome: the lift, the press and the logo's rise. */
+@media (prefers-reduced-motion: no-preference) {
+  .pick-card:hover { transform: translateY(-1px); }
+  .pick-card:active:not(:has(.composer-key:active)) { transform: translateY(0) scale(0.985); transition-duration: 60ms; }
+  .pick-card:hover .pick-logo { transform: translateY(-1px) scale(1.03); }
+}
+
+/* Find in chat (components/find) and in a panel (panels/files/FindBar.tsx): every match, and the current one. */
+::highlight(chat-find),
+::highlight(panel-find) {
+  background-color: hsl(var(--warning) / 0.28);
+}
+::highlight(chat-find-current),
+::highlight(panel-find-current) {
+  background-color: hsl(var(--warning) / 0.75);
+  color: hsl(var(--background));
+}
+/* A name clicked in Review's Files (routes/review/SymbolNav.tsx): everywhere it appears, an ink lift with an underline,
+   apart from find's amber. */
+::highlight(review-symbol) {
+  background-color: hsl(var(--foreground) / 0.14);
+  text-decoration: underline;
+  text-decoration-color: hsl(var(--foreground) / 0.5);
+  text-underline-offset: 3px;
+}
+
+/* A Chief's header (routes/Chief.tsx): its repo chips, or, once it is too narrow for them to read, one chip that
+   counts them (components/ChiefRepos.tsx). */
+.chief-head {
+  container: chief-head / inline-size;
+}
+.chief-chips-short {
+  display: none;
+}
+@container chief-head (max-width: 640px) {
+  .chief-chips-full {
+    display: none;
+  }
+  .chief-chips-short {
+    display: inline-flex;
+  }
+}
+
+/* The sidebar's Queue bell (shell/Sidebar.tsx ChatsHeader): a ghost key beside the list's ⋯. Pressed, it sinks a
+   pixel; when the view changes (data-turned: the press that changed it, never a launch) the bell swings from its top
+   and settles, and the heading changes with it. Its dot (a chat needs you) is the deck's one blue (--target, as the
+   Chief's unseen-tab dot; STYLE.md), filled, and pops in. */
+button.queue-bell { transition: background-color 75ms, color 75ms, transform 120ms var(--ease-snap); }
+button.queue-bell:active { transform: translateY(1px) scale(0.92); transition-duration: 75ms, 75ms, 60ms; }
+.queue-bell svg { transform-origin: 50% 10%; }
+.queue-bell[data-turned] svg { animation: bell-swing 300ms var(--ease-decelerate); }
+.queue-bell svg path:nth-child(3) { fill: hsl(var(--target)); stroke: hsl(var(--target)); transform-box: fill-box; transform-origin: center; animation: bell-dot-in 220ms var(--ease-snap) backwards; }
+.chats-heading[data-turned] { animation: heading-in 200ms var(--ease-decelerate); }
+@keyframes bell-swing { 20% { transform: rotate(14deg); } 45% { transform: rotate(-9deg); } 70% { transform: rotate(4deg); } }
+@keyframes bell-dot-in { from { transform: scale(0); } }
+@keyframes heading-in { from { opacity: 0; transform: translateY(2px); } }
+@media (prefers-reduced-motion: reduce) {
+  button.queue-bell, .queue-bell[data-turned] svg, .queue-bell svg path:nth-child(3), .chats-heading[data-turned] { transition: none; animation: none; }
+  button.queue-bell:active { transform: none; }
+}
+/* Turns breathe; steering stays part of its turn. Nested agent logs remain compact. */
+.transcript-rows:not([data-nested]) > [data-row-kind="user"]:not([data-steering]) {
+  padding-top: 32px;
+  padding-bottom: 12px;
+}
+.transcript-rows:not([data-nested]) > [data-row-kind="user"]:first-child { padding-top: 4px; }
+.transcript-rows:not([data-nested]) > [data-row-kind="user"][data-steering] { padding-block: 12px; }
+.transcript-rows:not([data-nested]) > [data-row-kind="assistant"] { padding-block: 4px; }
+.transcript-rows:not([data-nested]) > [data-row-kind="work"],
+.transcript-rows:not([data-nested]) > [data-row-kind="fold"] { padding-block: 4px; }
+/* A step behind the running turn's "Working for" line (Transcript's liveSteps):
+ * hidden, its row gives back its padding and the list's gap on the disclosure's
+ * own curve, so the steps open and close as one smooth move. */
+.transcript-rows > [data-step-row] {
+  transition: margin-top 200ms var(--ease-disclosure), padding-block 200ms var(--ease-disclosure);
+}
+.transcript-rows > [data-step-row][data-shut] { margin-top: -8px; padding-block: 0; }
+.transcript-rows[data-nested] > [data-step-row][data-shut] { margin-top: -4px; }
+@media (prefers-reduced-motion: reduce) {
+  .transcript-rows > [data-step-row] { transition: none; }
+}
+
+/* The Chief at work in its conversation (components/transcript/messenger.tsx): three dots that rise in turn, as a
+   messenger's typing dots do. Held still under reduced motion. */
+.messenger-dots > span { width: 5px; height: 5px; border-radius: 50%; background: currentColor; opacity: 0.45; animation: messenger-dot 1.2s ease-in-out infinite; }
+.messenger-dots > span:nth-child(2) { animation-delay: 0.15s; }
+.messenger-dots > span:nth-child(3) { animation-delay: 0.3s; }
+@keyframes messenger-dot { 0%, 60%, 100% { transform: translateY(0); opacity: 0.45; } 30% { transform: translateY(-3px); opacity: 0.9; } }
+@media (prefers-reduced-motion: reduce) { .messenger-dots > span { animation: none; } }
+
+/* Your bubble's tail in the Chief's conversation (components/transcript/messenger.tsx BubbleTail), iMessage's: the
+   bubble's own colour (inherited), curling out of its bottom-right corner. */
+.bubble-tail { position: absolute; bottom: 0; right: -5px; width: 15px; height: 17px; background: inherit; pointer-events: none; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 15 17'%3E%3Cpath d='M10 0H0V17H14.5C11.8 16 10 13.4 10 9.5Z'/%3E%3C/svg%3E") no-repeat; }
+
+/* Your ink in the Chief's conversation (components/transcript/messenger.tsx), neutral, never a brand blue (founder
+   2026-11-17: "dont copy imessage directly, the blue is over the top", "fix the colors and the contrasting"): the ink
+   itself, softened, with the page's colour as its text, so your words read apart from its plain replies. Opaque, so
+   the tail lies over it without a seam. */
+:root {
+  --bubble-mine: color-mix(in srgb, hsl(var(--foreground)) 82%, hsl(var(--background)));
+}

@@ -1,0 +1,5 @@
+{
+  "name": "caveman-space-fixture",
+  "version": "0.0.1",
+  "description": "Test Space plugin: one command and one skill, loaded per session through the SDK."
+}

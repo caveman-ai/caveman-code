@@ -1,0 +1,127 @@
+{
+  "ademark": "zqkra/ademark 119a5f7, run control-2026-11-10T08-31-19Z, Mac mini M4 16 GB, Claude Opus 5.5 high",
+  "machine": "Apple M5 Max, 128 GB",
+  "metrics": {
+    "A1": {
+      "name": "Cold start",
+      "unit": "ms",
+      "leader": {
+        "app": "super.engineering",
+        "value": 1760
+      },
+      "bare": 694,
+      "budget": 100000,
+      "timed": true
+    },
+    "A3": {
+      "name": "Thread open",
+      "unit": "ms",
+      "leader": {
+        "app": "Emdash",
+        "value": 183
+      },
+      "bare": 375,
+      "budget": 100000,
+      "timed": true
+    },
+    "A4": {
+      "name": "First word",
+      "unit": "ms",
+      "leader": {
+        "app": "Diri",
+        "value": 256
+      },
+      "bare": 220,
+      "budget": 100000,
+      "timed": true
+    },
+    "A5": {
+      "name": "Memory at rest",
+      "unit": "MB",
+      "leader": {
+        "app": "super.engineering",
+        "value": 134
+      },
+      "bare": 1013,
+      "budget": 100000
+    },
+    "A6": {
+      "name": "Idle CPU",
+      "unit": "%",
+      "leader": {
+        "app": "super.engineering",
+        "value": 0.179
+      },
+      "bare": 0.375,
+      "budget": 100
+    },
+    "A7": {
+      "name": "Memory under load",
+      "unit": "MB",
+      "leader": {
+        "app": "super.engineering",
+        "value": 969
+      },
+      "bare": 1905,
+      "budget": 100000
+    },
+    "A10": {
+      "name": "Memory per chat",
+      "unit": "MB",
+      "leader": {
+        "app": "Zeron",
+        "value": 2.14
+      },
+      "bare": 15.7,
+      "budget": 100000
+    },
+    "A11": {
+      "name": "Long thread open",
+      "unit": "ms",
+      "leader": {
+        "app": "Zeron",
+        "value": 76.9
+      },
+      "bare": 203,
+      "budget": 100000,
+      "timed": true
+    },
+    "B1": {
+      "name": "Hello tokens",
+      "unit": "tokens",
+      "leader": {
+        "app": "Paseo",
+        "value": 22206
+      },
+      "bare": 38226,
+      "budget": 1000000
+    },
+    "B3": {
+      "name": "Real prompt tokens",
+      "unit": "tokens",
+      "leader": {
+        "app": "Paseo",
+        "value": 73206
+      },
+      "bare": 168339,
+      "budget": 1000000
+    },
+    "B4": {
+      "name": "Repo rules",
+      "unit": "",
+      "leader": {
+        "app": "every app",
+        "value": 1
+      },
+      "bare": 1,
+      "budget": true
+    }
+  },
+  "tokens": {
+    "claude": "2.1.300",
+    "bare_hi_bytes": 47152,
+    "hi_bytes": 63397,
+    "hi_total_bytes": 63397,
+    "real_prompt_total_bytes": 130345
+  }
+}

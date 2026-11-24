@@ -1,0 +1,6 @@
+{
+  "title": "Fix failing CI",
+  "category": "Issues and PRs",
+  "summary": "When CI fails on your default branch, finds why and opens a reviewed draft fix. Flaky runs are left alone.",
+  "scope": "project"
+}

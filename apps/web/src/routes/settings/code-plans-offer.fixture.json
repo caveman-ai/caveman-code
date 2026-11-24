@@ -1,0 +1,165 @@
+{
+  "auto_topup": {
+    "min_month_usd": 20,
+    "amount_usd": {
+      "min": 10,
+      "max": 2000
+    },
+    "below_usd": {
+      "min": 5
+    },
+    "alert_pcts": [
+      80,
+      100
+    ],
+    "ceilings": [
+      {
+        "month_usd": 500,
+        "after_paid_usd": 0,
+        "after_days": 0,
+        "requests_per_minute": 240,
+        "concurrent_requests": 32
+      },
+      {
+        "month_usd": 2000,
+        "after_paid_usd": 100,
+        "after_days": 7,
+        "requests_per_minute": 360,
+        "concurrent_requests": 48
+      },
+      {
+        "month_usd": 10000,
+        "after_paid_usd": 500,
+        "after_days": 14,
+        "requests_per_minute": 720,
+        "concurrent_requests": 96
+      },
+      {
+        "month_usd": 50000,
+        "after_paid_usd": 2000,
+        "after_days": 30,
+        "requests_per_minute": 1500,
+        "concurrent_requests": 200
+      }
+    ]
+  },
+  "catalog_version": 20,
+  "gift": {
+    "plan": "pro",
+    "months": 1
+  },
+  "plans": [
+    {
+      "plan": "pro",
+      "label": "Pro",
+      "usd_month": 20,
+      "usd_year": 192,
+      "per_seat": false,
+      "up_to_usd": 60,
+      "on_sale": true,
+      "usage_times": 1,
+      "windows": [
+        "5h",
+        "week",
+        "month"
+      ],
+      "computers": {
+        "kept": 10,
+        "awake_gib": 160,
+        "max_size": "4x16"
+      },
+      "gifts": 1
+    },
+    {
+      "plan": "team",
+      "label": "Team",
+      "usd_month": 40,
+      "usd_year": 384,
+      "per_seat": true,
+      "up_to_usd": 120,
+      "on_sale": false,
+      "usage_times": 2,
+      "windows": [
+        "5h",
+        "week",
+        "month"
+      ],
+      "computers": {
+        "kept": 40,
+        "awake_gib": 416,
+        "max_size": "16x64"
+      },
+      "gifts": 0
+    },
+    {
+      "plan": "go",
+      "label": "Pro $60",
+      "usd_month": 60,
+      "usd_year": 576,
+      "per_seat": false,
+      "up_to_usd": 180,
+      "on_sale": true,
+      "usage_times": 3,
+      "windows": [
+        "5h",
+        "week",
+        "month"
+      ],
+      "computers": {
+        "kept": 20,
+        "awake_gib": 320,
+        "max_size": "8x32"
+      },
+      "gifts": 1
+    },
+    {
+      "plan": "max",
+      "label": "Max $100",
+      "usd_month": 100,
+      "usd_year": 960,
+      "per_seat": false,
+      "up_to_usd": 315,
+      "on_sale": true,
+      "usage_times": 5,
+      "windows": [
+        "5h",
+        "week",
+        "month"
+      ],
+      "computers": {
+        "kept": 30,
+        "awake_gib": 384,
+        "max_size": "16x64"
+      },
+      "gifts": 2
+    },
+    {
+      "plan": "max20",
+      "label": "Max $200",
+      "usd_month": 200,
+      "usd_year": 1920,
+      "per_seat": false,
+      "up_to_usd": 660,
+      "on_sale": true,
+      "usage_times": 11,
+      "windows": [
+        "5h",
+        "week",
+        "month"
+      ],
+      "computers": {
+        "kept": 40,
+        "awake_gib": 416,
+        "max_size": "16x64"
+      },
+      "gifts": 3
+    }
+  ],
+  "purchasable": true,
+  "top_up": {
+    "min_usd": 5,
+    "max_usd": 500,
+    "expires_days": 365
+  },
+  "usage_base": "pro"
+}

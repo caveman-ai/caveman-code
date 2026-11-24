@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Allow Caveman Code</title>
+    <!--
+      Computer use's guide panel (apps/desktop/src/computerGuide.ts): it floats beside System Settings while the
+      person allows Caveman Code under Accessibility and Screen Recording, one step at a time, and moves on by itself
+      when macOS says so. One flat, neutral surface: the app's icon, the agents' own cursor carrying it in Caveman's
+      green (scripts/agentDesktopCursors.ts), and the one blue for "here": the slot in the list where Caveman Code
+      goes. Static, so it opens at once; colours are copied from packages/ui/src/styles/pixel.css
+      because this page loads no app CSS. Without the desktop's bridge (a browser), ?step= shows one state, for review.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+        --agent: #4ade80; /* the agents' cursor: Caveman's green, packages/ui globals.css --primary */
+        --target: #3b82f6; /* --target, the one blue: "here" */
+        --card: #121014;
+        --foreground: hsl(220 5.7% 92%);
+        --muted: hsl(240 2% 64%);
+        --subtle: hsl(240 3% 46%);
+        --line: rgb(255 255 255 / 0.08);
+      }
+      * { box-sizing: border-box; }
+      html, body { height: 100%; margin: 0; background: transparent; }
+      body {
+        font: 13px/1.5 Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        color: var(--foreground);
+        -webkit-font-smoothing: antialiased;
+        -webkit-user-select: none;
+        user-select: none;
+        overflow: hidden;
+        padding: 8px;
+      }
+      .card {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+        border-radius: 22px;
+        background: var(--card);
+        box-shadow: 0 0 0 1px rgb(255 255 255 / 0.09), 0 18px 48px -12px rgb(0 0 0 / 0.7);
+        -webkit-app-region: drag;
+      }
+      button, .tile, a { -webkit-app-region: no-drag; }
+
+      /* ── The stage: the tile, the list, the carry ─────────────────────────────────────── */
+      .stage {
+        position: relative;
+        height: 214px;
+        flex: none;
+      }
+
+      /* The app tile: the real thing to drag into the list. */
+      .tile {
+        position: absolute;
+        left: 34px;
+        top: 52px;
+        width: 92px;
+        height: 92px;
+        display: grid;
+        place-items: center;
+        border-radius: 24px;
+        background: rgb(255 255 255 / 0.03);
+        box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.16);
+        cursor: grab;
+        transition: box-shadow 160ms ease, transform 160ms ease;
+      }
+      .tile:hover { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.32); transform: translateY(-1px); }
+      .tile:active { cursor: grabbing; transform: scale(0.98); }
+      .tile:focus-visible { outline: 2px solid var(--target); outline-offset: 3px; }
+      .tile img { width: 64px; height: 64px; border-radius: 15px; pointer-events: none; animation: lend 5.6s ease-in-out infinite; }
+      .tile .hint {
+        position: absolute;
+        bottom: -22px;
+        font: 600 9px/1 Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        letter-spacing: 0.1em;
+        color: var(--subtle);
+        text-transform: uppercase;
+        white-space: nowrap;
+      }
+      @keyframes lend { 0%, 15% { opacity: 1; } 19%, 63% { opacity: 0.28; } 70%, 100% { opacity: 1; } }
+
+      /* System Settings' list, in small: two apps that are there, and the slot Caveman Code goes in. */
+      .list {
+        position: absolute;
+        right: 22px;
+        top: 34px;
+        width: 168px;
+        padding: 8px;
+        border-radius: 12px;
+        background: rgb(255 255 255 / 0.04);
+        box-shadow: 0 0 0 1px rgb(255 255 255 / 0.08);
+      }
+      .list .pane {
+        margin: 0 2px 7px;
+        font-size: 9px;
+        font-weight: 600;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .row {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        height: 30px;
+        padding: 0 7px;
+        border-radius: 8px;
+      }
+      .row + .row { margin-top: 3px; }
+      .row .app { width: 16px; height: 16px; border-radius: 4.5px; flex: none; }
+      .row .bar { height: 5px; border-radius: 3px; background: rgb(255 255 255 / 0.16); }
+      .row .name { font-size: 10.5px; font-weight: 500; white-space: nowrap; }
+      .switch {
+        position: relative;
+        margin-left: auto;
+        width: 22px;
+        height: 13px;
+        flex: none;
+        border-radius: 7px;
+        background: rgb(255 255 255 / 0.16);
+      }
+      .switch::after {
+        content: "";
+        position: absolute;
+        top: 1.5px;
+        left: 1.5px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #f4f4f5;
+        box-shadow: 0 1px 2px rgb(0 0 0 / 0.4);
+      }
+      .slot { box-shadow: inset 0 0 0 1.5px rgb(59 130 246 / 0); animation: slot 5.6s ease-in-out infinite; }
+      .slot .app, .slot .name { opacity: 0; animation: fill 5.6s ease-in-out infinite; }
+      .slot .app { background: url("./icon-192.png") center / cover; }
+      .slot .switch { animation: track 5.6s ease-in-out infinite; }
+      .slot .switch::after { animation: knob 5.6s cubic-bezier(0.3, 1.4, 0.5, 1) infinite; }
+      @keyframes slot {
+        0%, 6% { box-shadow: inset 0 0 0 1.5px rgb(59 130 246 / 0); background: transparent; }
+        14%, 56% { box-shadow: inset 0 0 0 1.5px var(--target); background: rgb(59 130 246 / 0.1); }
+        34% { box-shadow: inset 0 0 0 1.5px rgb(59 130 246 / 0.55); background: rgb(59 130 246 / 0.05); }
+        64%, 100% { box-shadow: inset 0 0 0 1.5px rgb(59 130 246 / 0); background: rgb(255 255 255 / 0.05); }
+      }
+      @keyframes fill { 0%, 60% { opacity: 0; } 64%, 94% { opacity: 1; } 100% { opacity: 0; } }
+      @keyframes track { 0%, 70% { background: rgb(255 255 255 / 0.16); } 76%, 94% { background: var(--target); } 100% { background: rgb(255 255 255 / 0.16); } }
+      @keyframes knob { 0%, 70% { transform: translateX(0); } 78%, 94% { transform: translateX(9px); } 100% { transform: translateX(0); } }
+
+      /* The carry: the agents' cursor lifts the tile's icon and drops it in the slot. */
+      .carry {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        offset-path: path("M 80 98 C 104 22, 176 26, 214 106");
+        offset-rotate: 0deg;
+        offset-distance: 0%;
+        animation: carry 5.6s cubic-bezier(0.45, 0, 0.25, 1) infinite;
+      }
+      .carry .ghost {
+        position: absolute;
+        left: -22px;
+        top: -22px;
+        width: 44px;
+        height: 44px;
+        border-radius: 11px;
+        background: url("./icon-192.png") center / cover;
+        box-shadow: 0 0 0 1px rgb(255 255 255 / 0.3), 0 14px 26px -6px rgb(0 0 0 / 0.75);
+        animation: lift 5.6s ease-in-out infinite;
+      }
+      /* Twice its size on screen (two pixels a point, still whole pixels), its tip on the icon's lower right. */
+      .carry img { position: absolute; left: 0; top: -6px; width: 48px; height: 48px; image-rendering: pixelated; }
+      .carry .ripple {
+        position: absolute;
+        left: 15px;
+        top: 9px;
+        width: 18px;
+        height: 18px;
+        margin: -9px 0 0 -9px;
+        border-radius: 50%;
+        box-shadow: 0 0 0 2px var(--agent);
+        opacity: 0;
+        animation: ripple 5.6s ease-out infinite;
+      }
+      @keyframes carry {
+        0% { offset-distance: 0%; opacity: 0; }
+        8% { offset-distance: 0%; opacity: 1; }
+        19% { offset-distance: 0%; }
+        58% { offset-distance: 100%; opacity: 1; }
+        70% { offset-distance: 100%; opacity: 1; }
+        80%, 100% { offset-distance: 100%; opacity: 0; }
+      }
+      @keyframes lift {
+        0%, 12% { transform: scale(0.94); opacity: 0; }
+        17% { transform: scale(1.12) rotate(-4deg); opacity: 1; }
+        40% { transform: scale(1.1) rotate(3deg); }
+        58% { transform: scale(1.08) rotate(0deg); opacity: 1; }
+        63% { transform: scale(0.62); opacity: 0; }
+        100% { transform: scale(0.62); opacity: 0; }
+      }
+      @keyframes ripple {
+        0%, 11% { transform: scale(0.4); opacity: 0; }
+        13% { opacity: 0.9; }
+        20% { transform: scale(1.8); opacity: 0; }
+        59% { transform: scale(0.4); opacity: 0; }
+        61% { opacity: 0.9; }
+        68%, 100% { transform: scale(1.8); opacity: 0; }
+      }
+
+      /* Reopen: the tile, going round. Done: the tile, a check. */
+      .stage .center { display: none; }
+      [data-step="reopen"] .scene, [data-step="done"] .scene { display: none; }
+      [data-step="reopen"] .center, [data-step="done"] .center {
+        display: grid;
+        position: absolute;
+        inset: 0;
+        place-items: center;
+      }
+      .center .tile { position: relative; left: auto; top: auto; cursor: default; }
+      .center .tile img { animation: none; }
+      .orbit {
+        position: absolute;
+        width: 128px;
+        height: 128px;
+        border-radius: 50%;
+        border: 1.5px dashed rgb(255 255 255 / 0.18);
+        border-top-color: rgb(255 255 255 / 0.7);
+        animation: spin 2.4s linear infinite;
+      }
+      [data-step="done"] .orbit { display: none; }
+      .badge {
+        position: absolute;
+        width: 30px;
+        height: 30px;
+        margin: 70px 0 0 70px;
+        display: none;
+        place-items: center;
+        border-radius: 50%;
+        background: #f4f4f5;
+        color: #131316;
+        box-shadow: 0 0 0 3px var(--card), 0 6px 14px rgb(0 0 0 / 0.5);
+        animation: pop 420ms cubic-bezier(0.3, 1.6, 0.5, 1) both;
+      }
+      [data-step="done"] .badge { display: grid; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @keyframes pop { from { transform: scale(0.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+      /* ── The words ──────────────────────────────────────────────────────────────────────── */
+      .body { flex: 1; display: flex; flex-direction: column; align-items: center; padding: 12px 30px 20px; text-align: center; }
+      .step {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font: 600 10px/1 Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .pips { display: flex; gap: 4px; }
+      .pips i { width: 14px; height: 4px; border-radius: 2px; background: rgb(255 255 255 / 0.14); }
+      .pips i.on { background: #f4f4f5; }
+      .pips i.done { background: rgb(255 255 255 / 0.4); }
+      h1 { margin: 12px 0 0; font-size: 21px; line-height: 1.2; font-weight: 650; letter-spacing: -0.015em; text-wrap: balance; }
+      .lead { margin: 8px 0 0; font-size: 14px; line-height: 1.45; color: var(--foreground); text-wrap: balance; }
+      .lead b { font-weight: 600; }
+      .sub { margin: 6px 0 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); text-wrap: balance; }
+      .actions { display: flex; gap: 8px; margin-top: auto; padding-top: 16px; }
+      button {
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 9px;
+        border: 0;
+        font: 500 13px/1 Inter, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+        cursor: default;
+        transition: background-color 75ms ease, color 75ms ease, transform 75ms ease;
+      }
+      button:active { transform: scale(0.98); }
+      button:focus-visible { outline: 2px solid var(--target); outline-offset: 2px; }
+      .primary { background: #f4f4f5; color: #131316; }
+      .primary:hover { background: #ffffff; }
+      .quiet { background: rgb(255 255 255 / 0.06); color: var(--foreground); box-shadow: inset 0 0 0 1px var(--line); }
+      .quiet:hover { background: rgb(255 255 255 / 0.1); }
+      .again { margin-top: 10px; font-size: 11.5px; color: var(--subtle); background: none; height: auto; padding: 2px 4px; }
+      .again:hover { color: var(--muted); }
+      [hidden] { display: none !important; }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; animation-delay: 0s !important; }
+        .carry { display: none; }
+        .slot .app, .slot .name { opacity: 1 !important; animation: none !important; }
+        .slot .switch { background: var(--target) !important; animation: none !important; }
+        .slot .switch::after { transform: translateX(9px) !important; animation: none !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" id="card" data-step="accessibility">
+      <section class="stage" aria-hidden="false">
+        <div class="scene">
+          <div class="tile" id="tile" draggable="true" tabindex="0" role="button" aria-label="Caveman Code: drag it into the list in System Settings">
+            <img src="./icon-192.png" alt="" />
+            <span class="hint">Drag me</span>
+          </div>
+          <div class="list" aria-hidden="true">
+            <div class="pane" id="pane">Accessibility</div>
+            <div class="row"><span class="app" style="background: #5b5bd6"></span><span class="bar" style="width: 58px"></span><span class="switch" style="background: var(--target)"></span></div>
+            <div class="row slot"><span class="app"></span><span class="name">Caveman Code</span><span class="switch"></span></div>
+            <div class="row"><span class="app" style="background: #3f8f63"></span><span class="bar" style="width: 44px"></span><span class="switch"></span></div>
+          </div>
+          <div class="carry" aria-hidden="true">
+            <span class="ghost"></span>
+            <span class="ripple"></span>
+            <img src="./computer-guide-cursor.png" alt="" />
+          </div>
+        </div>
+
+        <div class="center">
+          <span class="orbit"></span>
+          <div class="tile"><img src="./icon-192.png" alt="" /></div>
+          <span class="badge" aria-hidden="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5 10 17.5 19 7" /></svg>
+          </span>
+        </div>
+      </section>
+
+      <section class="body" aria-live="polite">
+        <div class="step"><span id="count">Step 1 of 2</span><span class="pips" id="pips"></span></div>
+        <h1 id="title">Allow Accessibility</h1>
+        <p class="lead" id="lead">Drag <b>Caveman Code</b> into the list, then switch it on.</p>
+        <p class="sub" id="sub">macOS asks for Touch ID or your password. Agents use your apps in the background and never move your pointer.</p>
+        <div class="actions">
+          <button class="quiet" id="later">Not now</button>
+          <button class="primary" id="added">I added it</button>
+        </div>
+        <button class="again" id="settings">Open System Settings again</button>
+      </section>
+    </main>
+    <script src="./computer-guide.js"></script>
+  </body>
+</html>

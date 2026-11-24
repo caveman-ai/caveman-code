@@ -1,0 +1,23 @@
+{
+  "name": "@caveman-app/oxlint-plugin",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config ../vitest.config.ts --dir ."
+  },
+  "dependencies": {
+    "@oxlint/plugins": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

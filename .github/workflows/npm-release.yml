@@ -1,0 +1,144 @@
+# Publishes the `caveman-code` command to npm, public, license UNLICENSED
+# (packages/runtime/scripts/pack-npm.ts): @caveman-ai/code, a small launcher,
+# and one @caveman-ai/code-<platform>-<arch> per platform, which the launcher
+# lists as optional dependencies so npm installs the one for the machine.
+# By hand only. Each platform packs on its own runner, because its package
+# carries that host's natives, installs its package and the launcher into a
+# temp prefix and smokes them there (the runtime starts, serves the web client
+# and starts its own caveman-proxy). Then one job publishes those same
+# tarballs: every platform package first, the launcher last. A prerelease
+# version goes to the `next` tag. A version whose launcher is on npm already
+# is a finished release and is refused; a re-run of an unfinished one skips
+# the platform packages its first attempt published.
+#
+# Needs one repository secret (none live in the repo):
+#   NPM_TOKEN   an npm granular access token that can publish @caveman-ai/code
+#               and @caveman-ai/code-* (read and write on the @caveman-ai
+#               scope, 2FA bypass for automation)
+# Actions are pinned by commit: the publish job holds the token.
+name: npm release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Version, for example 0.1.0 (published as @caveman-ai/code@<version>)
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: npm-release
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  check:
+    name: Check NPM_TOKEN and the version
+    runs-on: ubuntu-24.04
+    steps:
+      # Before five platform builds, not after.
+      - env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          [ -n "$NPM_TOKEN" ] || { echo "::error::NPM_TOKEN is not set: add an npm granular access token that can publish @caveman-ai/code and @caveman-ai/code-* as a repository secret"; exit 1; }
+          VERSION="${VERSION#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::$VERSION is not a version"; exit 1; }
+          # The launcher goes last: on npm, it means this version was released in full.
+          if npm view "@caveman-ai/code@$VERSION" version > /dev/null 2>&1; then echo "::error::@caveman-ai/code@$VERSION is released already: pick a new version"; exit 1; fi
+
+  pack:
+    name: Pack and smoke ${{ matrix.platform }}
+    needs: check
+    strategy:
+      # One platform's failure must not hide another's; nothing publishes unless all pass.
+      fail-fast: false
+      matrix:
+        include:
+          - platform: darwin-arm64
+            runner: macos-15
+          - platform: darwin-x64
+            runner: macos-15-intel
+          - platform: linux-x64
+            runner: ubuntu-24.04
+          - platform: linux-arm64
+            runner: ubuntu-24.04-arm
+          - platform: win32-x64
+            runner: windows-2025
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Check the runner
+        env:
+          PLATFORM: ${{ matrix.platform }}
+        run: |
+          host="$(node -p 'process.platform + "-" + process.arch')"
+          [ "$host" = "$PLATFORM" ] || { echo "::error::this runner is $host, and the package declares $PLATFORM"; exit 1; }
+      - name: Pack and smoke
+        env:
+          CAVEMAN_APP_VERSION: ${{ inputs.version }}
+        run: pnpm --filter @caveman-app/runtime pack:npm "$RUNNER_TEMP/npm" --smoke
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: npm-${{ matrix.platform }}
+          path: ${{ runner.temp }}/npm/*.tgz
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: pack
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        with:
+          node-version: 24
+          # No pnpm in this job; setup-node v5 would otherwise look for its store.
+          package-manager-cache: false
+          registry-url: https://registry.npmjs.org
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          path: npm
+      - name: Publish the platform packages, then the launcher
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          VERSION: ${{ inputs.version }}
+          RUN_ATTEMPT: ${{ github.run_attempt }}
+        run: |
+          VERSION="${VERSION#v}"
+          [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]] || { echo "::error::$VERSION is not a version"; exit 1; }
+          TAG=latest
+          [[ "$VERSION" == *-* ]] && TAG=next
+          # pack-npm.ts NPM_PLATFORMS: the launcher lists exactly these.
+          platforms=(darwin-arm64 darwin-x64 linux-arm64 linux-x64 win32-x64)
+          for platform in "${platforms[@]}"; do
+            [ -f "npm/npm-$platform/caveman-ai-code-$platform-$VERSION.tgz" ] || { echo "::error::no @caveman-ai/code-$platform $VERSION was packed"; exit 1; }
+          done
+          published() { npm view "$1@$VERSION" version > /dev/null 2>&1; }
+          # Every platform first: a launcher without its platform package installs a command that cannot run.
+          # One on npm already is this release's own only on a re-run; on a first attempt someone else published it.
+          for platform in "${platforms[@]}"; do
+            if published "@caveman-ai/code-$platform"; then
+              [ "$RUN_ATTEMPT" -gt 1 ] || { echo "::error::@caveman-ai/code-$platform@$VERSION is on npm already, and this is no re-run of the release that published it: pick a new version"; exit 1; }
+              echo "@caveman-ai/code-$platform@$VERSION is published already (re-run)"
+            else
+              npm publish "npm/npm-$platform/caveman-ai-code-$platform-$VERSION.tgz" --access public --tag "$TAG"
+            fi
+          done
+          # Every runner packs the same launcher; this one is Linux x64's. On npm already: a finished release.
+          if published @caveman-ai/code; then echo "::error::@caveman-ai/code@$VERSION is released already"; exit 1; fi
+          npm publish "npm/npm-linux-x64/caveman-ai-code-$VERSION.tgz" --access public --tag "$TAG"
+          echo "Published @caveman-ai/code@$VERSION ($TAG) and its ${#platforms[@]} platform packages" >> "$GITHUB_STEP_SUMMARY"

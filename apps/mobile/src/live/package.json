@@ -1,0 +1,4 @@
+{
+  "//": "Marks the files here as ES modules for a toolchain that asks. The runtime's tests run and typecheck the phone's connection modules against a real runtime (packages/runtime/src/cloudLink/phoneLive.integration.test.ts), under Node's module rules, where a .ts file is CommonJS unless its nearest package.json says otherwise. Metro and the app's own typecheck do not ask.",
+  "type": "module"
+}

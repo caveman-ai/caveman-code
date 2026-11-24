@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "caveman-cloud": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@caveman-ai/cloud@0.1.0-rc.28",
+        "mcp"
+      ]
+    }
+  }
+}

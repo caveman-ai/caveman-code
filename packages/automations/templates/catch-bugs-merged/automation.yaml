@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Read every change merged to the default branch and speak up only about real bugs
+
+on:
+  github: { event: push }
+
+budget: $2
+
+steps:
+  hunt:
+    agent: bug-hunter             # decides bug or clean
+    model: base
+  report:
+    if: { hunt: bug }
+    prompt: >-
+      Write a short comment for the author of the merged change from hunt's result:
+      each bug with its file:line, what breaks, and the fix. No preamble.
+    model: fast
+    computer: none
+
+outputs:
+  github.comment: report.summary  # posted only when hunt found a bug

@@ -1,0 +1,164 @@
+# Windows, nightly on main and by hand on any branch: the runtime's suite, the
+# npm package, and the desktop app built, installed and smoked. ci.yml tests the
+# other packages on Windows on every push; these run here because several of the
+# runtime's end-to-end tests are timing-sensitive on a loaded Windows runner.
+# .yml (MIT); inputs reach the scripts only
+# through env.
+#
+#   gh workflow run windows.yml --ref <branch>                              everything
+#   gh workflow run windows.yml --ref <branch> -f package=packages/shared   one package
+#   gh workflow run windows.yml --ref <branch> -f package=packages/runtime \
+#     -f files="src/a.test.ts src/b.test.ts"                                some files
+#   gh run watch && gh run view --log-failed
+name: Windows
+
+on:
+  schedule:
+    - cron: "17 9 * * *"
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Workspace directory to test, for example packages/runtime. Empty runs every package and the smoke job.
+        type: string
+        default: ""
+      files:
+        description: Space-separated test files relative to the package. Empty runs its whole suite. Needs package.
+        type: string
+        default: ""
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  smoke:
+    name: Build and smoke
+    if: inputs.package == ''
+    runs-on: windows-2025
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Web build and runtime bundle
+        run: pnpm --filter @caveman-app/runtime build
+      # Each step runs even when one before it failed: one failure must not hide the next.
+      - name: npm package smoke
+        if: ${{ !cancelled() }}
+        run: pnpm --filter @caveman-app/runtime pack:npm --smoke
+      # The shell on its own, with the stand-in runtime: the window shown, pictured with its caption buttons, and its
+      # maximize button clicked with the real mouse (CAVEMAN_SMOKE_WINDOW, apps/desktop/src/main.ts).
+      - name: Desktop smoke (fixture runtime, window and caption buttons)
+        if: ${{ !cancelled() }}
+        env:
+          CAVEMAN_SMOKE_WINDOW: ${{ github.workspace }}/apps/desktop/dist-electron/smoke-window-fixture.png
+        run: |
+          pnpm --filter @caveman-app/web build
+          node apps/desktop/scripts/smoke-test.mjs --fixture
+          mv apps/desktop/dist-electron/smoke.png apps/desktop/dist-electron/smoke-fixture.png
+      - name: Desktop smoke (development build)
+        if: ${{ !cancelled() }}
+        env:
+          CAVEMAN_SMOKE_WINDOW: ${{ github.workspace }}/apps/desktop/dist-electron/smoke-window.png
+          CAVEMAN_SMOKE_ROUTE: /chief
+        run: pnpm --filter @caveman-app/desktop smoke-test
+      - name: Desktop smoke pictures
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: desktop-smoke-pictures
+          path: apps/desktop/dist-electron/*.png
+          if-no-files-found: ignore
+      # The app as a person gets it: built and packaged unsigned, its NSIS installer run silently, then that copy.
+      - name: Package (NSIS, unsigned)
+        if: ${{ !cancelled() }}
+        run: node apps/desktop/scripts/package.mjs
+      - name: Smoke the packaged app
+        if: ${{ !cancelled() }}
+        run: node apps/desktop/scripts/smoke-test.mjs --packaged
+      - name: Install silently and smoke the installed app
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $installer = Get-Item apps/desktop/release/Caveman-Code-Setup-*-x64.exe
+          $install = Start-Process -FilePath $installer.FullName -ArgumentList '/S' -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "the installer exited $($install.ExitCode)" }
+          $app = "$env:LOCALAPPDATA\Programs\caveman-code\Caveman Code.exe"
+          if (-not (Test-Path -LiteralPath $app)) { throw "$app is not installed" }
+          Get-ChildItem "$env:LOCALAPPDATA\Programs\caveman-code\resources\runtime" | Select-Object -ExpandProperty Name
+          node apps/desktop/scripts/smoke-test.mjs --app $app
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # File search and chat search load natives (fff_c.dll, onnxruntime) that need the Visual C++ runtime, which a
+      # clean Windows lacks and this runner has. In Windows Server Core, which has none (checked first), the installed
+      # app's runtime loads them from the copies it carries (scripts/package.mjs carryVcRuntime).
+      - name: Natives without the Visual C++ runtime (Server Core container)
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          $runtime = "$env:LOCALAPPDATA\Programs\caveman-code\resources\runtime"
+          $scripts = "${{ github.workspace }}\apps\desktop\scripts"
+          $image = "mcr.microsoft.com/windows/servercore:ltsc2025"
+          docker pull -q $image
+          if ($LASTEXITCODE -ne 0) { throw "could not pull $image" }
+          docker run --rm $image powershell -NoProfile -Command "if (Test-Path C:\Windows\System32\vcruntime140.dll) { 'this image has the Visual C++ runtime'; exit 1 } else { 'no Visual C++ runtime in System32' }"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          docker run --rm -v "${runtime}:C:\runtime" -v "${scripts}:C:\scripts" $image C:\runtime\node.exe C:\scripts\check-natives.mjs C:\runtime
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # A first run on that installed copy from empty folders, through its window (scripts/first-run-e2e.mjs):
+      # onboarding from the first paint, never the empty shell; the device sign-in; a Claude Code from before Opus 5.5
+      # listed and then updated; a Chief turn's answer outside the Worked fold; no half line left by a steer.
+      - name: First run end to end (installed app)
+        if: ${{ !cancelled() }}
+        shell: pwsh
+        run: |
+          node apps/desktop/scripts/first-run-e2e.mjs --app "$env:LOCALAPPDATA\Programs\caveman-code\Caveman Code.exe" --out apps/desktop/dist-electron/first-run-e2e
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: windows-desktop
+          path: |
+            apps/desktop/release/*.exe
+            apps/desktop/release/latest.yml
+            apps/desktop/dist-electron/*-packaged.png
+            apps/desktop/dist-electron/first-run-e2e/
+          if-no-files-found: ignore
+
+  test:
+    name: Test (${{ matrix.part }})
+    runs-on: windows-2025
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ${{ fromJSON(inputs.package == '' && '["packages", "runtime-1", "runtime-2", "runtime-3"]' || '["selected"]') }}
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Test
+        env:
+          PART: ${{ matrix.part }}
+          PACKAGE: ${{ inputs.package }}
+          FILES: ${{ inputs.files }}
+        run: |
+          case "$PART" in
+            packages) pnpm -r --no-bail --if-present --filter '!@caveman-app/runtime' test ;;
+            runtime-*) pnpm --filter @caveman-app/runtime test --shard="${PART#runtime-}/3" ;;
+            selected)
+              [[ "$PACKAGE" =~ ^(apps|packages)/[a-z0-9-]+$ && -f "$PACKAGE/package.json" ]] || { echo "::error::$PACKAGE is not a workspace package"; exit 1; }
+              cd "$PACKAGE"
+              read -ra files <<< "$FILES"
+              if (( ${#files[@]} )); then pnpm exec vitest run "${files[@]}"; else pnpm test; fi ;;
+          esac

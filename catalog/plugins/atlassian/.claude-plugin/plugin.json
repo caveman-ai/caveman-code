@@ -1,0 +1,16 @@
+{
+  "name": "atlassian",
+  "version": "1.0.0",
+  "description": "Work from Jira issues and Confluence pages: pick up a ticket, implement it here, and update the ticket and docs as you go.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.atlassian.com/",
+  "keywords": [
+    "jira",
+    "confluence",
+    "tickets",
+    "wiki"
+  ]
+}

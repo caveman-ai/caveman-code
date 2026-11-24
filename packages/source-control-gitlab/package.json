@@ -1,0 +1,63 @@
+{
+  "name": "@caveman-app/source-control-gitlab",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./client/definition": {
+      "types": "./src/client/definition.ts",
+      "import": "./src/client/definition.ts"
+    },
+    "./server/driver": {
+      "types": "./src/server/driver.ts",
+      "import": "./src/server/driver.ts"
+    },
+    "./server/gitLabAuthStatus": {
+      "types": "./src/server/gitLabAuthStatus.ts",
+      "import": "./src/server/gitLabAuthStatus.ts"
+    },
+    "./server/GitLabCli": {
+      "types": "./src/server/GitLabCli.ts",
+      "import": "./src/server/GitLabCli.ts"
+    },
+    "./server/gitLabMergeRequestJson": {
+      "types": "./src/server/gitLabMergeRequestJson.ts",
+      "import": "./src/server/gitLabMergeRequestJson.ts"
+    },
+    "./server/gitLabMergeRequests": {
+      "types": "./src/server/gitLabMergeRequests.ts",
+      "import": "./src/server/gitLabMergeRequests.ts"
+    },
+    "./server/GitLabPullRequestCli": {
+      "types": "./src/server/GitLabPullRequestCli.ts",
+      "import": "./src/server/GitLabPullRequestCli.ts"
+    },
+    "./server/GitLabPullRequestProvider": {
+      "types": "./src/server/GitLabPullRequestProvider.ts",
+      "import": "./src/server/GitLabPullRequestProvider.ts"
+    },
+    "./server/GitLabSourceControlProvider": {
+      "types": "./src/server/GitLabSourceControlProvider.ts",
+      "import": "./src/server/GitLabSourceControlProvider.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts --dir ."
+  },
+  "dependencies": {
+    "@caveman-app/protocol": "workspace:*",
+    "@caveman-app/shared": "workspace:*",
+    "@caveman-app/source-control-core": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@caveman-app/source-control-testing": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

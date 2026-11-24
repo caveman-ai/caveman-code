@@ -1,0 +1,57 @@
+name: Agent context budget
+
+# Fails a pull request that raises a value in packages/runtime/agentContextBudget.json above its base
+# branch's. scripts/agent-context-budget.test.ts keeps that file equal to the measured context (the
+# instructions every engine gets and the /mcp tool list, agent-context-size.ts), so the context can't
+# grow by editing the file. To accept growth on purpose, add the agent-context-increase label.
+# ).
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: agent-context-budget-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  budget:
+    name: Agent context budget
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BUDGET: packages/runtime/agentContextBudget.json
+      BASE_REF: ${{ github.base_ref }}
+      ALLOW_INCREASE: ${{ contains(github.event.pull_request.labels.*.name, 'agent-context-increase') }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: packages/runtime/agentContextBudget.json
+          sparse-checkout-cone-mode: false
+
+      - name: Compare with the base branch
+        run: |
+          git fetch --quiet --depth=1 origin "$BASE_REF"
+          if ! git cat-file -e "FETCH_HEAD:$BUDGET" 2>/dev/null; then
+            echo "$BASE_REF has no agent context budget yet."
+            exit 0
+          fi
+          git show "FETCH_HEAD:$BUDGET" > "$RUNNER_TEMP/base.json"
+          grown=$(jq -r --slurpfile base "$RUNNER_TEMP/base.json" '
+            to_entries[]
+            | select($base[0][.key] != null and .value > $base[0][.key])
+            | "\(.key): \($base[0][.key]) -> \(.value) (+\(.value - $base[0][.key]))"
+          ' "$BUDGET")
+          if [ -z "$grown" ]; then
+            echo "Agent context is not larger than $BASE_REF's."
+            exit 0
+          fi
+          printf 'Agent context grew compared to %s:\n%s\n' "$BASE_REF" "$grown"
+          if [ "$ALLOW_INCREASE" = "true" ]; then
+            echo "Accepted by the agent-context-increase label."
+            exit 0
+          fi
+          echo "::error file=$BUDGET::Agent context grew compared to $BASE_REF. Cut the added text, or add the agent-context-increase label and say in the pull request why it has to grow."
+          exit 1

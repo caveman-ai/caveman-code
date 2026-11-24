@@ -1,0 +1,15 @@
+{
+  "name": "notion",
+  "version": "1.0.0",
+  "description": "Turn Notion specs into a plan for this repository and publish design notes and release notes back to Notion.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.notion.com/",
+  "keywords": [
+    "docs",
+    "wiki",
+    "specs"
+  ]
+}

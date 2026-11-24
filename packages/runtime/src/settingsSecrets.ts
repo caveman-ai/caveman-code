@@ -1,0 +1,139 @@
+// ), apps/server/src/settingsSecrets.ts @ ab3a3cd1.
+// Ports upstream 97e35bcf23 (#27115) and 81899ce04c (#27746): a secret provider reference is not
+// itself a secret, so it is stored and shown as written and never goes to the secret store.
+import {
+  AntigravitySettings,
+  ClaudeSettings,
+  CodexSettings,
+  type ServerSettings,
+  isSecretReference,
+  secretSettingsFields,
+} from "@caveman-app/protocol";
+import { acpRegistryClient } from "@caveman-app/provider-acp-registry/client";
+import { cursorClient } from "@caveman-app/provider-cursor/client";
+import { piClient } from "@caveman-app/provider-pi/client";
+import { grokClient } from "@caveman-app/provider-grok/client";
+import { museClient } from "@caveman-app/provider-muse/client";
+import { openCodeClient } from "@caveman-app/provider-opencode/client";
+import {
+  readSecretFieldValues,
+  SOURCE_CONTROL_HOST_SECRET_FIELDS,
+  sourceControlHostSecretName,
+  writeSecretFieldValues,
+} from "./sourceControl/sourceControlHostSecrets.ts";
+
+export const SECRET_REDACTED = "\u2022\u2022\u2022\u2022\u2022\u2022";
+
+const providerSecretFields = new Map([
+  ["codex", secretSettingsFields(CodexSettings)],
+  ["claudeAgent", secretSettingsFields(ClaudeSettings)],
+  ["antigravity", secretSettingsFields(AntigravitySettings)],
+  ...[cursorClient, museClient, openCodeClient, grokClient, piClient, acpRegistryClient].map(
+    (client) => [client.driverKind, secretSettingsFields(client.settingsSchema)] as const,
+  ),
+]);
+const encode = (value: string) => Buffer.from(value, "utf8").toString("base64url");
+
+export interface SettingsSecret {
+  readonly secretName: string;
+  readonly kind: "field" | "environment";
+  readonly value: string;
+  readonly redacted: boolean;
+  readonly sensitive: boolean;
+  readonly providerInstanceId?: string;
+  readonly environmentVariable?: string;
+}
+
+type SecretValue = Pick<SettingsSecret, "value" | "redacted">;
+
+/**
+ * Visits credential fields declared by schemas and dynamically sensitive environment variables.
+ * Store keys and client representations stay here; callers supply only the secret operation.
+ */
+export function mapSettingsSecrets(
+  settings: ServerSettings,
+  map: (secret: SettingsSecret) => SecretValue,
+): ServerSettings {
+  const mapFields = (
+    fields: Readonly<Record<string, unknown>>,
+    secretFields: ReadonlyArray<string>,
+    name: (field: string, serverHost: string | null) => string,
+  ) => {
+    const next = { ...fields };
+    for (const field of secretFields) {
+      if (!(field in next) || isSecretReference(next[field])) continue;
+      next[field] = writeSecretFieldValues(
+        next[field],
+        readSecretFieldValues(next[field]).map(([serverHost, value]) => {
+          const result = map({
+            secretName: name(field, serverHost),
+            kind: "field",
+            value,
+            redacted: value === SECRET_REDACTED,
+            sensitive: true,
+          });
+          return [serverHost, result.redacted ? SECRET_REDACTED : result.value] as const;
+        }),
+      );
+    }
+    return next;
+  };
+
+  const providerInstances = Object.fromEntries(
+    Object.entries(settings.providerInstances).map(([instanceId, instance]) => {
+      const config = instance.config;
+      return [
+        instanceId,
+        {
+          ...instance,
+          ...(config !== null && typeof config === "object" && !Array.isArray(config)
+            ? {
+                config: mapFields(
+                  config as Record<string, unknown>,
+                  providerSecretFields.get(instance.driver) ?? [],
+                  (field, serverHost) =>
+                    `provider-config-${encode(instanceId)}-${encode(instance.driver)}-${encode(field)}` +
+                    (serverHost === null ? "" : `-${encode(serverHost)}`),
+                ),
+              }
+            : {}),
+          ...(instance.environment
+            ? {
+                environment: instance.environment.map((variable) => {
+                  const { valueRedacted: _omit, ...rest } = variable;
+                  // A secret reference is not itself secret; storage sees the value cleared.
+                  const reference = typeof variable.value === "string" ? undefined : variable.value;
+                  const result = map({
+                    secretName: `provider-env-${encode(instanceId)}-${encode(variable.name)}`,
+                    kind: "environment",
+                    value: typeof variable.value === "string" ? variable.value : "",
+                    redacted: reference === undefined && variable.valueRedacted === true,
+                    sensitive: variable.sensitive,
+                    providerInstanceId: instanceId,
+                    environmentVariable: variable.name,
+                  });
+                  if (reference !== undefined) return { ...rest, value: reference };
+                  return {
+                    ...rest,
+                    value: result.value,
+                    ...(result.redacted ? { valueRedacted: true } : {}),
+                  };
+                }),
+              }
+            : {}),
+        },
+      ];
+    }),
+  );
+
+  const sourceControlHosts = Object.fromEntries(
+    Object.entries(settings.sourceControlHosts).map(([kind, fields]) => [
+      kind,
+      mapFields(fields, SOURCE_CONTROL_HOST_SECRET_FIELDS.get(kind) ?? [], (field, serverHost) =>
+        sourceControlHostSecretName({ kind, field, serverHost }),
+      ),
+    ]),
+  ) as ServerSettings["sourceControlHosts"];
+
+  return { ...settings, providerInstances, sourceControlHosts };
+}

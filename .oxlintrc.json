@@ -1,0 +1,88 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // T3 Code's lint (its vite.config.ts `lint` block, origin/main 67eebaca23), minus its product-specific rules.
+  // `pnpm lint` fails on errors only. A rule set to "warn" still finds real problems but fires too often here to
+  // fix in one change; check:changed prints its warnings for the files a branch touches. The count after each
+  // "warn" or "off" is how often the rule fired on 2026-11-09: turn one back to "error" once its count is zero.
+  "plugins": ["eslint", "oxc", "react", "unicorn", "typescript"],
+  "jsPlugins": ["./oxlint-plugin-caveman/index.ts"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "perf": "error"
+  },
+  // T3 Code also reports unused disable directives. Not yet here: 41 name a rule that is off here (most of them
+  // react-hooks/exhaustive-deps, no-control-regex, or a t3code rule in ported code).
+  "rules": {
+    // Off in T3 Code too.
+    "eslint/no-control-regex": "off",
+    "eslint/no-await-in-loop": "off",
+    "eslint/no-shadow": "off",
+    "eslint/no-underscore-dangle": "off",
+    "typescript/no-this-alias": "off",
+    "unicorn/consistent-function-scoping": "off",
+    "unicorn/no-array-reverse": "off",
+    "unicorn/no-array-sort": "off",
+    "unicorn/no-new-array": "off",
+    "unicorn/prefer-add-event-listener": "off",
+    "unicorn/prefer-array-find": "off",
+    "unicorn/prefer-set-has": "off",
+    "unicorn/prefer-string-starts-ends-with": "off",
+    "oxc/no-map-spread": "off",
+    "react/exhaustive-deps": "off",
+    "react/jsx-no-constructed-context-values": "off",
+    "react/no-object-type-as-default-prop": "off",
+    "react/react-in-jsx-scope": "off",
+
+    // On in T3 Code.
+    "eslint/no-empty-pattern": "error",
+    "eslint/no-unneeded-ternary": "error",
+    "eslint/no-unsafe-optional-chaining": "error",
+    "react/capitalized-calls": "error",
+    "typescript/no-extraneous-class": ["error", { "allowEmpty": true }],
+    "unicorn/no-useless-fallback-in-spread": "error",
+    "unicorn/require-module-specifiers": "error",
+    "eslint/no-unused-vars": [
+      "warn", // 137
+      { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }
+    ],
+    "oxc/no-accumulating-spread": "warn", // 7, each a loop to restructure
+    "unicorn/no-useless-spread": "warn", // 34
+    // The React Compiler (apps/web) skips a component that breaks these; each fix is a rewrite of that component.
+    "react/exhaustive-effect-dependencies": "warn", // 142
+    "react/immutability": "warn", // 54
+    "react/memo-dependencies": "warn", // 18
+    "react/no-array-index-key": "warn", // 99
+    "react/no-unstable-nested-components": "warn", // 9
+    "react/preserve-manual-memoization": "warn", // 1
+    "react/purity": "warn", // 34
+    "react/refs": "warn", // 130
+    "react/set-state-in-effect": "warn", // 108
+    "react/static-components": "warn", // 3
+    "react/use-memo": "warn", // 2
+
+    // Off here, each wrong about this code every time it fired.
+    "eslint/no-new": "off", // 4: constructors run for what they check or start (Intl.DateTimeFormat, tests)
+    "eslint/no-unmodified-loop-condition": "off", // 18: the condition changes inside calls and awaits it cannot see
+    "eslint/no-unused-expressions": "off", // 30: `a && b()` and `(a(), b())` statements, written that way on purpose
+    "eslint/require-yield": "off", // 2: Effect.fn generators need no yield
+    "oxc/no-this-in-exported-function": "off", // 1: unified plugins receive the processor as `this`
+    "react/no-children-prop": "off", // 5: React.createElement in .ts tests passes children as a prop
+    "unicorn/no-thenable": "off", // 4: a `then` string field and test thenables
+    "unicorn/require-post-message-target-origin": "off", // 7: every one a Worker, MessagePort or AudioWorklet
+
+    "caveman/require-suppression-reason": "error"
+  },
+  "overrides": [
+    {
+      // A test that reads through a missing value fails, which is what the test should do then.
+      "files": ["**/*.test.{ts,tsx}", "**/test/**"],
+      "rules": { "eslint/no-unsafe-optional-chaining": "off" }
+    },
+    {
+      "files": ["apps/web/src/**/*.{ts,tsx}", "apps/mobile/src/**/*.{ts,tsx}", "packages/ui/src/**/*.{ts,tsx}"],
+      "excludeFiles": ["**/*.test.{ts,tsx}"],
+      "rules": { "caveman/no-hookless-use-function": "error" }
+    }
+  ]
+}

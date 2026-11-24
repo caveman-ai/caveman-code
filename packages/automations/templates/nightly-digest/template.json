@@ -1,0 +1,6 @@
+{
+  "title": "Nightly digest",
+  "category": "Chores and reports",
+  "summary": "Every night, what changed in the repository today, posted to a Slack channel from Cloud.",
+  "scope": "project"
+}

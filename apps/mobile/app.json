@@ -1,0 +1,104 @@
+{
+  "expo": {
+    "name": "Caveman Code",
+    "slug": "caveman-code",
+    "scheme": "caveman",
+    "version": "0.0.0",
+    "orientation": "default",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#121213",
+    "icon": "../desktop/resources/icon.png",
+    "ios": {
+      "bundleIdentifier": "so.caveman.code",
+      "supportsTablet": false,
+      "infoPlist": {
+        "PHPhotoLibraryPreventAutomaticLimitedAccessAlert": true
+      }
+    },
+    "android": {
+      "package": "so.caveman.code",
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single"
+    },
+    "plugins": [
+      "expo-sqlite",
+      [
+        "expo-widgets",
+        {
+          "bundleIdentifier": "so.caveman.code.widgets",
+          "groupIdentifier": "group.so.caveman.code",
+          "frequentUpdates": true,
+          "widgets": [
+            {
+              "name": "Glance",
+              "displayName": "Caveman",
+              "description": "What needs you and what's working, across your Chiefs.",
+              "android": null,
+              "ios": {
+                "supportedFamilies": ["systemSmall", "systemMedium", "accessoryCircular", "accessoryRectangular", "accessoryInline"]
+              }
+            }
+          ]
+        }
+      ],
+      "./plugins/withShareExtensionDisplayName.cjs",
+      [
+        "expo-sharing",
+        {
+          "ios": {
+            "enabled": true,
+            "extensionBundleIdentifier": "so.caveman.code.share",
+            "appGroupId": "group.so.caveman.code",
+            "activationRule": {
+              "supportsText": true,
+              "supportsWebUrlWithMaxCount": 1,
+              "supportsImageWithMaxCount": 10
+            }
+          },
+          "android": {
+            "enabled": true,
+            "singleShareMimeTypes": ["text/plain", "image/*"],
+            "multipleShareMimeTypes": ["image/*"]
+          }
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Caveman Code listens while you dictate, talk in voice chat or call your Chief, and keeps listening when you lock your phone.",
+          "enableBackgroundRecording": true,
+          "enableBackgroundPlayback": true
+        }
+      ],
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Caveman Code shows your recent photos and screenshots under + so you can attach one in a tap.",
+          "savePhotosPermission": false,
+          "isAccessMediaLocationEnabled": false
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Caveman Code shows your recent photos and screenshots under + so you can attach one in a tap.",
+          "cameraPermission": "Caveman Code uses the camera when you take a photo to attach to a chat.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-quick-actions",
+        {
+          "iosActions": [
+            { "id": "new", "title": "New chat", "icon": "symbol:square.and.pencil", "params": { "href": "caveman://new" } },
+            { "id": "call", "title": "Call the Chief", "icon": "symbol:phone.fill", "params": { "href": "caveman://chief/home?call=1" } },
+            { "id": "voice", "title": "Voice chat", "icon": "symbol:waveform", "params": { "href": "caveman://new?voice=1" } }
+          ]
+        }
+      ]
+    ]
+  }
+}

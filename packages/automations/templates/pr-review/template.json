@@ -1,0 +1,6 @@
+{
+  "title": "PR review",
+  "category": "Review",
+  "summary": "Reviews every pull request that changes code in one comment. A new push is reviewed from the last review.",
+  "scope": "project"
+}

@@ -1,0 +1,15 @@
+{
+  "name": "neon",
+  "version": "1.0.0",
+  "description": "Test schema migrations on a Neon branch before they reach the main database, and run queries against your Neon projects.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://neon.com/",
+  "keywords": [
+    "postgres",
+    "database",
+    "branches"
+  ]
+}

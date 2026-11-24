@@ -1,0 +1,29 @@
+issue-to-pr · Project                                    .caveman/automations/issue-to-pr.yaml
+  Turn issues labelled caveman into reviewed draft pull requests
+  triggers     Issue labelled caveman · By hand
+  runs on      Cloud                                     line 3
+               Cloud fires its triggers and runs it on a Cloud computer once you send it there with caveman-runtime apply; a revision that widens what it may do waits for the owner's approval.
+  budget       $6.00 per run, all attempts               line 9
+  worst case   $6.00 or 1h 50m, whichever comes first
+               At most 5 attempts across 3 steps.
+  levers       Caveman harness: on                       vs the classic engine: Opus 5.5 at 0.47x the cost over three working days, 48/48 steps done against 44/48 (measured in the app's own runner, one run)
+
+implement                                                automations/issue-to-pr.yaml:15
+  agent        builder                                   built-in
+  engine       caveman                                   the new-chat default
+  model        base · anthropic/claude-sonnet-5-5        class map: Models & keys
+  escalate     frontier · anthropic/claude-opus-5-5      class map: Models & keys
+               Attempt 2.
+               codex, frontier
+               Attempt 3. No frontier model is set for codex here.
+  effort       engine default
+  computer     full: a worktree on branch caveman/issue-to-pr/<subject>  line 22
+  attempts     3, at most 30m each                       line 27
+  checks       agent:reviewer                            line 23
+               Run by the runtime, credentials stripped; a failure starts the next attempt.
+  checker      reviewer: base · anthropic/claude-sonnet-5-5  the step's model
+  sees         the issues.labeled event; results of triage
+               As data blocks after its instructions, never as instructions; a result only when that step ran.
+  runs if      triage decided implement                  line 16
+  outputs      github.pull_request, draft                line 34
+               The runtime writes it when the run ends, if implement succeeded. A manual run waits for you to apply it.

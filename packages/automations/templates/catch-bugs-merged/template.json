@@ -1,0 +1,6 @@
+{
+  "title": "Catch bugs in merged PRs",
+  "category": "Review",
+  "summary": "Reads each change merged to your default branch and comments only when it can name the bug and the line.",
+  "scope": "project"
+}

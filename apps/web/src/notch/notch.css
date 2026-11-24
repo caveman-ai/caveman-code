@@ -1,0 +1,111 @@
+/* The notch (Notch.tsx; STYLE.md section 11): one black island hanging from the top centre of a clear window. Black,
+   never a theme's surface: it reads as the screen's own notch grown, over any app. */
+
+html[data-notch],
+html[data-notch] body,
+html[data-notch] #root {
+  background: transparent !important;
+}
+html[data-notch] body {
+  cursor: default;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.notch {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  /* A view's travel on the way down, two thirds of it on the way back (STYLE.md section 8). */
+  --notch-ms: 200ms;
+  visibility: hidden;
+}
+.notch[data-ready] { visibility: visible; }
+.notch[data-open] { --notch-ms: 300ms; }
+
+.notch-shape {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  transition: clip-path var(--notch-ms) var(--ease-snap);
+}
+
+/* The inverse corners that join the shape to the top edge, as the screen's own notch has: a square of black with a
+   quarter circle cut from its lower outer corner (Notch.tsx FILLET is its size). */
+.notch-fillet {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  transition: transform var(--notch-ms) var(--ease-snap);
+}
+.notch-fillet[data-at="left"] { background: radial-gradient(circle at 0 100%, transparent 7.5px, #000 8px); }
+.notch-fillet[data-at="right"] { background: radial-gradient(circle at 100% 100%, transparent 7.5px, #000 8px); }
+
+/* The band: an ear either side of the screen's notch. It never moves; the body opens under it. */
+.notch-band {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  display: flex;
+  justify-content: space-between;
+  transform: translateX(-50%);
+  color: hsl(var(--muted-foreground));
+  outline: none;
+}
+.notch-ear {
+  display: flex;
+  width: 40px;
+  height: 100%;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+}
+
+/* The body, at its own size all along: only its ink comes in as the clip travels down over it. */
+.notch-open {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  opacity: 0;
+  transition: opacity 120ms var(--ease-snap);
+}
+.notch[data-open] .notch-open {
+  opacity: 1;
+  transition: opacity 200ms var(--ease-snap) 80ms;
+}
+
+/* Held (guard.ts): until the pointer moves after a change, the keys take no mouse, so none lights under a resting
+   pointer and a click there lands on nothing. A finger or a pen still reaches them through the body (Notch.tsx tap),
+   so the body itself stays live and undimmed: never the shared [data-held] (packages/ui globals.css), which fades a
+   view and takes all its pointer. */
+.notch-open[data-notch-held] button { pointer-events: none; }
+
+/* What the chat built: the one big thing on the card. A wide picture fills it from its top; a tall one stands whole. */
+.notch-preview {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 10;
+  overflow: hidden;
+  border-radius: 12px;
+  background: hsl(0 0% 100% / 0.05);
+  box-shadow: inset 0 0 0 1px hsl(0 0% 100% / 0.08);
+  outline: none;
+}
+.notch-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+.notch-preview img[data-tall] { object-fit: contain; object-position: center; }
+
+@media (prefers-reduced-motion: reduce) {
+  .notch-shape,
+  .notch-fillet,
+  .notch-open {
+    transition: none !important;
+  }
+}

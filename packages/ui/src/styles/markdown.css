@@ -1,0 +1,251 @@
+/* The side-panel reader (src/markdown): CodeView's line layout, GitHub alert
+   colours, the task-list checkbox. Code colours are CODE_THEME
+   (ai/code-block.tsx), the one palette; prose classes mirror ai/response.tsx. */
+
+/* ── CodeView ──────────────────────────────────────────────────────────────
+   Every line is a row: the number is a sticky ::before (never selected or
+   copied), the code a flex cell, so soft-wrapped continuation hangs under the
+   code column. Set --cv-bg to the surface the view sits on. Root rules sit in
+   :where() so a host's utilities win. */
+:where(.cv) {
+  background: var(--cv-bg, hsl(var(--background)));
+  color: var(--shiki-foreground);
+  tab-size: 4;
+  font-variant-ligatures: none;
+  font-feature-settings: normal;
+}
+.cv-body {
+  width: max-content;
+  min-width: 100%;
+}
+.cv-wrap .cv-body {
+  width: auto;
+}
+.cv-chunk {
+  content-visibility: auto;
+}
+.cv-line {
+  display: flex;
+  min-height: 19px;
+  background: var(--cv-bg, hsl(var(--background)));
+}
+.cv-line::before {
+  content: attr(data-n);
+  position: sticky;
+  left: 0;
+  flex: none;
+  width: calc(var(--cv-gutter) + 28px);
+  padding: 0 16px 0 12px;
+  text-align: right;
+  color: hsl(var(--subtle-foreground));
+  background: inherit; /* follows the row through marks and the reveal flash */
+  user-select: none;
+  font-variant-numeric: tabular-nums;
+}
+.cv-plain .cv-line::before {
+  content: none;
+}
+.cv-code {
+  flex: 1 0 auto;
+  padding-right: 16px;
+  white-space: pre;
+}
+.cv-plain .cv-code {
+  padding-left: 12px;
+}
+.cv-wrap .cv-code {
+  flex: 1 1 0;
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.cv-mark {
+  background: hsl(var(--accent));
+}
+/* revealLine: hold the accent, then ease back to the row's own background. */
+.cv-flash {
+  animation: cv-flash 600ms var(--ease-snap);
+}
+@keyframes cv-flash {
+  0%,
+  30% {
+    background-color: hsl(var(--accent));
+  }
+}
+
+/* ── Markdown ──────────────────────────────────────────────────────────────
+   GitHub alerts: a 2px rule and a label in the state colour (STYLE.md 3). */
+.md-alert {
+  border-color: hsl(var(--md-alert));
+}
+.md-alert-label {
+  margin: 0 0 2px;
+  color: hsl(var(--md-alert));
+}
+.md-alert[data-alert="note"],
+.md-alert[data-alert="important"] {
+  --md-alert: var(--info);
+}
+.md-alert[data-alert="tip"] {
+  --md-alert: var(--success);
+}
+.md-alert[data-alert="warning"] {
+  --md-alert: var(--warning);
+}
+.md-alert[data-alert="caution"] {
+  --md-alert: var(--destructive);
+}
+/* The dark deck's --info is a fill; as text it takes the lift the inbox uses. */
+html.dark[data-surface="deck"] .md-alert {
+  --info: 213 94% 68%;
+}
+
+/* Task lists: a real disabled checkbox, drawn like Response's: in the item's
+   left padding, centred on its first line. */
+/* Hosted folds (<details>, Markdown.tsx): a run of them reads as one list. */
+.md-details + .md-details {
+  margin-top: 0.125rem;
+}
+
+.md-check {
+  appearance: none;
+  display: grid;
+  place-content: center;
+  position: absolute;
+  inset-inline-start: 2px;
+  top: calc(0.5lh - 7px);
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  border: 1px solid hsl(var(--input));
+  border-radius: 3px;
+}
+/* Live in a document the host can write: it ticks the file. */
+.md-check-live {
+  cursor: pointer;
+  transition: border-color 75ms;
+}
+.md-check-live:hover {
+  border-color: hsl(var(--muted-foreground));
+}
+.md-check-live:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+.md-check:checked {
+  border-color: hsl(var(--foreground));
+  background: hsl(var(--foreground));
+}
+.md-check:checked::before {
+  content: "";
+  width: 8px;
+  height: 4.5px;
+  border: solid hsl(var(--background));
+  border-width: 0 0 2px 2px;
+  transform: translateY(-1px) rotate(-45deg);
+}
+
+/* ── Document scale ────────────────────────────────────────────────────────
+   A markdown file read in the side panel (MarkdownDocument): the chat's
+   elements at reading size (15px prose, 1.7 leading, a 760px column) with
+   headings that carry the structure of a spec. Selectors outrank the
+   elements' utilities, and their `first:mt-0` still wins at the top. */
+.md-doc {
+  font-size: 15px;
+  line-height: 1.7;
+}
+.md-doc h1 {
+  margin: 2.2em 0 0.55em;
+  font-size: 30px;
+  line-height: 1.2;
+  letter-spacing: -0.022em;
+}
+.md-doc h2 {
+  margin: 2.1em 0 0.6em;
+  font-size: 21px;
+  line-height: 1.3;
+  letter-spacing: -0.014em;
+}
+.md-doc h3 {
+  margin: 1.8em 0 0.5em;
+  font-size: 17px;
+  line-height: 1.4;
+  letter-spacing: -0.006em;
+}
+.md-doc h4 {
+  margin: 1.6em 0 0.4em;
+  font-size: 15px;
+  color: hsl(var(--foreground));
+}
+.md-doc :is(h5, h6) {
+  margin: 1.4em 0 0.3em;
+  font-size: 14px;
+}
+.md-doc p {
+  margin-block: 0.85em;
+}
+.md-doc li {
+  margin-block: 0.35em;
+}
+.md-doc :is(ul, ol) {
+  margin-block: 0.85em;
+}
+.md-doc blockquote {
+  margin-block: 1.1em;
+}
+.md-doc hr {
+  margin-block: 2.4em;
+}
+.md-doc :not(pre) > code {
+  font-size: 0.86em;
+}
+.md-doc table {
+  font-size: 13.5px;
+}
+
+/* ── The copy mark (ai/code-block.tsx CodeBlockCopyButton) ──────────────────
+   Compact layout: on a
+   copy the two pages turn and shrink away while a check draws itself in;
+   1.5s later the pages come back. Transform, opacity and a dash offset only. */
+.copy-morph {
+  width: 15px;
+  height: 15px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.6px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.copy-morph-pages,
+.copy-morph-check {
+  transform-box: fill-box;
+  transform-origin: 50%;
+}
+.copy-morph-pages {
+  transition: opacity 120ms 100ms, transform 260ms var(--ease-snap);
+}
+.copy-morph-check {
+  opacity: 0;
+  stroke-dasharray: 16;
+  stroke-dashoffset: 16px;
+  transform: scale(0.65) rotate(-12deg);
+  transition: opacity 80ms 180ms, transform 260ms var(--ease-snap), stroke-dashoffset 260ms var(--ease-snap);
+}
+.copy-morph[data-copied] .copy-morph-pages {
+  opacity: 0;
+  transform: scale(0.55) rotate(12deg);
+  transition: opacity 120ms, transform 260ms var(--ease-snap);
+}
+.copy-morph[data-copied] .copy-morph-check {
+  opacity: 1;
+  stroke-dashoffset: 0;
+  transform: none;
+  transition: opacity 80ms, transform 260ms var(--ease-snap), stroke-dashoffset 260ms var(--ease-snap);
+}
+@media (prefers-reduced-motion: reduce) {
+  .copy-morph-pages,
+  .copy-morph-check {
+    transition: none;
+  }
+}

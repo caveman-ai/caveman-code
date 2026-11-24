@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxfmt/configuration_schema.json",
+ // Measured on 2026-11-09 over every tracked JS and TS file: oxfmt's defaults (upstream style, which the ported
+  // code already follows) change the fewest lines. Width 110, 120 or 140, other trailing commas, or `arrowParens:
+  // avoid` each changed more; `quoteProps: preserve` changed fewer. About half the files are not formatted yet, so
+  // nothing reformats the whole repo: check:changed holds a file to this only if the branch adds it or it was
+  // formatted before the branch (scripts/check-changed.ts).
+  "printWidth": 100,
+  "quoteProps": "preserve",
+  "sortPackageJson": false,
+  "ignorePatterns": [
+    // Code only for now: Markdown, JSON, YAML, CSS and HTML are written by hand or generated in their own styles.
+    "**/*.md",
+    "**/*.json",
+    "**/*.jsonc",
+    "**/*.yaml",
+    "**/*.yml",
+    "**/*.css",
+    "**/*.html",
+    "**/*.toml",
+    "pnpm-lock.yaml"
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "name": "slack",
+  "version": "1.0.0",
+  "description": "Catch up on Slack channels and threads, and draft updates about the work in this repository for you to approve before they post.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://slack.com/",
+  "keywords": [
+    "chat",
+    "messaging",
+    "channels"
+  ]
+}

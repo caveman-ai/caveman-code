@@ -1,0 +1,74 @@
+{
+  "name": "@caveman-app/session-protocol",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./client": {
+      "types": "./src/client.ts",
+      "import": "./src/client.ts"
+    },
+    "./device-client": {
+      "types": "./src/deviceClient.ts",
+      "import": "./src/deviceClient.ts"
+    },
+    "./devices": {
+      "types": "./src/devices.ts",
+      "import": "./src/devices.ts"
+    },
+    "./mac-mail": {
+      "types": "./src/macMail.ts",
+      "import": "./src/macMail.ts"
+    },
+    "./direct": {
+      "types": "./src/direct.ts",
+      "import": "./src/direct.ts"
+    },
+    "./direct-wire": {
+      "types": "./src/directWire.ts",
+      "import": "./src/directWire.ts"
+    },
+    "./cloud-chats": {
+      "types": "./src/cloudChats.ts",
+      "import": "./src/cloudChats.ts"
+    },
+    "./references": {
+      "types": "./src/references.ts",
+      "import": "./src/references.ts"
+    },
+    "./secrets": {
+      "types": "./src/secrets.ts",
+      "import": "./src/secrets.ts"
+    },
+    "./smart-view": {
+      "types": "./src/smartView.ts",
+      "import": "./src/smartView.ts"
+    },
+    "./schema.json": "./schema/session-protocol.v1.json",
+    "./protocol": {
+      "types": "./src/protocol.ts",
+      "import": "./src/protocol.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run",
+    "schema": "node scripts/json-schema.ts --write"
+  },
+  "dependencies": {
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@caveman-app/model-check": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "ws": "catalog:"
+  }
+}

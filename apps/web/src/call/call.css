@@ -1,0 +1,21 @@
+/* A call's chrome motion (STYLE.md 8): the box's contents fade over to the call (its frame stays put), a phone's
+   stage rises in, a new line of words fades up, the pill and the ring-back card arrive, and the live dot breathes
+   while the call is on. The voice's line draws itself (VoiceWave.tsx). Under reduced motion every one of these is
+   still. */
+
+.call-box-in { animation: call-appear 180ms var(--ease-snap); }
+.call-stage-in { animation: call-rise 220ms var(--ease-snap); }
+.call-caption-in { animation: call-fade 180ms var(--ease-snap); }
+.call-pill-in { animation: call-rise 160ms var(--ease-snap); }
+.call-incoming-in { animation: call-drop 260ms var(--ease-snap); }
+.call-live-dot { animation: call-live 2s ease-in-out infinite; }
+
+@keyframes call-appear { from { opacity: 0; } }
+@keyframes call-rise { from { opacity: 0; transform: translateY(6px) scale(0.99); } }
+@keyframes call-fade { from { opacity: 0; transform: translateY(2px); } }
+@keyframes call-drop { from { opacity: 0; transform: translateY(-8px) scale(0.98); } }
+@keyframes call-live { 50% { opacity: 0.35; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .call-box-in, .call-stage-in, .call-caption-in, .call-pill-in, .call-incoming-in, .call-live-dot { animation: none; }
+}

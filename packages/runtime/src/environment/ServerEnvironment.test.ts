@@ -1,0 +1,294 @@
+// ), apps/server/src/environment/ServerEnvironment.test.ts @ ab3a3cd1.
+import * as NodeCrypto from "@effect/platform-node/NodeCrypto";
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { ORCHESTRATION_PROTOCOL_VERSION } from "@caveman-app/protocol";
+import { expect, it } from "@effect/vitest";
+import * as SecureRandom from "effect/crypto/SecureRandom";
+import * as Deferred from "effect/Deferred";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as Layer from "effect/Layer";
+import * as PlatformError from "effect/PlatformError";
+import * as Schema from "effect/Schema";
+
+import { DEFAULT_SIGNAL_EXPORT } from "@caveman-app/shared/observability";
+import * as HostProcess from "@caveman-app/shared/HostProcess";
+import * as OtelEnvironment from "@caveman-app/shared/otelEnvironment";
+
+import * as ServerSecretStore from "../auth/ServerSecretStore.ts";
+import * as ServerConfig from "../config.ts";
+import * as ServerEnvironment from "./ServerEnvironment.ts";
+
+const isServerEnvironmentIdPersistenceError = Schema.is(
+  ServerEnvironment.ServerEnvironmentIdPersistenceError,
+);
+
+const layerServerEnvironment = (baseDir: string) =>
+  ServerEnvironment.layer.pipe(
+    Layer.provide(ServerSecretStore.layer),
+    Layer.provide(ServerConfig.layerTest(process.cwd(), baseDir)),
+  );
+
+const layerEmptySecretStore = Layer.succeed(
+  ServerSecretStore.ServerSecretStore,
+  ServerSecretStore.ServerSecretStore.of({
+    get: () => Effect.succeedNone,
+    set: () => Effect.void,
+    create: () => Effect.void,
+    getOrCreateRandom: () => Effect.succeed(new Uint8Array()),
+    remove: () => Effect.void,
+  }),
+);
+
+const makeServerConfig = Effect.fn(function* (baseDir: string) {
+  const derivedPaths = yield* ServerConfig.deriveServerPaths(baseDir, undefined);
+
+  return {
+    ...derivedPaths,
+    logLevel: "Error",
+    traceMinLevel: "Info",
+    traceTimingEnabled: true,
+    traceBatchWindowMs: 200,
+    traceMaxBytes: 10 * 1024 * 1024,
+    traceMaxFiles: 10,
+    otlpTracesUrl: undefined,
+    otlpMetricsUrl: undefined,
+    otlpLogsUrl: undefined,
+    otlpTracesExport: DEFAULT_SIGNAL_EXPORT,
+    otlpMetricsExport: DEFAULT_SIGNAL_EXPORT,
+    otlpLogsExport: DEFAULT_SIGNAL_EXPORT,
+    otelEnvironment: OtelEnvironment.none,
+    cwd: process.cwd(),
+    baseDir,
+    mode: "web",
+    autoBootstrapProjectFromCwd: false,
+    logWebSocketEvents: false,
+    port: 0,
+    host: undefined,
+    desktopBootstrapToken: undefined,
+    staticDir: undefined,
+    devUrl: undefined,
+    devAllowedOrigins: [],
+    noBrowser: false,
+    startupPresentation: "browser",
+  } satisfies ServerConfig.ServerConfig["Service"];
+});
+
+it.layer(Layer.mergeAll(NodeServices.layer, NodeCrypto.layer))("ServerEnvironmentLive", (it) => {
+  it.effect("publishes proven install ownership only for manually updated servers", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const windows = process.platform === "win32";
+      const baseDir = yield* fs.makeTempDirectoryScoped();
+      const prefix = `${baseDir}/node`;
+      const entry = `${prefix}/lib/node_modules/t3/dist/bin.mjs`;
+      yield* fs.makeDirectory(`${prefix}/lib/node_modules/t3/dist`, { recursive: true });
+      yield* fs.makeDirectory(`${prefix}/bin`, { recursive: true });
+      yield* fs.writeFileString(entry, "");
+      yield* fs.writeFileString(
+        `${prefix}/lib/node_modules/t3/package.json`,
+        '{"name":"t3","version":"0.0.45","bin":{"t3":"./dist/bin.mjs"}}',
+      );
+      yield* fs.symlink(entry, `${prefix}/bin/t3`);
+      const config = yield* makeServerConfig(baseDir);
+      yield* fs.makeDirectory(config.stateDir, { recursive: true });
+      for (const mode of ["web", "desktop"] as const) {
+        const descriptor = yield* Effect.gen(function* () {
+          const environment = yield* ServerEnvironment.ServerEnvironment;
+          return yield* environment.getDescriptor;
+        }).pipe(
+          Effect.provide(
+            ServerEnvironment.layer.pipe(
+              Layer.provide(layerEmptySecretStore),
+              Layer.provide(ServerConfig.layer({ ...config, mode })),
+            ),
+          ),
+          Effect.provideService(HostProcess.Arguments, ["node", entry]),
+          Effect.provideService(HostProcess.IsExecutable, false),
+          Effect.provideService(HostProcess.Platform, windows ? "win32" : "linux"),
+          Effect.provideService(HostProcess.Environment, {}),
+        );
+        // Windows has no proof for npm's shims yet, so it publishes no ownership there.
+        expect(descriptor.capabilities.serverInstallation).toEqual(
+          mode === "web" && !windows ? { kind: "npm-global", prefix } : undefined,
+        );
+        expect(descriptor.capabilities).toMatchObject({
+          settledWorktreeCleanup: true,
+          storageCleanupRun: true,
+          projectWorktreeCleanup: true,
+          worktreesDirectory: true,
+          threadAutoSettlementScope: true,
+        });
+      }
+    }),
+  );
+  it.effect.each([
+    { name: "missing", content: undefined },
+    { name: "empty", content: "" },
+    { name: "whitespace-only", content: " \t\n" },
+  ])("concurrent initializers recover a $name environment id file", ({ content }) =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const random = yield* SecureRandom.SecureRandom;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-concurrent-test-",
+      });
+      const serverConfig = yield* makeServerConfig(baseDir);
+      yield* fileSystem.makeDirectory(serverConfig.stateDir, { recursive: true });
+      if (content !== undefined) {
+        yield* fileSystem.writeFileString(serverConfig.environmentIdPath, content);
+      }
+      const bothGenerated = yield* Deferred.make<void>();
+      const bothReadEmpty = yield* Deferred.make<void>();
+      const firstInitialized = yield* Deferred.make<void>();
+      let remaining = 2;
+      let emptyReads = 0;
+      const readIdentity = Effect.gen(function* () {
+        const identity = yield* ServerEnvironment.ServerEnvironmentIdentity;
+        return yield* identity.getEnvironmentId;
+      }).pipe(
+        Effect.tap(() => Deferred.succeed(firstInitialized, undefined)),
+        Effect.provide(Layer.fresh(ServerEnvironment.layerIdentity)),
+        Effect.provideService(ServerConfig.ServerConfig, serverConfig),
+        Effect.provideService(FileSystem.FileSystem, {
+          ...fileSystem,
+          readFileString: (path) =>
+            fileSystem.readFileString(path).pipe(
+              Effect.tap(
+                Effect.fn(function* (value) {
+                  if (path !== serverConfig.environmentIdPath || remaining > 0 || value.trim()) {
+                    return;
+                  }
+                  // Both observe the empty file, but one repairs it after the other has finished.
+                  if (++emptyReads === 2) {
+                    yield* Deferred.succeed(bothReadEmpty, undefined);
+                    yield* Deferred.await(firstInitialized);
+                  } else {
+                    yield* Deferred.await(bothReadEmpty);
+                  }
+                }),
+              ),
+            ),
+        }),
+        Effect.provideService(SecureRandom.SecureRandom, {
+          ...random,
+          uuidV4: (() =>
+            Effect.gen(function* () {
+              const id = yield* random.uuidV4();
+              if (--remaining === 0) {
+                yield* Deferred.succeed(bothGenerated, undefined);
+              }
+              yield* Deferred.await(bothGenerated);
+              return id;
+            })) as SecureRandom.SecureRandom["Service"]["uuidV4"],
+        }),
+      );
+
+      const [first, second] = yield* Effect.all([readIdentity, readIdentity], {
+        concurrency: "unbounded",
+      });
+      const persisted = yield* fileSystem.readFileString(serverConfig.environmentIdPath);
+
+      expect(first).toBe(second);
+      expect(persisted.trim()).toBe(first);
+    }),
+  );
+
+  it.effect("persists the environment id across service restarts", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-test-",
+      });
+
+      const first = yield* Effect.gen(function* () {
+        const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+        return yield* serverEnvironment.getDescriptor;
+      }).pipe(Effect.provide(layerServerEnvironment(baseDir)));
+      const second = yield* Effect.gen(function* () {
+        const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+        return yield* serverEnvironment.getDescriptor;
+      }).pipe(Effect.provide(layerServerEnvironment(baseDir)));
+
+      expect(first.environmentId).toBe(second.environmentId);
+      expect(first.orchestrationProtocolVersion).toBe(ORCHESTRATION_PROTOCOL_VERSION);
+      expect(second.capabilities.repositoryIdentity).toBe(true);
+      expect(second.capabilities.connectionProbe).toBe(true);
+      expect(second.capabilities.attachmentUploads).toBe(true);
+      expect(second.capabilities.fileAttachments).toEqual({ maxUploadBytes: 50 * 1024 * 1024 });
+      expect(second.capabilities.pullRequests).toBe(true);
+      expect(second.capabilities.requiredWorktreeBootstrap).toBe(true);
+      expect(second.capabilities.usagePriceOverrides).toBe(true);
+      expect(second.capabilities.threadActiveReorder).toBe(true);
+      expect(second.capabilities.threadTitleRegeneration).toBe(true);
+      expect(second.capabilities.threadPullRequests).toBe(true);
+      expect(second.capabilities.threadPullRequestLinking).toBe(true);
+      expect(second.capabilities.serverResolvedCommandContext).toBe(true);
+      expect(second.capabilities.projectProviderInstanceOverrides).toBe(true);
+      expect(second.capabilities.agentActivityPublishing).toBe(false);
+    }),
+  );
+
+  it.effect("structures persisted environment id filesystem failures", () =>
+    Effect.gen(function* () {
+      const fileSystem = yield* FileSystem.FileSystem;
+      const baseDir = yield* fileSystem.makeTempDirectoryScoped({
+        prefix: "t3-server-environment-error-test-",
+      });
+      const serverConfig = yield* makeServerConfig(baseDir);
+      const environmentIdPath = serverConfig.environmentIdPath;
+      const tempPath = `${environmentIdPath}.tmp`;
+      const methodByOperation = {
+        check: "exists",
+        read: "readFileString",
+        write: "writeFileString",
+      } as const;
+
+      for (const operation of ["check", "read", "write"] as const) {
+        const writeAttempts: string[] = [];
+        const cause = PlatformError.systemError({
+          _tag: "PermissionDenied",
+          module: "FileSystem",
+          method: methodByOperation[operation],
+          description: "permission denied",
+          pathOrDescriptor: environmentIdPath,
+        });
+        const layerFailingFileSystem = FileSystem.layerNoop({
+          exists: () =>
+            operation === "check" ? Effect.fail(cause) : Effect.succeed(operation === "read"),
+          readFileString: () => Effect.fail(cause),
+          makeTempFileScoped: () => Effect.succeed(tempPath),
+          writeFileString: (path) => {
+            writeAttempts.push(path);
+            return Effect.fail(cause);
+          },
+        });
+
+        const error = yield* Effect.gen(function* () {
+          const serverEnvironment = yield* ServerEnvironment.ServerEnvironment;
+          return yield* serverEnvironment.getDescriptor;
+        }).pipe(
+          Effect.provide(
+            ServerEnvironment.layer.pipe(
+              Layer.provide(layerEmptySecretStore),
+              Layer.provide(Layer.merge(ServerConfig.layer(serverConfig), layerFailingFileSystem)),
+            ),
+          ),
+          Effect.flip,
+        );
+
+        expect(isServerEnvironmentIdPersistenceError(error)).toBe(true);
+        if (!isServerEnvironmentIdPersistenceError(error)) {
+          throw error;
+        }
+        expect(error.operation).toBe(operation);
+        expect(error.environmentIdPath).toBe(environmentIdPath);
+        expect(error.cause).toBe(cause);
+        expect(error.message).toBe(
+          `Server environment ID ${operation} failed at '${environmentIdPath}'.`,
+        );
+        expect(writeAttempts).toEqual(operation === "write" ? [tempPath] : []);
+      }
+    }),
+  );
+});

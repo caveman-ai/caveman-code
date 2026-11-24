@@ -1,0 +1,216 @@
+// ), packages/provider-pi/src/server/mcpInjection.test.ts @ 13aa882c22.
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import { assert, describe, it } from "@effect/vitest";
+import { EnvironmentId, ProviderInstanceId, ThreadId } from "@caveman-app/protocol";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+
+import {
+  PI_CAVEMAN_CODE_MCP_EXTENSION_FILENAME,
+  CAVEMAN_CODE_MCP_BEARER_ENV,
+  CAVEMAN_CODE_MCP_URL_ENV,
+  CAVEMAN_CODE_PI_RUNTIME_MODE_ENV,
+  CAVEMAN_CODE_PI_MCP_EXTENSION_PATH_ENV,
+} from "./mcpExtensionSource.ts";
+import {
+  buildPiRpcLaunch,
+  materializePiCavemanMcpExtension,
+  resolvePiLaunchArgs,
+} from "./mcpInjection.ts";
+
+const threadId = ThreadId.make("thread-pi-caveman-mcp");
+
+const mcpSession = {
+  environmentId: EnvironmentId.make("environment-pi-caveman-mcp"),
+  threadId,
+  providerSessionId: "mcp-session-pi",
+  providerInstanceId: ProviderInstanceId.make("pi"),
+  endpoint: "http://127.0.0.1:43123/mcp",
+  authorizationHeader: "Bearer secret-pi-token",
+  browserToolsAvailable: true,
+};
+
+describe("pi T3 MCP injection", () => {
+  it("always adds the permission bridge and configures MCP when available", () => {
+    const resolvedArgs = resolvePiLaunchArgs(
+      "--extension=/home/user/.pi/agent/extensions/demo.ts --session-dir=/tmp/pi-sessions --provider=anthropic --model=claude-sonnet --tools='' --name=-review --extension-flag=kept",
+    );
+    assert.isTrue(resolvedArgs.ok);
+    if (!resolvedArgs.ok) return;
+    const launch = buildPiRpcLaunch({
+      launchArgs: resolvedArgs.args,
+      environment: { PATH: "/usr/bin" },
+      mcpSession,
+      extensionPath: "/tmp/cache/pi-caveman-mcp-extension.ts",
+      runtimeMode: "approval-required",
+    });
+    assert.deepEqual(launch.args, [
+      "--mode",
+      "rpc",
+      "--extension",
+      "/home/user/.pi/agent/extensions/demo.ts",
+      "--session-dir",
+      "/tmp/pi-sessions",
+      "--provider",
+      "anthropic",
+      "--model",
+      "claude-sonnet",
+      "--tools",
+      "",
+      "--name",
+      "-review",
+      "--extension-flag=kept",
+      "--extension",
+      "/tmp/cache/pi-caveman-mcp-extension.ts",
+    ]);
+    assert.notInclude(launch.args, "--no-extensions");
+    assert.equal(launch.env[CAVEMAN_CODE_MCP_URL_ENV], "http://127.0.0.1:43123/mcp");
+    assert.equal(launch.env[CAVEMAN_CODE_MCP_BEARER_ENV], "secret-pi-token");
+    assert.equal(launch.env[CAVEMAN_CODE_PI_RUNTIME_MODE_ENV], "approval-required");
+    assert.equal(launch.env[CAVEMAN_CODE_PI_MCP_EXTENSION_PATH_ENV], "/tmp/cache/pi-caveman-mcp-extension.ts");
+
+    const permissionOnly = buildPiRpcLaunch({
+      launchArgs: [],
+      environment: {
+        [CAVEMAN_CODE_MCP_URL_ENV]: "http://127.0.0.1:9999/stale",
+        [CAVEMAN_CODE_MCP_BEARER_ENV]: "stale-token",
+        T3_MCP_URL: "http://old.invalid/mcp",
+        T3_MCP_BEARER_TOKEN: "legacy-stale-token",
+        T3_PI_MCP_EXTENSION_PATH: "/stale/legacy-extension.ts",
+        [CAVEMAN_CODE_PI_MCP_EXTENSION_PATH_ENV]: "/stale/extension.ts",
+      },
+      mcpSession: undefined,
+      extensionPath: "/tmp/cache/pi-caveman-mcp-extension.ts",
+      runtimeMode: "auto-accept-edits",
+    });
+    assert.deepEqual(permissionOnly.args, [
+      "--mode",
+      "rpc",
+      "--extension",
+      "/tmp/cache/pi-caveman-mcp-extension.ts",
+    ]);
+    assert.isFalse(permissionOnly.hasCavemanMcp);
+    assert.isUndefined(permissionOnly.env[CAVEMAN_CODE_MCP_URL_ENV]);
+    assert.isUndefined(permissionOnly.env[CAVEMAN_CODE_MCP_BEARER_ENV]);
+    assert.isUndefined(permissionOnly.env.T3_MCP_URL);
+    assert.isUndefined(permissionOnly.env.T3_MCP_BEARER_TOKEN);
+    assert.isUndefined(permissionOnly.env.T3_PI_MCP_EXTENSION_PATH);
+    assert.equal(permissionOnly.env[CAVEMAN_CODE_PI_RUNTIME_MODE_ENV], "auto-accept-edits");
+    assert.equal(
+      permissionOnly.env[CAVEMAN_CODE_PI_MCP_EXTENSION_PATH_ENV],
+      "/tmp/cache/pi-caveman-mcp-extension.ts",
+    );
+  });
+
+  it("keeps the runtime's own variables off Pi and the commands it runs", () => {
+    const runtimeOnly = {
+      CAVEMAN_CODE_DEV_AUTH_TOKEN: "runtime-dev-token",
+      CAVEMAN_CODE_OTLP_HEADERS: "authorization=Bearer runtime-otlp",
+      CAVEMAN_RUNTIME_STATE_DIR: "/runtime/state",
+      CAVEMAN_CLOUD_LINK_DIR: "/cloud/link",
+      CAVEMAN_WORKSPACE_ROOT: "/cloud/workspace",
+    };
+    const launch = buildPiRpcLaunch({
+      launchArgs: [],
+      environment: { PATH: "/usr/bin", ...runtimeOnly },
+      mcpSession,
+      extensionPath: "/tmp/cache/pi-caveman-mcp-extension.ts",
+    });
+
+    assert.deepEqual(
+      Object.fromEntries(Object.keys(runtimeOnly).map((name) => [name, launch.env[name]])),
+      Object.fromEntries(Object.keys(runtimeOnly).map((name) => [name, undefined])),
+    );
+    assert.equal(launch.env.PATH, "/usr/bin");
+  });
+
+  it("falls back to Pi's first supported mode for legacy auto threads", () => {
+    const launch = buildPiRpcLaunch({
+      launchArgs: [],
+      environment: {},
+      mcpSession: undefined,
+      extensionPath: "/tmp/cache/pi-caveman-mcp-extension.ts",
+      runtimeMode: "auto",
+    });
+
+    assert.equal(launch.env[CAVEMAN_CODE_PI_RUNTIME_MODE_ENV], "approval-required");
+  });
+
+  it("forces tools and user extensions off for unattended text generation", () => {
+    const launch = buildPiRpcLaunch({
+      launchArgs: [
+        "--tools",
+        "read,write",
+        "--extension",
+        "/home/user/.pi/agent/extensions/demo.ts",
+        "--extension=./second.ts",
+        "--provider",
+        "anthropic",
+      ],
+      environment: {},
+      mcpSession,
+      extensionPath: "/tmp/cache/pi-caveman-mcp-extension.ts",
+      sessionPath: "/fake/persisted.jsonl",
+      ephemeral: true,
+      shortLived: true,
+      disableExtensions: true,
+      disableTools: true,
+    });
+    assert.deepEqual(launch.args, [
+      "--mode",
+      "rpc",
+      "--no-session",
+      "--provider",
+      "anthropic",
+      "--offline",
+      "--no-extensions",
+      "--no-tools",
+    ]);
+    assert.isFalse(launch.hasCavemanMcp);
+    const alreadyOffline = buildPiRpcLaunch({
+      launchArgs: ["--offline"],
+      environment: {},
+      mcpSession: undefined,
+      extensionPath: undefined,
+      ephemeral: true,
+      shortLived: true,
+    });
+    assert.deepEqual(alreadyOffline.args, ["--mode", "rpc", "--no-session", "--offline"]);
+    assert.deepInclude(resolvePiLaunchArgs("--mode text"), {
+      ok: false,
+      message: "Pi launch argument '--mode' is controlled by Caveman Code and cannot be overridden.",
+    });
+    assert.deepInclude(resolvePiLaunchArgs("--session old.jsonl"), { ok: false });
+    assert.deepInclude(resolvePiLaunchArgs("prompt pi immediately"), { ok: false });
+    assert.deepInclude(resolvePiLaunchArgs("--plan @instructions.md"), { ok: false });
+  });
+
+  it("rejects --provider without --model, which Pi 1.0 refuses at startup", () => {
+    const rejection = {
+      ok: false,
+      message: "Pi launch argument '--provider' requires '--model'.",
+    };
+    assert.deepInclude(resolvePiLaunchArgs("--provider openrouter"), rejection);
+    assert.deepInclude(resolvePiLaunchArgs("--provider=openrouter --models gpt-6"), rejection);
+    assert.isTrue(resolvePiLaunchArgs("--provider openrouter --model=deepseek/v4").ok);
+    assert.isTrue(resolvePiLaunchArgs("--model deepseek/v4").ok);
+  });
+
+  it.effect("materializes the MCP bridge with namespaced tool registration", () =>
+    Effect.gen(function* () {
+      const fs = yield* FileSystem.FileSystem;
+      const cacheDir = yield* fs.makeTempDirectoryScoped({ prefix: "t3-pi-extensions-" });
+      const mcpDest = yield* materializePiCavemanMcpExtension(cacheDir);
+      assert.isTrue(mcpDest.endsWith(PI_CAVEMAN_CODE_MCP_EXTENSION_FILENAME));
+      const mcpSource = yield* fs.readFileString(mcpDest);
+      assert.include(mcpSource, "export default async function cavemanMcpExtension");
+      assert.include(mcpSource, "before_agent_start");
+      assert.include(mcpSource, 'pi.on("tool_call"');
+      assert.include(mcpSource, "Allow ${event.toolName}?");
+      assert.include(mcpSource, '"mcp-protocol-version"');
+      assert.include(mcpSource, '"tools/call"');
+      assert.include(mcpSource, "mcp__caveman-code__");
+      assert.include(mcpSource, "mcp__caveman_code__");
+    }).pipe(Effect.scoped, Effect.provide(NodeServices.layer)),
+  );
+});

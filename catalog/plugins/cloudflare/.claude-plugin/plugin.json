@@ -1,0 +1,16 @@
+{
+  "name": "cloudflare",
+  "version": "1.0.0",
+  "description": "Reach the whole Cloudflare API: inspect Workers, DNS, R2 and other resources, and make changes you approve.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.cloudflare.com/",
+  "keywords": [
+    "workers",
+    "dns",
+    "cdn",
+    "r2"
+  ]
+}

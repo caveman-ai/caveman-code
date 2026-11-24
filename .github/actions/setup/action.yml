@@ -1,0 +1,12 @@
+name: Setup
+description: pnpm, Node 24 with the pnpm store cached, and the workspace installed from the lockfile.
+runs:
+  using: composite
+  steps:
+    - uses: pnpm/action-setup@v4
+    - uses: actions/setup-node@v5
+      with:
+        node-version: 24
+        cache: pnpm
+    - shell: bash
+      run: pnpm install --frozen-lockfile

@@ -1,0 +1,36 @@
+{
+  "name": "playwright",
+  "version": "1.0.0",
+  "description": "Open the app in a real browser, click through it, read the page and console, and confirm a UI change works before you call it done.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://playwright.dev/",
+  "keywords": [
+    "browser",
+    "testing",
+    "e2e"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Playwright",
+    "shortDescription": "Drive a browser to check your UI",
+    "longDescription": "Open the app in a real browser, click through it, read the page and console, and confirm a UI change works before you call it done.",
+    "developerName": "Microsoft",
+    "category": "Developer tools",
+    "capabilities": [
+      "Interactive"
+    ],
+    "websiteURL": "https://playwright.dev/",
+    "privacyPolicyURL": "https://www.microsoft.com/privacy/privacystatement",
+    "termsOfServiceURL": "https://github.com/microsoft/playwright-mcp/blob/main/LICENSE",
+    "defaultPrompt": [
+      "Open the app and check the change I just made",
+      "Reproduce this UI bug in a browser"
+    ],
+    "brandColor": "#2EAD33",
+    "logo": "./assets/logo.svg"
+  }
+}

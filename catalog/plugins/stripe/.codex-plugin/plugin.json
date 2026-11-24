@@ -1,0 +1,37 @@
+{
+  "name": "stripe",
+  "version": "1.0.0",
+  "description": "Build Stripe integrations against current Stripe docs and inspect customers, payments and subscriptions in a sandbox or live account.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://stripe.com/",
+  "keywords": [
+    "payments",
+    "billing",
+    "subscriptions"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Stripe",
+    "shortDescription": "Payments, billing and Stripe docs",
+    "longDescription": "Build Stripe integrations against current Stripe docs and inspect customers, payments and subscriptions in a sandbox or live account.",
+    "developerName": "Stripe",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://stripe.com/",
+    "privacyPolicyURL": "https://stripe.com/privacy",
+    "termsOfServiceURL": "https://stripe.com/legal/ssa",
+    "defaultPrompt": [
+      "Add Stripe Checkout to this app",
+      "Why did this customer's payment fail?"
+    ],
+    "brandColor": "#635BFF",
+    "logo": "./assets/logo.svg"
+  }
+}

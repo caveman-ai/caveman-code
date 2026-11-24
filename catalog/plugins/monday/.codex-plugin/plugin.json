@@ -1,0 +1,37 @@
+{
+  "name": "monday",
+  "version": "1.0.0",
+  "description": "Read monday.com boards and items, and post updates on the item you are working on.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://monday.com/",
+  "keywords": [
+    "boards",
+    "work management",
+    "tasks"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "monday.com",
+    "shortDescription": "Boards, items and updates",
+    "longDescription": "Read monday.com boards and items, and post updates on the item you are working on.",
+    "developerName": "monday.com",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://monday.com/",
+    "privacyPolicyURL": "https://monday.com/l/privacy/privacy-policy/",
+    "termsOfServiceURL": "https://monday.com/l/legal/tos/",
+    "defaultPrompt": [
+      "Show my open items on the dev board",
+      "Post an update on this item with the PR link"
+    ],
+    "brandColor": "#6161FF",
+    "logo": "./assets/logo.svg"
+  }
+}

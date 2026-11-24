@@ -1,0 +1,745 @@
+#!/usr/bin/env node
+// Ported from T3 Code (MIT), packages/effect-acp/scripts/generate.ts @ ab3a3cd1.
+
+import * as NodeRuntime from "@effect/platform-node/NodeRuntime";
+import * as NodeServices from "@effect/platform-node/NodeServices";
+import * as Effect from "effect/Effect";
+import * as FileSystem from "effect/FileSystem";
+import * as JsonSchema from "effect/JsonSchema";
+import * as Layer from "effect/Layer";
+import * as Logger from "effect/Logger";
+import * as Path from "effect/Path";
+import * as Schema from "effect/Schema";
+import * as SchemaRepresentation from "effect/SchemaRepresentation";
+import { Command, Flag } from "effect/cli";
+import { FetchHttpClient, HttpClient, HttpClientResponse } from "effect/http";
+import { format } from "oxfmt";
+
+const V2_SCHEMA_RELEASE = "schema-v2.0.0-alpha.3";
+const V1_SCHEMA_RELEASE = "schema-v1.21.0";
+
+interface GenerateCommandError {
+  readonly _tag: "GenerateCommandError";
+  readonly message: string;
+}
+
+interface GeneratedPaths {
+  readonly generatedDir: string;
+  readonly upstreamSchemaPath: string;
+  readonly upstreamMetaPath: string;
+  readonly upstreamV1SchemaPath: string;
+  readonly upstreamV1MetaPath: string;
+  readonly schemaOutputPath: string;
+  readonly v1SchemaOutputPath: string;
+  readonly metaOutputPath: string;
+}
+
+const UpstreamJsonSchemaSchema = Schema.Struct({
+  $defs: Schema.Record(Schema.String, Schema.Json),
+});
+const MetaJsonSchema = Schema.Struct({
+  agentMethods: Schema.Record(Schema.String, Schema.String),
+  clientMethods: Schema.Record(Schema.String, Schema.String),
+  version: Schema.Union([Schema.Number, Schema.String]),
+});
+const encodeAgentMethods = Schema.encodeEffect(
+  Schema.fromJsonString(MetaJsonSchema.fields.agentMethods),
+);
+const encodeClientMethods = Schema.encodeEffect(
+  Schema.fromJsonString(MetaJsonSchema.fields.clientMethods),
+);
+const encodeVersion = Schema.encodeEffect(Schema.fromJsonString(MetaJsonSchema.fields.version));
+
+const decodeUpstreamSchema = Schema.decodeEffect(Schema.fromJsonString(UpstreamJsonSchemaSchema));
+const decodeMetaJson = Schema.decodeEffect(Schema.fromJsonString(MetaJsonSchema));
+
+const getGeneratedPaths = Effect.fn("getGeneratedPaths")(function* (generatedDir: string) {
+  const path = yield* Path.Path;
+  return {
+    generatedDir,
+    upstreamSchemaPath: path.join(generatedDir, "upstream-schema.json"),
+    upstreamMetaPath: path.join(generatedDir, "upstream-meta.json"),
+    upstreamV1SchemaPath: path.join(generatedDir, "upstream-schema-v1.json"),
+    upstreamV1MetaPath: path.join(generatedDir, "upstream-meta-v1.json"),
+    schemaOutputPath: path.join(generatedDir, "schema.gen.ts"),
+    v1SchemaOutputPath: path.join(generatedDir, "schema-v1.gen.ts"),
+    metaOutputPath: path.join(generatedDir, "meta.gen.ts"),
+  } satisfies GeneratedPaths;
+});
+
+const ensureGeneratedDir = Effect.fn("ensureGeneratedDir")(function* (generatedDir: string) {
+  const fs = yield* FileSystem.FileSystem;
+
+  yield* fs.makeDirectory(generatedDir, { recursive: true });
+});
+
+const downloadFile = Effect.fn("downloadFile")(function* (url: string, outputPath: string) {
+  const fs = yield* FileSystem.FileSystem;
+  const path = yield* Path.Path;
+
+  yield* fs.makeDirectory(path.dirname(outputPath), { recursive: true });
+
+  const text = yield* HttpClient.get(url).pipe(
+    Effect.flatMap(HttpClientResponse.filterStatusOk),
+    Effect.flatMap((response) => response.text),
+  );
+
+  yield* fs.writeFileString(outputPath, text);
+});
+
+const downloadSchemas = Effect.fn("downloadSchemas")(function* (
+  tag: string,
+  paths: { readonly schema: string; readonly meta: string },
+) {
+  const fs = yield* FileSystem.FileSystem;
+  const baseUrl = `https://github.com/agentclientprotocol/agent-client-protocol/releases/download/${tag}`;
+
+  yield* Effect.all(
+    [
+      downloadFile(`${baseUrl}/schema.unstable.json`, paths.schema),
+      downloadFile(`${baseUrl}/meta.unstable.json`, paths.meta),
+    ],
+    { concurrency: 2 },
+  );
+
+  yield* Effect.addFinalizer(() =>
+    Effect.all([fs.remove(paths.schema), fs.remove(paths.meta)]).pipe(
+      Effect.ignoreCause({ log: true }),
+    ),
+  );
+});
+
+const readFileString = Effect.fn("readJsonFile")(function* (filePath: string) {
+  const fs = yield* FileSystem.FileSystem;
+  return yield* fs.readFileString(filePath);
+});
+
+const writeGeneratedFiles = Effect.fn("writeGeneratedFiles")(function* (
+  { metaOutputPath, schemaOutputPath, v1SchemaOutputPath }: GeneratedPaths,
+  schemaOutput: string,
+  v1SchemaOutput: string,
+  metaOutput: string,
+) {
+  const fs = yield* FileSystem.FileSystem;
+
+  yield* fs.writeFileString(schemaOutputPath, schemaOutput);
+  yield* fs.writeFileString(v1SchemaOutputPath, v1SchemaOutput);
+  yield* fs.writeFileString(metaOutputPath, metaOutput);
+});
+
+function isJsonArray(value: Schema.Json | undefined): value is ReadonlyArray<Schema.Json> {
+  return Array.isArray(value);
+}
+
+function isJsonObject(
+  value: Schema.Json | undefined,
+): value is { readonly [key: string]: Schema.Json } {
+  return value !== null && typeof value === "object" && !isJsonArray(value);
+}
+
+// These keywords map names to subschemas. The map itself is not a schema, so a
+// property named `anyOf` (TitledMultiSelectItems) must not be read as a keyword.
+const subschemaMapKeywords = new Set([
+  "properties",
+  "patternProperties",
+  "$defs",
+  "dependentSchemas",
+]);
+
+function mapSubschemas(
+  schema: { readonly [key: string]: Schema.Json },
+  f: (child: Schema.Json) => Schema.Json,
+): Record<string, Schema.Json> {
+  return Object.fromEntries(
+    Object.entries(schema).map(([key, child]) => [
+      key,
+      subschemaMapKeywords.has(key) && isJsonObject(child)
+        ? Object.fromEntries(Object.entries(child).map(([name, subschema]) => [name, f(subschema)]))
+        : f(child),
+    ]),
+  );
+}
+
+const defaultOnErrorKeyword = "x-deserialize-default-on-error";
+const skipInvalidItemsKeyword = "x-deserialize-skip-invalid-items";
+
+function normalizeSchemaKeywords(value: Schema.Json): Schema.Json {
+  if (isJsonArray(value)) {
+    return value.map(normalizeSchemaKeywords);
+  }
+  if (value === null || typeof value !== "object") {
+    return value;
+  }
+
+  const normalizedObject = mapSubschemas(value, normalizeSchemaKeywords);
+  // ACP's forward-compatible variants exclude known discriminator values.
+  // The Effect generator does not support `not`; express this exact exclusion
+  // as a string pattern while preserving validation of the known variants.
+  if (normalizedObject.not !== undefined) {
+    const exclusion = normalizedObject.not;
+    if (
+      exclusion === null ||
+      typeof exclusion !== "object" ||
+      isJsonArray(exclusion) ||
+      !isJsonArray(exclusion.anyOf)
+    ) {
+      throw new Error("Unsupported ACP schema exclusion");
+    }
+    const excluded = exclusion.anyOf.map((variant) => {
+      if (variant === null || typeof variant !== "object" || isJsonArray(variant))
+        throw new Error("Invalid ACP excluded variant");
+      const properties = variant.properties;
+      if (properties === null || typeof properties !== "object" || isJsonArray(properties))
+        throw new Error("Invalid ACP excluded properties");
+      const entries = Object.entries(properties);
+      const entry = entries[0];
+      if (entries.length !== 1 || entry === undefined) throw new Error("Invalid ACP discriminator");
+      const [key, schema] = entry;
+      if (
+        schema === null ||
+        typeof schema !== "object" ||
+        isJsonArray(schema) ||
+        typeof schema.const !== "string"
+      )
+        throw new Error("Invalid ACP discriminator value");
+      return { key, value: schema.const };
+    });
+    const discriminator = excluded[0]?.key;
+    const properties = normalizedObject.properties;
+    if (
+      discriminator === undefined ||
+      excluded.some((entry) => entry.key !== discriminator) ||
+      properties === null ||
+      typeof properties !== "object" ||
+      isJsonArray(properties)
+    )
+      throw new Error("Unsupported ACP discriminator exclusion");
+    const property = properties[discriminator];
+    if (property === null || typeof property !== "object" || isJsonArray(property))
+      throw new Error("Missing ACP discriminator property");
+    normalizedObject.properties = {
+      ...properties,
+      [discriminator]: {
+        ...property,
+        pattern: `^(?!(?:${excluded.map(({ value }) => RegExp.escape(value)).join("|")})$)[\\s\\S]*$`,
+      },
+    };
+    delete normalizedObject.not;
+  }
+  if (normalizedObject.unevaluatedProperties !== undefined) {
+    if (normalizedObject.unevaluatedProperties !== true)
+      throw new Error("Unsupported ACP unevaluated properties constraint");
+    normalizedObject.additionalProperties = true;
+    delete normalizedObject.unevaluatedProperties;
+  }
+  if (isJsonArray(normalizedObject.oneOf)) {
+    const discriminator = normalizedObject.discriminator;
+    const propertyName =
+      discriminator !== null && typeof discriminator === "object" && !isJsonArray(discriminator)
+        ? discriminator.propertyName
+        : undefined;
+    const values = normalizedObject.oneOf.map((entry) => {
+      if (entry === null || typeof entry !== "object" || isJsonArray(entry)) return undefined;
+      if (typeof entry.const === "string") return entry.const;
+      const properties = entry.properties;
+      if (
+        typeof propertyName !== "string" ||
+        properties === null ||
+        typeof properties !== "object" ||
+        isJsonArray(properties)
+      )
+        return undefined;
+      const property = properties[propertyName];
+      return property !== null && typeof property === "object" && !isJsonArray(property)
+        ? property.const
+        : undefined;
+    });
+    if (
+      values.every((entry) => typeof entry === "string") &&
+      new Set(values).size === values.length
+    ) {
+      normalizedObject.anyOf = normalizedObject.oneOf;
+      delete normalizedObject.oneOf;
+    }
+  }
+  const typeValue = normalizedObject.type;
+
+  if (!isJsonArray(typeValue)) {
+    return normalizedObject;
+  }
+
+  const normalizedTypes = typeValue.filter((entry): entry is string => typeof entry === "string");
+  if (normalizedTypes.length !== typeValue.length || !normalizedTypes.includes("null")) {
+    return normalizedObject;
+  }
+
+  const nonNullTypes = normalizedTypes.filter((entry) => entry !== "null");
+  if (nonNullTypes.length !== 1) {
+    return normalizedObject;
+  }
+  const nonNullType = nonNullTypes[0]!;
+
+  const nextObject: Record<string, Schema.Json> = {};
+  for (const [key, child] of Object.entries(normalizedObject)) {
+    if (key !== "type" && key !== defaultOnErrorKeyword) {
+      nextObject[key] = child;
+    }
+  }
+
+  return {
+    // The fallback covers the whole field, `null` included.
+    ...(normalizedObject[defaultOnErrorKeyword] === undefined
+      ? {}
+      : { [defaultOnErrorKeyword]: normalizedObject[defaultOnErrorKeyword] }),
+    anyOf: [
+      {
+        ...nextObject,
+        type: nonNullType,
+      },
+      { type: "null" },
+    ],
+  };
+}
+
+const isAnnotationKeyword = (key: string): boolean =>
+  ["description", "title", "$comment", "default", "examples", "discriminator"].includes(key) ||
+  key.startsWith("x-");
+
+// Distribute object intersections over unions before handing schemas to Effect.
+// ACP uses sibling `properties`/`anyOf` and `allOf` references for elicitation scopes.
+function flattenCompositions(
+  value: Schema.Json,
+  definitions: Readonly<Record<string, Schema.Json>>,
+): Schema.Json {
+  if (isJsonArray(value)) return value.map((child) => flattenCompositions(child, definitions));
+  if (value === null || typeof value !== "object") return value;
+  const normalized = mapSubschemas(value, (child) => flattenCompositions(child, definitions));
+  const { allOf, anyOf, ...base } = normalized;
+  const merge = (left: Schema.Json, right: Schema.Json): Schema.Json => {
+    if (
+      left === null ||
+      typeof left !== "object" ||
+      isJsonArray(left) ||
+      right === null ||
+      typeof right !== "object" ||
+      isJsonArray(right)
+    )
+      throw new Error("Unsupported ACP schema intersection");
+    if (typeof right.$ref === "string") {
+      // Keep references when the sibling only describes the referenced schema.
+      // Inlining these repeats entire protocol unions in every request schema.
+      if (Object.keys(left).every(isAnnotationKeyword)) return { ...right, ...left };
+      const target = definitions[right.$ref.replace("#/$defs/", "")];
+      if (target === undefined) throw new Error(`Missing ACP definition ${right.$ref}`);
+      return merge(left, flattenCompositions(normalizeSchemaKeywords(target), definitions));
+    }
+    if (isJsonArray(left.anyOf)) return { anyOf: left.anyOf.map((branch) => merge(branch, right)) };
+    if (isJsonArray(right.anyOf))
+      return { anyOf: right.anyOf.map((branch) => merge(left, branch)) };
+    for (const key of Object.keys(left)) {
+      if (key === "properties" || key === "required" || isAnnotationKeyword(key)) continue;
+      if (right[key] !== undefined && JSON.stringify(left[key]) !== JSON.stringify(right[key])) {
+        throw new Error(`Unsupported conflicting ACP schema constraint: ${key}`);
+      }
+    }
+    const result = { ...left, ...right };
+    if (
+      left.properties &&
+      right.properties &&
+      typeof left.properties === "object" &&
+      !isJsonArray(left.properties) &&
+      typeof right.properties === "object" &&
+      !isJsonArray(right.properties)
+    ) {
+      for (const key of Object.keys(left.properties)) {
+        if (
+          right.properties[key] !== undefined &&
+          JSON.stringify(left.properties[key]) !== JSON.stringify(right.properties[key])
+        ) {
+          throw new Error(`Unsupported overlapping ACP schema property: ${key}`);
+        }
+      }
+      result.properties = { ...left.properties, ...right.properties };
+    }
+    if (isJsonArray(left.required) || isJsonArray(right.required)) {
+      result.required = [
+        ...new Set([
+          ...(isJsonArray(left.required) ? left.required : []),
+          ...(isJsonArray(right.required) ? right.required : []),
+        ]),
+      ];
+    }
+    return result;
+  };
+  let combined: Schema.Json = base;
+  if (isJsonArray(allOf)) for (const part of allOf) combined = merge(combined, part);
+  if (isJsonArray(anyOf) && !isJsonArray(allOf) && Object.keys(base).every(isAnnotationKeyword)) {
+    return { ...base, anyOf };
+  }
+  return isJsonArray(anyOf) ? merge(combined, { anyOf }) : combined;
+}
+
+// Effect's importer reads an omitted `additionalProperties` as open and keeps
+// unknown keys. The committed schemas strip them, so state that explicitly.
+function closeObjects(value: Schema.Json): Schema.Json {
+  if (isJsonArray(value)) return value.map(closeObjects);
+  if (value === null || typeof value !== "object") return value;
+  const closed = mapSubschemas(value, closeObjects);
+  if (closed.type === "object" && closed.additionalProperties === undefined) {
+    closed.additionalProperties = false;
+  }
+  return closed;
+}
+
+// Effect's importer keeps only standard annotations, so the `x-deserialize-*`
+// rules travel to the representation in `contentSchema`, which ACP never sets.
+const deserializeRuleKey = "x-acp-deserialize";
+
+interface DeserializeRule {
+  // "empty" is a required list's fallback; an optional field is dropped instead.
+  readonly defaultOnError?: "drop" | "empty";
+  readonly skipInvalidItems?: true;
+}
+
+function carryDeserializeRules(value: Schema.Json): Schema.Json {
+  if (isJsonArray(value)) return value.map(carryDeserializeRules);
+  if (!isJsonObject(value)) return value;
+  const {
+    [defaultOnErrorKeyword]: defaultOnError,
+    [skipInvalidItemsKeyword]: skipInvalidItems,
+    ...schema
+  } = mapSubschemas(value, carryDeserializeRules);
+  const required = isJsonArray(schema.required) ? schema.required : [];
+  if (isJsonObject(schema.properties)) {
+    schema.properties = Object.fromEntries(
+      Object.entries(schema.properties).map(([name, property]) => [
+        name,
+        required.includes(name) ? fallBackToEmptyList(property, name) : property,
+      ]),
+    );
+  }
+  if (defaultOnError !== true && skipInvalidItems !== true) return schema;
+  if (schema.contentSchema !== undefined) throw new Error("Unsupported ACP contentSchema");
+  return {
+    ...schema,
+    contentSchema: {
+      [deserializeRuleKey]: {
+        ...(defaultOnError === true ? { defaultOnError: "drop" } : {}),
+        ...(skipInvalidItems === true ? { skipInvalidItems: true } : {}),
+      },
+    },
+  };
+}
+
+function fallBackToEmptyList(property: Schema.Json, name: string): Schema.Json {
+  if (!isJsonObject(property)) return property;
+  const rule = deserializeRuleOf(property.contentSchema);
+  if (rule?.defaultOnError === undefined) return property;
+  if (property.type !== "array") {
+    throw new Error(`Unsupported required default-on-error ACP property: ${name}`);
+  }
+  return {
+    ...property,
+    contentSchema: { [deserializeRuleKey]: { ...rule, defaultOnError: "empty" } },
+  };
+}
+
+function deserializeRuleOf(contentSchema: unknown): DeserializeRule | undefined {
+  return isJsonObject(contentSchema as Schema.Json)
+    ? ((contentSchema as Record<string, unknown>)[deserializeRuleKey] as DeserializeRule)
+    : undefined;
+}
+
+const deserializeImport = 'import * as Deserialize from "../_internal/deserialize.ts";';
+
+const deserializeDeclaration = (
+  typeParameter: SchemaRepresentation.Representation,
+  toCode: (inner: SchemaRepresentation.Code) => SchemaRepresentation.Code,
+  rest?: Pick<SchemaRepresentation.Declaration, "annotations" | "checks">,
+): SchemaRepresentation.Declaration => ({
+  _tag: "Declaration",
+  typeParameters: [typeParameter],
+  checks: rest?.checks ?? [],
+  annotations: {
+    ...rest?.annotations,
+    toCode: ({
+      typeParameters: [inner],
+    }: {
+      readonly typeParameters: ReadonlyArray<SchemaRepresentation.Code>;
+    }) => ({
+      ...toCode(inner!),
+      importDeclarations: [deserializeImport],
+    }),
+  },
+});
+
+// Wraps each carried node in a declaration that renders the matching
+// `Deserialize` combinator around the node's own generated code.
+function applyDeserializeRules(
+  representation: SchemaRepresentation.Representation,
+): SchemaRepresentation.Representation {
+  const node = mapRepresentationChildren(representation, applyDeserializeRules);
+  if (node._tag === "Reference") return node;
+  const { contentSchema, ...annotations } = node.annotations ?? {};
+  const rule = deserializeRuleOf(contentSchema);
+  if (rule === undefined) return node;
+  let wrapped: SchemaRepresentation.Representation = {
+    ...node,
+    annotations: Object.keys(annotations).length === 0 ? undefined : annotations,
+  } as SchemaRepresentation.Representation;
+  if (rule.skipInvalidItems === true) {
+    if (wrapped._tag !== "Arrays" || wrapped.elements.length !== 0 || wrapped.rest.length !== 1) {
+      throw new Error("Unsupported skip-invalid-items ACP schema");
+    }
+    wrapped = deserializeDeclaration(
+      wrapped.rest[0]!,
+      (item) => ({
+        runtime: `Deserialize.skipInvalidItems(${item.runtime})`,
+        Type: `ReadonlyArray<${item.Type}>`,
+      }),
+      { annotations: wrapped.annotations, checks: wrapped.checks },
+    );
+  }
+  if (rule.defaultOnError !== undefined) {
+    const fallback = rule.defaultOnError === "empty" ? ", () => []" : "";
+    wrapped = deserializeDeclaration(wrapped, (inner) => ({
+      runtime: `Deserialize.defaultOnError(${inner.runtime}${fallback})`,
+      Type: inner.Type,
+    }));
+  }
+  return wrapped;
+}
+
+function mapRepresentationChildren(
+  representation: SchemaRepresentation.Representation,
+  f: (child: SchemaRepresentation.Representation) => SchemaRepresentation.Representation,
+): SchemaRepresentation.Representation {
+  switch (representation._tag) {
+    case "Declaration":
+      return { ...representation, typeParameters: representation.typeParameters.map(f) };
+    case "Suspend":
+      return { ...representation, thunk: f(representation.thunk) };
+    case "TemplateLiteral":
+      return { ...representation, parts: representation.parts.map(f) };
+    case "Arrays":
+      return {
+        ...representation,
+        elements: representation.elements.map((element) => ({ ...element, type: f(element.type) })),
+        rest: representation.rest.map(f),
+      };
+    case "Objects":
+      return {
+        ...representation,
+        propertySignatures: representation.propertySignatures.map((property) => ({
+          ...property,
+          type: f(property.type),
+        })),
+        indexSignatures: representation.indexSignatures.map((signature) => ({
+          parameter: f(signature.parameter),
+          type: f(signature.type),
+        })),
+      };
+    case "Union":
+      return { ...representation, types: representation.types.map(f) };
+    default:
+      return representation;
+  }
+}
+
+// The parts of @effect/openapi-generator's JsonSchemaGenerator that ACP's
+// schemas use, so the representation can be rewritten before code generation.
+function generateSchemaEntries(definitions: Readonly<Record<string, Schema.Json>>): {
+  readonly entries: ReadonlyMap<string, string>;
+  readonly imports: ReadonlyArray<string>;
+} {
+  const toJsonSchema = (schema: Schema.Json) =>
+    JsonSchema.fromSchemaOpenApi3_1(schema as never).schema;
+  const names = Object.keys(definitions).toSorted((left, right) => left.localeCompare(right));
+  const roots = SchemaRepresentation.fromJsonSchemaMultiDocument(
+    {
+      dialect: "draft-2020-12",
+      schemas: names.map((name) => toJsonSchema(definitions[name]!)),
+      definitions: Object.fromEntries(
+        Object.entries(definitions).map(([name, schema]) => [name, toJsonSchema(schema)]),
+      ),
+    } as never,
+    { patterns: "apply" },
+  );
+  const document = SchemaRepresentation.toRepresentations(roots.map((root) => root.ast) as never);
+  const { codes, references, artifacts } = SchemaRepresentation.toCodeDocument({
+    representations: document.representations.map(applyDeserializeRules) as never,
+    references: Object.fromEntries(
+      Object.entries(document.references).map(([name, representation]) => [
+        name,
+        applyDeserializeRules(representation),
+      ]),
+    ),
+  });
+  const entries = new Map<string, string>();
+  const add = (name: string, code: SchemaRepresentation.Code) => {
+    if (!entries.has(name)) {
+      entries.set(
+        name,
+        `export type ${name} = ${code.Type}\nexport const ${name} = ${code.runtime}`,
+      );
+    }
+  };
+  for (const { $ref, code } of references.nonRecursives) add($ref, code);
+  for (const [name, code] of Object.entries(references.recursives)) add(name, code);
+  codes.forEach((code, index) => add(names[index]!, code));
+  return {
+    entries,
+    imports: artifacts.flatMap((artifact) =>
+      artifact._tag === "Import" ? [artifact.importDeclaration] : [],
+    ),
+  };
+}
+
+const portedHeader = (file: string) =>
+  `// Ported from T3 Code (MIT), packages/effect-acp/src/_generated/${file} @ ab3a3cd1.`;
+
+function generateSchemaOutput(
+  upstreamSchema: { readonly $defs: Readonly<Record<string, Schema.Json>> },
+  release: string,
+  file: string,
+): { readonly output: string; readonly count: number } {
+  const normalizedDefinitions = Object.fromEntries(
+    Object.entries(upstreamSchema.$defs).map(([name, schema]) => [
+      name,
+      carryDeserializeRules(
+        closeObjects(flattenCompositions(normalizeSchemaKeywords(schema), upstreamSchema.$defs)),
+      ),
+    ]),
+  );
+  const { entries, imports } = generateSchemaEntries(normalizedDefinitions);
+
+  return {
+    output: [
+      portedHeader(file),
+      "// This file is generated by the effect-acp package. Do not edit manually.",
+      `// Current ACP schema release: ${release}`,
+      "",
+      'import * as Schema from "effect/Schema";',
+      ...imports,
+      "",
+      [...entries.values()].join("\n\n"),
+      "",
+    ].join("\n"),
+    count: entries.size,
+  };
+}
+
+// T3 ran `vp fmt` over the written files; oxfmt is the formatter under it, and
+// its defaults give the committed files their shape.
+const formatGenerated = Effect.fn("formatGenerated")(function* (fileName: string, source: string) {
+  const { code, errors } = yield* Effect.tryPromise({
+    try: () => format(fileName, source),
+    catch: (cause): GenerateCommandError => ({
+      _tag: "GenerateCommandError",
+      message: `oxfmt failed on ${fileName}: ${String(cause)}`,
+    }),
+  });
+  if (errors.length > 0) {
+    return yield* Effect.fail<GenerateCommandError>({
+      _tag: "GenerateCommandError",
+      message: `oxfmt failed on ${fileName}: ${errors.map((error) => error.message).join("; ")}`,
+    });
+  }
+  return code;
+});
+
+export const generateSchemas = Effect.fn("generateSchemas")(function* (options: {
+  readonly skipDownload: boolean;
+  readonly generatedDir: string;
+}) {
+  const { skipDownload, generatedDir } = options;
+  const paths = yield* getGeneratedPaths(generatedDir);
+  const { upstreamMetaPath, upstreamSchemaPath, upstreamV1MetaPath, upstreamV1SchemaPath } = paths;
+
+  yield* ensureGeneratedDir(generatedDir);
+
+  if (!skipDownload) {
+    yield* Effect.log(
+      `Downloading ACP schema assets for ${V2_SCHEMA_RELEASE} and ${V1_SCHEMA_RELEASE}`,
+    );
+    yield* Effect.all(
+      [
+        downloadSchemas(V2_SCHEMA_RELEASE, {
+          schema: upstreamSchemaPath,
+          meta: upstreamMetaPath,
+        }),
+        downloadSchemas(V1_SCHEMA_RELEASE, {
+          schema: upstreamV1SchemaPath,
+          meta: upstreamV1MetaPath,
+        }),
+      ],
+      { concurrency: 2 },
+    );
+  }
+
+  const upstreamSchema = yield* readFileString(upstreamSchemaPath).pipe(
+    Effect.flatMap(decodeUpstreamSchema),
+  );
+  const upstreamV1Schema = yield* readFileString(upstreamV1SchemaPath).pipe(
+    Effect.flatMap(decodeUpstreamSchema),
+  );
+  const upstreamMeta = yield* readFileString(upstreamMetaPath).pipe(Effect.flatMap(decodeMetaJson));
+  const v2Schema = generateSchemaOutput(upstreamSchema, V2_SCHEMA_RELEASE, "schema.gen.ts");
+  const v1Schema = generateSchemaOutput(upstreamV1Schema, V1_SCHEMA_RELEASE, "schema-v1.gen.ts");
+
+  const prelude = [
+    portedHeader("meta.gen.ts"),
+    `// This file is generated by the effect-acp package. Do not edit manually.`,
+    `// Current ACP schema release: ${V2_SCHEMA_RELEASE}`,
+    "",
+  ];
+
+  const metaOutput = [
+    ...prelude,
+    `export const AGENT_METHODS = ${yield* encodeAgentMethods(upstreamMeta.agentMethods)} as const;`,
+    "",
+    `export const CLIENT_METHODS = ${yield* encodeClientMethods(upstreamMeta.clientMethods)} as const;`,
+    "",
+    `export const PROTOCOL_VERSION = ${yield* encodeVersion(upstreamMeta.version)} as const;`,
+    "",
+  ].join("\n");
+
+  const [schemaOutput, v1SchemaOutput, formattedMetaOutput] = yield* Effect.all([
+    formatGenerated("schema.gen.ts", v2Schema.output),
+    formatGenerated("schema-v1.gen.ts", v1Schema.output),
+    formatGenerated("meta.gen.ts", metaOutput),
+  ]);
+  yield* writeGeneratedFiles(paths, schemaOutput, v1SchemaOutput, formattedMetaOutput);
+  yield* Effect.log(
+    `Generated ${v2Schema.count} ACP v2 schemas and ${v1Schema.count} ACP v1 compatibility schemas`,
+  );
+});
+
+const generateCommand = Command.make(
+  "generate",
+  {
+    skipDownload: Flag.Boolean("skip-download").pipe(Flag.withDefault(false)),
+  },
+  ({ skipDownload }) =>
+    Effect.gen(function* () {
+      const path = yield* Path.Path;
+      yield* generateSchemas({
+        skipDownload,
+        generatedDir: path.join(import.meta.dirname, "..", "src", "_generated"),
+      });
+    }),
+).pipe(Command.withDescription("Generate Effect ACP schemas from the pinned ACP release assets."));
+
+const layerRuntime = Layer.mergeAll(
+  Logger.layer([Logger.consolePretty()]),
+  NodeServices.layer,
+  FetchHttpClient.layer,
+);
+
+if (import.meta.main) {
+  Command.run(generateCommand, { version: "0.0.0" }).pipe(
+    Effect.scoped,
+    Effect.provide(layerRuntime),
+    NodeRuntime.runMain,
+  );
+}

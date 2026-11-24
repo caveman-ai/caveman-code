@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "slack": {
+      "auth": "oauth",
+      "unavailable": "Slack signs in only through a registered Slack app; Caveman's Slack app client id is not set yet."
+    }
+  }
+}

@@ -1,0 +1,8 @@
+# The team's actions (docs/computer-config.md "Actions").
+
+# This chat's checkout, uncommitted edits included, as Caveman Code Nightly beside the installed app
+# (scripts/try-app.sh). The diff icon puts it on the Changes bar too.
+[nightly]
+name = "Try in Nightly"
+command = "bash scripts/try-app.sh"
+icon = "diff"

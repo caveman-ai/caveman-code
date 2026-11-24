@@ -1,0 +1,16 @@
+{
+  "requestId": "b5947044c4b78efa9552a7c89b306d95",
+  "results": [
+    {
+      "title": "undici Agent connect options",
+      "url": "https://undici.nodejs.org/#/docs/api/Agent",
+      "publishedDate": "2026-07-14T00:00:00.000Z",
+      "author": null,
+      "id": "https://undici.nodejs.org/#/docs/api/Agent",
+      "highlights": ["connect: ConnectOptions | Function — options for the connector, such as lookup."],
+      "highlightScores": [0.62]
+    }
+  ],
+  "costDollars": { "total": 0.008, "search": { "neural": 0.007 }, "contents": { "highlights": 0.001 } },
+  "searchTime": 412.5
+}

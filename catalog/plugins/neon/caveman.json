@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "neon": {
+      "auth": "oauth"
+    }
+  }
+}

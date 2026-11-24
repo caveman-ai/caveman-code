@@ -1,0 +1,15 @@
+{
+  "name": "hugging-face",
+  "version": "1.0.0",
+  "description": "Search the Hugging Face Hub for models, datasets, Spaces and papers, and check licence, size and usage before you build on one.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://huggingface.co/",
+  "keywords": [
+    "models",
+    "datasets",
+    "ml"
+  ]
+}

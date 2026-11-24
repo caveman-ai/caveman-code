@@ -1,0 +1,8 @@
+#!/bin/sh
+# Ported from T3 Code (MIT), apps/server/src/vcs/testing/GitVcsDriverCore.fixture.sh @ ab3a3cd1.
+printf "GCM_INTERACTIVE=%s\n" "${GCM_INTERACTIVE:-}" > "$T3_TEST_SSH_ASKPASS_LOG"
+printf "GIT_ASKPASS=%s\n" "${GIT_ASKPASS:-}" >> "$T3_TEST_SSH_ASKPASS_LOG"
+printf "GIT_TERMINAL_PROMPT=%s\n" "${GIT_TERMINAL_PROMPT:-}" >> "$T3_TEST_SSH_ASKPASS_LOG"
+printf "SSH_ASKPASS=%s\n" "${SSH_ASKPASS:-}" >> "$T3_TEST_SSH_ASKPASS_LOG"
+printf "SSH_ASKPASS_REQUIRE=%s\n" "${SSH_ASKPASS_REQUIRE:-}" >> "$T3_TEST_SSH_ASKPASS_LOG"
+exit 1

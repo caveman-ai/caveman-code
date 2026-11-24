@@ -1,0 +1,36 @@
+{
+  "name": "@caveman-app/model-check",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./src/index.ts"
+    },
+    "./effect": {
+      "types": "./src/effect.ts",
+      "import": "./src/effect.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts --dir ."
+  },
+  "peerDependencies": {
+    "effect": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "effect": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@caveman-app/shared": "workspace:*",
+    "@types/node": "catalog:",
+    "effect": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

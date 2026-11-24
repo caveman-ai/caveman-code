@@ -1,0 +1,35 @@
+{
+  "name": "asana",
+  "version": "1.0.0",
+  "description": "Turn a plan into Asana tasks and keep them current as the work in this repository moves.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://asana.com/",
+  "keywords": [
+    "tasks",
+    "projects"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Asana",
+    "shortDescription": "Tasks and projects",
+    "longDescription": "Turn a plan into Asana tasks and keep them current as the work in this repository moves.",
+    "developerName": "Asana",
+    "category": "Productivity",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://asana.com/",
+    "privacyPolicyURL": "https://asana.com/terms/privacy-statement",
+    "termsOfServiceURL": "https://asana.com/terms/terms-of-service",
+    "defaultPrompt": [
+      "Create Asana tasks for this plan"
+    ],
+    "brandColor": "#F06A6A",
+    "logo": "./assets/logo.svg"
+  }
+}

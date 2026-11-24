@@ -1,0 +1,18 @@
+{
+  "name": "caveman-code-wallpaper-images-v1",
+  "main": "edge.mjs",
+  "compatibility_date": "2026-11-15",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "download.caveman.so/code/wallpapers/*",
+      "zone_name": "caveman.so"
+    }
+  ],
+  "r2_buckets": [
+    {
+      "binding": "WALLPAPERS",
+      "bucket_name": "caveman-downloads"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: On the last day of each month, review what shipped, what is stuck and what CI kept failing on
+
+on:
+  schedule: { at: "17:00", timezone: Europe/Amsterdam, monthdays: [last] }   # your time zone; last is the 28th to the 31st
+
+budget: $1
+
+steps:
+  review:
+    prompt: >-
+      Review this repository's month, from the first of the month until now: pull requests merged
+      (grouped by area), pull requests and issues open for more than two weeks with no activity,
+      and checks that failed more than once on the default branch, with the likely cause of each.
+      End with the three things most worth doing next month.
+    model: base

@@ -1,0 +1,38 @@
+{
+  "name": "cloudflare",
+  "version": "1.0.0",
+  "description": "Reach the whole Cloudflare API: inspect Workers, DNS, R2 and other resources, and make changes you approve.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://www.cloudflare.com/",
+  "keywords": [
+    "workers",
+    "dns",
+    "cdn",
+    "r2"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./.mcp.json",
+  "interface": {
+    "displayName": "Cloudflare",
+    "shortDescription": "Workers, DNS and the Cloudflare API",
+    "longDescription": "Reach the whole Cloudflare API: inspect Workers, DNS, R2 and other resources, and make changes you approve.",
+    "developerName": "Cloudflare",
+    "category": "Developer tools",
+    "capabilities": [
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://www.cloudflare.com/",
+    "privacyPolicyURL": "https://www.cloudflare.com/privacypolicy/",
+    "termsOfServiceURL": "https://www.cloudflare.com/website-terms/",
+    "defaultPrompt": [
+      "List my Workers and their routes",
+      "Why is this hostname not resolving?"
+    ],
+    "brandColor": "#F38020",
+    "logo": "./assets/logo.svg"
+  }
+}

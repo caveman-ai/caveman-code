@@ -1,0 +1,15 @@
+{
+  "name": "vercel",
+  "version": "1.0.0",
+  "description": "Check Vercel deployments for this repository, read build and runtime logs, and fix what broke.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://vercel.com/",
+  "keywords": [
+    "deploy",
+    "hosting",
+    "next.js"
+  ]
+}

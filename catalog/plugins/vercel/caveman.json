@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "vercel": {
+      "auth": "oauth",
+      "note": "Vercel lets only clients it has reviewed connect; sign-in may be refused until Caveman Code is approved."
+    }
+  }
+}

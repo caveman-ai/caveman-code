@@ -1,0 +1,16 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+description: Answer questions people ask @caveman in issue and pull request comments
+
+on:
+  github: { event: issue_comment.created, mention: true }
+
+budget: $1
+
+steps:
+  answer:
+    agent: answerer
+    model: base
+
+outputs:
+  github.comment: answer.summary

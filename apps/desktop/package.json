@@ -1,0 +1,44 @@
+{
+  "name": "@caveman-app/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "description": "Caveman Code for macOS and Windows",
+  "author": "Caveman",
+  "productName": "Caveman Code",
+  "main": "dist-electron/main.cjs",
+  "exports": {
+    "./bridge": {
+      "types": "./src/bridge.ts"
+    }
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "dev": "node scripts/dev.mjs",
+    "smoke-test": "node scripts/smoke-test.mjs",
+    "profile:startup": "node scripts/profile-startup.mjs",
+    "ademark": "node scripts/ademark/run.ts",
+    "ademark:tokens": "node scripts/ademark/tokens-check.ts",
+    "package": "node scripts/package.mjs",
+    "icon": "python3 scripts/make-icon.py",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@caveman-app/session-protocol": "workspace:*",
+    "@electron/fuses": "1.8.0",
+    "@sentry/cli": "catalog:",
+    "@sentry/core": "catalog:",
+    "@sentry/electron": "catalog:",
+    "@types/node": "catalog:",
+    "@types/ws": "catalog:",
+    "electron": "44.10.1",
+    "electron-builder": "26.15.6",
+    "electron-updater": "6.8.9",
+    "esbuild": "0.28.2",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "ws": "catalog:"
+  }
+}

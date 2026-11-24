@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "figma": {
+      "auth": "oauth",
+      "note": "Figma lets only clients in its MCP catalog connect; sign-in may be refused until Caveman Code is listed."
+    }
+  }
+}

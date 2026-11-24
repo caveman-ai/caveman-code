@@ -1,0 +1,421 @@
+// ), packages/shared/src/threadPullRequests.ts @ ab3a3cd1; perf from 9c161462c9.
+import type {
+  OrchestrationV2AppThread,
+  RepositoryIdentity,
+  SourceControlProviderKind,
+  ThreadLinkedPullRequest,
+  ThreadPullRequestKey,
+  ThreadPullRequestLink,
+} from "@caveman-app/protocol";
+
+import { pullRequestHostOf } from "@caveman-app/protocol";
+import { parseChangeRequestUrl } from "./changeRequestUrl.ts";
+import { canonicalRepositoryKey, sourceControlRepositorySelector } from "./sourceControl.ts";
+
+type ThreadPullRequestKeySource = ThreadPullRequestKey & {
+  readonly authority?: string;
+  readonly url?: string;
+};
+
+/** Normalize stored links, recovering Forgejo HTTP ports from old links' URLs. */
+export function normalizeThreadPullRequestKey(
+  key: ThreadPullRequestKeySource,
+): ThreadPullRequestKey {
+  const parsed = key.url === undefined ? null : parseChangeRequestUrl(key.url);
+  const authority =
+    key.authority ??
+    (parsed?.repository === key.repository.trim().toLowerCase() && parsed.number === key.number
+      ? parsed.authority
+      : undefined);
+  const canonical = canonicalRepositoryKey(
+    `${(authority ?? key.host).trim().toLowerCase()}/${key.repository.trim().toLowerCase()}`,
+  );
+  const separator = canonical.indexOf("/");
+  return {
+    host: canonical.slice(0, separator),
+    repository: canonical.slice(separator + 1),
+    number: key.number,
+  };
+}
+
+/** Legacy Azure selectors omit the organization and project; recover those from the PR URL. */
+export function legacyThreadPullRequestKey(
+  linked: Pick<ThreadLinkedPullRequest, "repository" | "number" | "url">,
+  fallbackHost?: string,
+): ThreadPullRequestKey {
+  const parsed = parseChangeRequestUrl(linked.url);
+  if (parsed !== null && parsed.number === linked.number) {
+    const canonical = canonicalRepositoryKey(`${parsed.host}/${parsed.repository}`);
+    if (parsed.authority !== undefined || canonical.startsWith("dev.azure.com/")) {
+      return normalizeThreadPullRequestKey(parsed);
+    }
+  }
+  let host = fallbackHost;
+  if (host === undefined) {
+    try {
+      host = new URL(linked.url).hostname;
+    } catch {
+      host = "unknown";
+    }
+  }
+  return {
+    host: host.trim().toLowerCase() || "unknown",
+    repository: linked.repository.trim().toLowerCase(),
+    number: linked.number,
+  };
+}
+
+/** Identity comparison for links: host-level, case-insensitive on host and repository. */
+export function threadPullRequestKeysEqual(
+  left: ThreadPullRequestKeySource,
+  right: ThreadPullRequestKeySource,
+): boolean {
+  return threadPullRequestKeyOf(left) === threadPullRequestKeyOf(right);
+}
+
+// Clients re-derive chains for every link on each render, and normalizing parses the
+// link's URL. Links are immutable and keep their identity until they change.
+const normalizedKeys = new WeakMap<ThreadPullRequestKeySource, ThreadPullRequestKey>();
+
+function normalizedKeyOf(key: ThreadPullRequestKeySource): ThreadPullRequestKey {
+  let normalized = normalizedKeys.get(key);
+  if (normalized === undefined) {
+    normalized = normalizeThreadPullRequestKey(key);
+    normalizedKeys.set(key, normalized);
+  }
+  return normalized;
+}
+
+export function threadPullRequestKeyOf(key: ThreadPullRequestKeySource): string {
+  const normalized = normalizedKeyOf(key);
+  return `${normalized.host}/${normalized.repository}#${normalized.number}`;
+}
+
+/** Links a user should see. Tombstoned stack members stay in the array only so the
+ * sync reactor does not re-add them. */
+export function visibleThreadPullRequests(
+  links: ReadonlyArray<ThreadPullRequestLink>,
+): ReadonlyArray<ThreadPullRequestLink> {
+  return links.filter((link) => link.source !== "stack-dismissed");
+}
+
+function isOpen(link: ThreadPullRequestLink): boolean {
+  // Unsynced links are treated as open: they were just linked, and hiding them
+  // behind a terminal PR until the first sync would make the link look lost.
+  return link.snapshot === null || link.snapshot.state === "open";
+}
+
+function latestUpdatedAt(link: ThreadPullRequestLink): number {
+  const value = link.snapshot?.updatedAt ?? link.linkedAt;
+  const ms = Date.parse(value);
+  return Number.isNaN(ms) ? 0 : ms;
+}
+
+/** The single pull request a one-slot surface (sidebar badge, tab icon, copy link) shows. */
+export type ThreadCurrentPullRequest =
+  | { readonly kind: "single"; readonly link: ThreadPullRequestLink }
+  | {
+      readonly kind: "stack";
+      readonly open: ReadonlyArray<ThreadPullRequestLink>;
+      /** Highest layer of the open set; the one "View PR" and copy-link target. */
+      readonly top: ThreadPullRequestLink;
+    };
+
+function layersFromTop(chain: ThreadPullRequestChain): Array<ThreadPullRequestLink> {
+  // `.sort()` on a fresh array, not `.toSorted()`: this runs on Hermes, which has no ES2023
+  // array methods, and a TypeError here is fatal on every mobile launch that renders a stack.
+  return chain.layers
+    .map((link, index) => ({ link, index, depth: chain.depths[index]! }))
+    .sort((left, right) => right.depth - left.depth || right.index - left.index)
+    .map((entry) => entry.link);
+}
+
+export function resolveThreadCurrentPullRequest(
+  links: ReadonlyArray<ThreadPullRequestLink>,
+): ThreadCurrentPullRequest | null {
+  const visible = visibleThreadPullRequests(links);
+  if (visible.length === 0) return null;
+  const open = visible.filter(isOpen);
+  if (open.length === 1) return { kind: "single", link: open[0]! };
+  const chains = resolveThreadPullRequestChains(visible);
+  if (open.length > 1) {
+    const openChains = chains
+      .map((chain) => layersFromTop(chain).filter(isOpen))
+      .filter((layers) => layers.length > 0)
+      .sort(
+        (left, right) =>
+          Math.max(...right.map((link) => Date.parse(link.linkedAt))) -
+          Math.max(...left.map((link) => Date.parse(link.linkedAt))),
+      );
+    const ordered = openChains.flat();
+    return { kind: "stack", open: ordered, top: ordered[0]! };
+  }
+  if (chains.length === 1) {
+    return { kind: "single", link: layersFromTop(chains[0]!)[0]! };
+  }
+  const terminal = [...visible].sort(
+    (left, right) => latestUpdatedAt(right) - latestUpdatedAt(left),
+  );
+  return { kind: "single", link: terminal[0]! };
+}
+
+/** The one link a legacy `linkedPullRequest` consumer should see, or null. */
+export function resolveThreadCurrentPullRequestLink(
+  links: ReadonlyArray<ThreadPullRequestLink>,
+): ThreadPullRequestLink | null {
+  const current = resolveThreadCurrentPullRequest(links);
+  if (current === null) return null;
+  return current.kind === "single" ? current.link : current.top;
+}
+
+/** Legacy clients can only route links belonging to the thread's own repository. */
+export function legacyLinkedPullRequestOf(
+  links: ReadonlyArray<ThreadPullRequestLink>,
+  projectId: ThreadLinkedPullRequest["projectId"],
+  identity: RepositoryIdentity | null | undefined,
+): ThreadLinkedPullRequest | null {
+  if (!identity) return null;
+  // A local-path remote has no host segment and no provider, so there is no host to match.
+  const host = pullRequestHostOf(identity, identity.provider as SourceControlProviderKind);
+  if (typeof host !== "string") return null;
+  const repository = sourceControlRepositorySelector(identity);
+  if (repository === null) return null;
+  const azureKey =
+    identity.provider === "azure-devops"
+      ? canonicalRepositoryKey(identity.canonicalKey.toLowerCase())
+      : null;
+  const link = resolveThreadCurrentPullRequestLink(
+    links.filter((link) => {
+      if (azureKey !== null) {
+        const key = legacyThreadPullRequestKey(link, link.host);
+        return canonicalRepositoryKey(`${key.host}/${key.repository}`) === azureKey;
+      }
+      const parsed = parseChangeRequestUrl(link.url);
+      if (parsed?.authority !== undefined) {
+        try {
+          const remote = new URL(identity.locator.remoteUrl);
+          if (remote.protocol === "http:" || remote.protocol === "https:") {
+            return (
+              parsed.authority === remote.host && parsed.repository === repository.toLowerCase()
+            );
+          }
+        } catch {
+          // SSH web ports are resolved by the provider's configured login.
+        }
+        return parsed.host === host && parsed.repository === repository.toLowerCase();
+      }
+      return (
+        link.host.toLowerCase() === host.toLowerCase() &&
+        link.repository.toLowerCase() === repository.toLowerCase()
+      );
+    }),
+  );
+  if (link === null) return null;
+  return {
+    projectId,
+    repository: azureKey === null ? link.repository : repository,
+    number: link.number,
+    url: link.url,
+  };
+}
+
+export interface ThreadPullRequestChain {
+  readonly kind: "native" | "derived";
+  /** Bottom to top. */
+  readonly layers: ReadonlyArray<ThreadPullRequestLink>;
+  /** One per layer: 0 for the base, parent's depth + 1 above it. Siblings share a depth. */
+  readonly depths: ReadonlyArray<number>;
+}
+
+/**
+ * Groups a thread's links into stacks. Native stacks come from the host and win; the rest
+ * are chained by matching one link's base branch to another's head branch within the same
+ * repository. A link that chains to nothing is a one-layer chain.
+ */
+export function resolveThreadPullRequestChains(
+  links: ReadonlyArray<ThreadPullRequestLink>,
+): ReadonlyArray<ThreadPullRequestChain> {
+  const visible = visibleThreadPullRequests(links);
+  const chains: Array<ThreadPullRequestChain> = [];
+  const placed = new Set<string>();
+
+  const nativeStacks = new Map<string, Array<ThreadPullRequestLink>>();
+  for (const link of visible) {
+    if (link.stack === null) continue;
+    const key = normalizedKeyOf(link);
+    const stackKey = `${key.host}/${key.repository}#stack:${link.stack.id}`;
+    const members = nativeStacks.get(stackKey) ?? [];
+    members.push(link);
+    nativeStacks.set(stackKey, members);
+  }
+  for (const members of nativeStacks.values()) {
+    // Saved snapshots can lag behind newer members of the same stack.
+    const memberNumbers = new Set(members.map((member) => member.number));
+    let layers = members[0]!.stack!.layers;
+    let coverage = layers.filter((layer) => memberNumbers.has(layer.number)).length;
+    for (const member of members.slice(1)) {
+      const candidate = member.stack!.layers;
+      const candidateCoverage = candidate.filter((layer) => memberNumbers.has(layer.number)).length;
+      if (
+        candidateCoverage > coverage ||
+        (candidateCoverage === coverage && candidate.length > layers.length)
+      ) {
+        layers = candidate;
+        coverage = candidateCoverage;
+      }
+    }
+    const order = new Map(layers.map((layer, index) => [layer.number, index]));
+    members.sort(
+      (left, right) =>
+        (order.get(left.number) ?? layers.length) - (order.get(right.number) ?? layers.length),
+    );
+    for (const member of members) placed.add(threadPullRequestKeyOf(member));
+    chains.push({ kind: "native", layers: members, depths: members.map((_, index) => index) });
+  }
+
+  const remaining = visible.filter((link) => !placed.has(threadPullRequestKeyOf(link)));
+  const branchKey = (link: ThreadPullRequestLink, branch: string) => {
+    const key = normalizedKeyOf(link);
+    return `${key.host}/${key.repository}:${branch}`;
+  };
+  // Reused head names cannot identify a parent unambiguously.
+  const byHead = new Map<string, ThreadPullRequestLink | null>();
+  for (const link of remaining) {
+    if (link.snapshot === null) continue;
+    const key = branchKey(link, link.snapshot.headBranch);
+    byHead.set(key, byHead.has(key) ? null : link);
+  }
+  const parentOf = (link: ThreadPullRequestLink) => {
+    if (link.snapshot === null) return undefined;
+    const parent = byHead.get(branchKey(link, link.snapshot.baseBranch));
+    return parent == null || parent === link ? undefined : parent;
+  };
+  const children = new Map<string, Array<ThreadPullRequestLink>>();
+  for (const link of remaining) {
+    const parent = parentOf(link);
+    if (parent === undefined) continue;
+    const key = threadPullRequestKeyOf(parent);
+    const siblings = children.get(key) ?? [];
+    siblings.push(link);
+    children.set(key, siblings);
+  }
+  for (const base of remaining) {
+    if (parentOf(base) !== undefined) continue;
+    const layers: Array<ThreadPullRequestLink> = [];
+    const depths: Array<number> = [];
+    const pending: Array<{ readonly link: ThreadPullRequestLink; readonly depth: number }> = [
+      { link: base, depth: 0 },
+    ];
+    for (let next = pending.pop(); next !== undefined; next = pending.pop()) {
+      const key = threadPullRequestKeyOf(next.link);
+      // Two links with one identity would otherwise share a child list and expand forever.
+      if (placed.has(key)) continue;
+      placed.add(key);
+      layers.push(next.link);
+      depths.push(next.depth);
+      const below = children.get(key) ?? [];
+      for (let index = below.length - 1; index >= 0; index -= 1) {
+        pending.push({ link: below[index]!, depth: next.depth + 1 });
+      }
+    }
+    if (layers.length > 0) chains.push({ kind: "derived", layers, depths });
+  }
+  // Cycles have no top. Keep those links visible without inventing a stack order.
+  for (const link of remaining) {
+    if (!placed.has(threadPullRequestKeyOf(link))) {
+      chains.push({ kind: "derived", layers: [link], depths: [0] });
+    }
+  }
+  return chains;
+}
+
+export type ThreadPullRequestBadge = {
+  readonly state: "open" | "closed" | "merged" | "draft";
+} & (
+  | {
+      readonly kind: "stack";
+      readonly layers: number;
+    }
+  | { readonly kind: "pull-request"; readonly others: number }
+);
+
+/** Aggregate visible links' state for both stacks and unrelated linked counts. */
+export function resolveThreadPullRequestBadge(
+  pullRequests: ReadonlyArray<ThreadPullRequestLink> | undefined,
+): ThreadPullRequestBadge | null {
+  const visible = visibleThreadPullRequests(pullRequests ?? []);
+  if (visible.length === 0) return null;
+  const states = visible.map((link) => link.snapshot?.state ?? "open");
+  const state = visible.every((link) => link.snapshot?.state === "open" && link.snapshot.isDraft)
+    ? "draft"
+    : states.includes("open")
+      ? "open"
+      : states.every((entry) => entry === "merged")
+        ? "merged"
+        : "closed";
+  const chains = resolveThreadPullRequestChains(visible);
+  if (visible.length > 1 && chains.length === 1) {
+    return { kind: "stack", layers: visible.length, state };
+  }
+  return { kind: "pull-request", others: visible.length - 1, state };
+}
+
+/** Search terms for visible PR links, the legacy projection, and the branch PR. */
+export function threadPullRequestSearchTerms(thread: {
+  readonly pullRequests?: ReadonlyArray<ThreadPullRequestLink> | undefined;
+  readonly linkedPullRequest?: ThreadLinkedPullRequest | null | undefined;
+  readonly branchPullRequest?: ThreadLinkedPullRequest | null | undefined;
+}): string[] {
+  const branch = thread.branchPullRequest;
+  const terms = branch
+    ? [`#${branch.number}`, `${branch.repository}#${branch.number}`, branch.url]
+    : [];
+  if (thread.pullRequests !== undefined && thread.pullRequests.length > 0) {
+    return terms.concat(
+      visibleThreadPullRequests(thread.pullRequests).flatMap((link) => [
+        `#${link.number}`,
+        `${link.repository}#${link.number}`,
+        link.url,
+        link.snapshot?.title ?? "",
+      ]),
+    );
+  }
+  const legacy = thread.linkedPullRequest;
+  return legacy
+    ? terms.concat([`#${legacy.number}`, `${legacy.repository}#${legacy.number}`, legacy.url])
+    : terms;
+}
+
+/** Older V2 event payloads stored one link; an explicit empty array means it was unlinked. */
+export function threadPullRequestsOf(thread: {
+  readonly pullRequests?: ReadonlyArray<ThreadPullRequestLink> | undefined;
+  readonly linkedPullRequest?: ThreadLinkedPullRequest | null | undefined;
+}): ReadonlyArray<ThreadPullRequestLink> {
+  if (thread.pullRequests !== undefined) return thread.pullRequests;
+  const linked = thread.linkedPullRequest;
+  return linked == null
+    ? []
+    : [
+        {
+          ...legacyThreadPullRequestKey(linked),
+          url: linked.url,
+          source: "manual",
+          linkedAt: "1970-01-01T00:00:00.000Z",
+          snapshot: null,
+          stack: null,
+        },
+      ];
+}
+
+/** Apply a single-link sync without copying unrelated PRs into the event history. */
+export function applyThreadPullRequestLinkUpdate(
+  thread: OrchestrationV2AppThread,
+  updated: ThreadPullRequestLink,
+): OrchestrationV2AppThread {
+  return {
+    ...thread,
+    pullRequests: threadPullRequestsOf(thread).map((link) =>
+      threadPullRequestKeysEqual(link, updated) ? updated : link,
+    ),
+  };
+}

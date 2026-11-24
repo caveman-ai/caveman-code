@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+host: cloud
+description: Every night, what changed in this repository today, posted to a Slack channel
+
+on:
+  schedule: { at: "22:00", timezone: Europe/Amsterdam }   # your time zone
+
+budget: $0.50
+
+steps:
+  log:
+    run: git log --since=24.hours --no-merges --pretty=format:'%h %an %s'
+  digest:
+    needs: [log]
+    prompt: >-
+      Write tonight's digest of this repository from the commit log in the data blocks:
+      what changed, grouped by area, then anything that looks risky or half done.
+      Five to ten short bullets in plain words, with no preamble. If the log is empty,
+      say that nothing changed today.
+    model: fast
+    computer: none
+
+outputs:
+  slack.message: { from: digest, channel: "#eng" }   # the channel to post in

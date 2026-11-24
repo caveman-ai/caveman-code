@@ -1,0 +1,15 @@
+{
+  "name": "playwright",
+  "version": "1.0.0",
+  "description": "Open the app in a real browser, click through it, read the page and console, and confirm a UI change works before you call it done.",
+  "author": {
+    "name": "Caveman",
+    "url": "https://caveman.so"
+  },
+  "homepage": "https://playwright.dev/",
+  "keywords": [
+    "browser",
+    "testing",
+    "e2e"
+  ]
+}

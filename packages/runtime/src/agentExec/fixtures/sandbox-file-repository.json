@@ -1,0 +1,1 @@
+{"session_id":"0193c0de-0000-7000-8000-000000005e55","api_url":"https://app.caveman.example","relay_url":"https://app.caveman.example","computer_id":"0193c0de-0000-7000-8000-00000000c0de","repository":{"owner":"acme","name":"web","base_branch":"main","git_url":"http://172.16.0.1:47483/git/v1/acme/web.git"}}

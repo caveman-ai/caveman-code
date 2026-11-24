@@ -1,0 +1,6 @@
+{
+  "title": "Month-end review",
+  "category": "Chores and reports",
+  "summary": "On the last day of each month, what shipped, what is stuck, and what CI kept failing on. Just for you.",
+  "scope": "me"
+}

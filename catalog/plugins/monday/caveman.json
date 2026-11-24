@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "monday": {
+      "auth": "oauth"
+    }
+  }
+}

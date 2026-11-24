@@ -1,0 +1,46 @@
+{
+  "name": "@caveman-app/engine-testing",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "Apache-2.0",
+  "exports": {
+    "./fakeCli": {
+      "types": "./src/fakeCli.ts",
+      "import": "./src/fakeCli.ts"
+    },
+    "./replayGate": {
+      "types": "./src/replayGate.ts",
+      "import": "./src/replayGate.ts"
+    },
+    "./replayTranscript": {
+      "types": "./src/replayTranscript.ts",
+      "import": "./src/replayTranscript.ts"
+    },
+    "./replayWorkspace": {
+      "types": "./src/replayWorkspace.ts",
+      "import": "./src/replayWorkspace.ts"
+    },
+    "./TestProviderHost": {
+      "types": "./src/TestProviderHost.ts",
+      "import": "./src/TestProviderHost.ts"
+    }
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run --config ../../vitest.config.ts --dir ."
+  },
+  "dependencies": {
+    "@caveman-app/engine-core": "workspace:*",
+    "@caveman-app/protocol": "workspace:*",
+    "@caveman-app/shared": "workspace:*",
+    "@effect/platform-node": "catalog:",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@effect/vitest": "catalog:",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

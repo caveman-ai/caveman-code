@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://caveman.so/schemas/automation-v1.json
+version: 1
+host: cloud
+description: Turn issues labelled caveman into reviewed draft pull requests
+
+on:
+  github: { event: issues.labeled, label: caveman }
+
+budget: $6
+
+steps:
+  triage:
+    agent: issue-triage           # decides implement or needs_info
+    model: fast
+  implement:
+    if: { triage: implement }
+    agent: builder
+    model: base                   # cheap first
+    escalate:                     # a failed check moves the next attempt up a rung
+      - model: frontier
+      - { engine: codex, model: frontier }
+    computer: full
+    checks:
+      # Add your test command here, so a change must pass it before the reviewer reads it:
+      # - pnpm test
+      - agent: reviewer           # request_changes fails the attempt; its findings go to the next one
+    retries: 2
+  ask:
+    if: { triage: needs_info }
+    agent: clarifier
+    model: fast
+
+outputs:
+  github.pull_request: { from: implement, draft: true }
+  github.comment: ask.summary
