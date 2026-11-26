@@ -42,3 +42,10 @@ node scripts/verify-clean-room.mjs
 - **Depend on published packages.** Keep `@caveman-ai/*` dependencies pinned to published npm versions (no `file:` or `vendor/` overrides).
 - **Attribution.** Modules ported from T3 Code (MIT) and other third-party notices are documented in [`NOTICE`](NOTICE) and [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md). Keep `LICENSE`, `NOTICE`, and `THIRD_PARTY_NOTICES.md` intact in source and release bundles.
 - **Scoped conventional commits** (`feat(runtime): ...`, `fix(cli): ...`, `docs(repo): ...`).
+
+## Workflow
+
+- Work in a clean branch or worktree off `origin/main`; never commit or push directly to `main`.
+- Stage explicit paths (`git commit --only -- <paths>`), never `git add -A`.
+- Run `node scripts/verify-clean-room.mjs` and the checks above before pushing.
+- Open a pull request against `main` and squash-merge once CI (`Check`) is green.
