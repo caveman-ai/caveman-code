@@ -111,7 +111,18 @@ test("a worktree made ahead (workspace.prewarm) is the next new chat's, its bran
   const prewarmed = async (request_id: string, count: number) => {
     const before = worktrees();
     expect(await client.call("workspace.prewarm", { request_id, repo: { path: repo } })).toEqual({});
-    await until(() => worktrees().length === count);
+    // Polled while the runtime's `git worktree add` runs: git lists the worktree's `locked` file while the add holds
+    // it, and a list that reads it after the add removed it fails ("failed to read .../locked"). That is a worktree
+    // still being made, so not yet; any other failure still fails the test.
+    const settled = () => {
+      try {
+        return worktrees().length === count;
+      } catch (error) {
+        if (/failed to read '[^']*\/locked'/.test(String((error as { stderr?: unknown }).stderr ?? ""))) return false;
+        throw error;
+      }
+    };
+    await until(settled);
     return worktrees().find((w) => !before.includes(w))!;
   };
   const chat = async (request_id: string, text: string) => {

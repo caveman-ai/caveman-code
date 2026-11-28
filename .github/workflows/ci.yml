@@ -3,6 +3,7 @@
 # Blacksmith (installed for the organization; Caveman Cloud's CI runs there too), the macOS smoke on GitHub's macos-15.
 # A pull request runs the runtime's 24 shards only when it can affect them (`changes`), and never the macOS smoke, which
 # an Actions budget can stop: main pushes, workflow_dispatch and desktop-nightly.yml run both whatever changed.
+# Actions are pinned by commit to their Node 24 majors.
 # Nothing here signs with a real identity, notarizes or publishes: desktop-release.yml does that, by hand.
 name: CI
 
@@ -31,12 +32,16 @@ jobs:
     outputs:
       runtime: ${{ steps.runtime.outputs.runtime }}
     steps:
-      - uses: actions/checkout@v5
+      # Every runtime shard waits on this job. The merge base needs the history, but a name-only diff needs no old
+      # file contents: commits and trees only (blob:none), a smaller clone than the full one.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
+          filter: blob:none
+          persist-credentials: false
       # The scripts below use Node's built-ins only, so no pnpm: setup-node would otherwise read packageManager and
       # look for pnpm's cache before pnpm exists.
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           package-manager-cache: false
@@ -61,9 +66,10 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm lint
       - run: pnpm knip
@@ -77,7 +83,9 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm typecheck
 
@@ -92,7 +100,9 @@ jobs:
     env:
       GITHUB_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Web build and runtime bundle
         run: pnpm --filter @caveman-app/runtime build
@@ -117,7 +127,9 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm -r --no-sort --workspace-concurrency 4 --no-bail --if-present --filter '!@caveman-app/runtime' --filter '!@caveman-app/web' test
 
@@ -127,7 +139,9 @@ jobs:
     runs-on: blacksmith-8vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm --filter @caveman-app/web test
 
@@ -137,6 +151,9 @@ jobs:
   # time, when the longest one nears the limit. Memory, disk and node processes go into the log every 30 s: a runner
   # that dies of exhaustion (the runner "received a shutdown signal") leaves its last state here, where no failure
   # step would run.
+  # Shard 1 always holds the heaviest file alone (the sequencer gives it to the first empty shard):
+  # src/chief/chief.test.ts, about 7 minutes and the floor of the run's wall-clock. Its time is the runtime's waits,
+  # not CPU (a bigger runner took as long), so only splitting that file shortens it.
   runtime:
     name: Runtime tests ${{ matrix.shard }}
     needs: changes
@@ -148,7 +165,9 @@ jobs:
       matrix:
         shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Runtime tests
         run: |
@@ -176,7 +195,9 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm --filter @caveman-app/runtime exec vitest run src/cloudLink/chaos/chaos.integration.test.ts -t "hop overhead"
         env:
@@ -190,26 +211,36 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: node apps/desktop/scripts/ademark/tokens-check.ts
 
  # apps/web in a real browser (upstream browser project): its *.browser.test.tsx in Playwright's headless Chromium
   # through Vitest's browser mode, the whole app against a scripted Session Protocol runtime (apps/web/test). The
   # browser is cached per Playwright version; apt runs only when the runner lacks a library it needs.
+  # The files run one at a time (fileParallelism: false, they share an origin's storage), so one job ran them all in
+  # series. Vitest's --shard gives every file to exactly one shard, each with a browser of its own.
   web-browser:
-    name: Web browser tests (Chromium)
+    name: Web browser tests (Chromium) ${{ matrix.shard }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - name: Resolve Playwright version
         id: playwright_version
         run: echo "version=$(node -p "require('./apps/web/node_modules/playwright/package.json').version")" >> "$GITHUB_OUTPUT"
       - name: Cache Chromium
         id: chromium_cache
-        uses: actions/cache@v4
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: ~/.cache/ms-playwright
           key: playwright-chromium-shell-${{ runner.os }}-${{ runner.arch }}-${{ steps.playwright_version.outputs.version }}
@@ -224,7 +255,7 @@ jobs:
             node apps/web/node_modules/playwright/cli.js install-deps chromium
           fi
       - name: Web browser tests
-        run: pnpm --filter @caveman-app/web test:browser
+        run: pnpm --filter @caveman-app/web test:browser --shard=${{ matrix.shard }}/${{ strategy.job-total }}
 
   # Every package but the runtime, tested on Windows, with the runtime's lifecycle files. The runtime's suite and the
   # Windows build, install and smokes run nightly in windows.yml: several of the runtime's end-to-end tests are
@@ -237,7 +268,9 @@ jobs:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       - uses: ./.github/actions/setup
       - run: pnpm -r --no-sort --workspace-concurrency 4 --no-bail --if-present --filter '!@caveman-app/runtime' test
       # The runtime's lifecycle on Windows, which no other job here covers: `caveman code` and the desktop's runtime
@@ -258,10 +291,12 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
       # Electron's and electron-builder's downloads come from GitHub's release CDN, which answers a 504 now and then:
       # kept between runs (keyed on the lockfile, which pins their versions), most runs never ask it.
-      - uses: actions/cache@v4
+      - uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5.1.0
         with:
           path: |
             ~/Library/Caches/electron
@@ -316,10 +351,14 @@ jobs:
       - name: First run without git (packaged app)
         if: ${{ !cancelled() }}
         run: node apps/desktop/scripts/first-run-e2e.mjs --packaged --without-git --out apps/desktop/dist-electron/first-run-e2e/without-git
-      - uses: actions/upload-artifact@v4
+      # Pictures for a person to look at, not a check: an Actions artifact storage quota that refuses the upload
+      # must not turn a passing smoke red. The smoke steps above still fail the job.
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        continue-on-error: true
         if: always()
         with:
           name: desktop-smoke
+          retention-days: 14
           path: |
             apps/desktop/dist-electron/*.png
             apps/desktop/dist-electron/first-run-e2e/

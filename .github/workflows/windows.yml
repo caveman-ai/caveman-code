@@ -4,6 +4,8 @@
 # runtime's end-to-end tests are timing-sensitive on a loaded Windows runner.
 # .yml (MIT); inputs reach the scripts only
 # through env.
+# GitHub-hosted windows-2025: free for a public repository, and nightly or by hand, so off a pull request's path.
+# Actions pinned by commit.
 #
 #   gh workflow run windows.yml --ref <branch>                              everything
 #   gh workflow run windows.yml --ref <branch> -f package=packages/shared   one package
@@ -40,9 +42,11 @@ jobs:
     runs-on: windows-2025
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: pnpm
@@ -71,9 +75,13 @@ jobs:
         run: pnpm --filter @caveman-app/desktop smoke-test
       - name: Desktop smoke pictures
         if: ${{ !cancelled() }}
-        uses: actions/upload-artifact@v4
+        # Pictures for a person to look at, not a check: an Actions artifact storage quota that refuses the upload
+        # must not turn a passing smoke red. The smoke steps above still fail the job.
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        continue-on-error: true
         with:
           name: desktop-smoke-pictures
+          retention-days: 14
           path: apps/desktop/dist-electron/*.png
           if-no-files-found: ignore
       # The app as a person gets it: built and packaged unsigned, its NSIS installer run silently, then that copy.
@@ -120,10 +128,14 @@ jobs:
         run: |
           node apps/desktop/scripts/first-run-e2e.mjs --app "$env:LOCALAPPDATA\Programs\caveman-code\Caveman Code.exe" --out apps/desktop/dist-electron/first-run-e2e
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-      - uses: actions/upload-artifact@v4
+      # The installer and pictures for a person to try and look at, not a check: an Actions artifact storage quota that
+      # refuses the upload must not turn a passing smoke red. The smoke steps above still fail the job.
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
+        continue-on-error: true
         if: ${{ !cancelled() }}
         with:
           name: windows-desktop
+          retention-days: 7
           path: |
             apps/desktop/release/*.exe
             apps/desktop/release/latest.yml
@@ -140,9 +152,11 @@ jobs:
       matrix:
         part: ${{ fromJSON(inputs.package == '' && '["packages", "runtime-1", "runtime-2", "runtime-3"]' || '["selected"]') }}
     steps:
-      - uses: actions/checkout@v5
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
           node-version: 24
           cache: pnpm
