@@ -26,8 +26,10 @@ jobs:
       BASE_REF: ${{ github.base_ref }}
       ALLOW_INCREASE: ${{ contains(github.event.pull_request.labels.*.name, 'agent-context-increase') }}
     steps:
-      - uses: actions/checkout@v5
+      # No stored credentials: the fetch below reads this public repository's base branch anonymously.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
+          persist-credentials: false
           sparse-checkout: packages/runtime/agentContextBudget.json
           sparse-checkout-cone-mode: false
 
